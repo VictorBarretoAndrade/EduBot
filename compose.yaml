@@ -1,0 +1,116 @@
+services:
+  ova_mysql:
+    container_name: ova_db
+    build:
+      context: "./Database"
+      dockerfile: Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD: "Password-1"
+      MYSQL_USER: "eduardo"
+      MYSQL_PASSWORD: "Password-1"
+      MYSQL_DATABASE: "ova_db"
+    ports:
+      - 3310:3306
+    # Healthcheck (A18): o Flask só deve subir quando o MySQL estiver realmente
+    # aceitando conexões. Sem isto, o backend subia antes do banco e — com o
+    # fallback antigo — caía num SQLite vazio (A4).
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pPassword-1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    networks:
+      - ova_network
+
+  ova_flask:
+    container_name: ova_back_end
+    build:
+      context: "./Back-End"
+      dockerfile: Dockerfile
+    environment:
+      # Config do banco lida por env (A4) — casa com Back-End/data/models/base.py
+      DB_HOST: ova_mysql
+      DB_PORT: "3306"
+      DB_NAME: ova_db
+      DB_USER: eduardo
+      DB_PASSWORD: "Password-1"
+      # Segredo para assinar tokens de sessão (A18). Defina EDUBOT_SECRET num
+      # arquivo .env na raiz; sem ele o auth.py usa um default só de dev.
+      EDUBOT_SECRET: ${EDUBOT_SECRET:-dev-secret-change-me}
+      # Proatividade agendada (A13): varredura periódica da turma. Ligada por
+      # padrão no container; ajuste a cadência via .env (hora diária ou, para
+      # demo, um intervalo em minutos).
+      EDUBOT_SCHEDULER: ${EDUBOT_SCHEDULER:-on}
+      EDUBOT_SCHEDULER_HOUR: ${EDUBOT_SCHEDULER_HOUR:-3}
+      EDUBOT_SCHEDULER_INTERVAL_MINUTES: ${EDUBOT_SCHEDULER_INTERVAL_MINUTES:-}
+      EDUBOT_DEBUG: ${EDUBOT_DEBUG:-0}
+      # IA do EduBot — padrão mockado. Defina estas variáveis num arquivo .env
+      # na raiz do projeto (o compose o carrega automaticamente) para ligar o
+      # Claude real na AWS Bedrock sem tocar no código.
+      EDUBOT_LLM_PROVIDER: ${EDUBOT_LLM_PROVIDER:-mock}
+      EDUBOT_LLM_MODEL: ${EDUBOT_LLM_MODEL:-claude-sonnet-4-6}
+      EDUBOT_LLM_MAX_TOKENS: ${EDUBOT_LLM_MAX_TOKENS:-1024}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Coach (fala do EduBot): usa a MESMA camada de provider (llm.py) dos
+      # outros agentes — Fase 3d unificou o caminho, sem boto3 paralelo. Só muda
+      # o modelo (mais barato) via override. Sem provider real => texto local.
+      EDUBOT_COACH_MODEL: ${EDUBOT_COACH_MODEL:-claude-haiku-4-5-20251001}
+    ports:
+      - 5010:8090
+    volumes:
+      - ./Back-End:/api
+    depends_on:
+      ova_mysql:
+        condition: service_healthy
+    networks:
+      - ova_network
+
+  # Compila o frontend React (Lovable) sem exigir Node instalado na máquina:
+  # roda npm install + vite build dentro de um container e emite o resultado
+  # em Front-End/files/app, que o Apache serve em http://localhost:8010/app/
+  ova_react_build:
+    container_name: ova_react_build
+    image: node:20-alpine
+    working_dir: /src
+    environment:
+      VITE_OUT_DIR: /out
+    volumes:
+      - ./Front-End/react-logic-demo:/src
+      - ./Front-End/files/app:/out
+    command: sh -c "npm install && npm run build"
+    networks:
+      - ova_network
+
+  ova_apache:
+    container_name: ova_front_end
+    build:
+      context: "./Front-End"
+      dockerfile: Dockerfile
+    ports:
+      - 8010:80
+    volumes:
+      - ./Front-End/files:/usr/local/apache2/htdocs/
+    depends_on:
+      ova_flask:
+        condition: service_started
+      ova_react_build:
+        condition: service_completed_successfully
+    networks:
+      - ova_network
+
+networks:
+  ova_network:
+    name: ova_network
+    driver: bridge
+    ipam:
+      config:
+        # Sub-rede privada RFC1918 (A18). A anterior (172.168.30.0/29) estava em
+        # espaço público e só tinha 6 endereços, forçando IPs fixos por serviço.
+        # Aqui os serviços se resolvem por nome de container (ova_mysql etc.),
+        # então basta uma /24 privada sem IPs fixos.
+        - subnet: 172.28.0.0/24
