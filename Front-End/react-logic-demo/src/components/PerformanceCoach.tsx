@@ -13,7 +13,20 @@ import { StudentProfile, getCoachMessage } from "../services/api";
 import { Lang, useLanguage } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { EduBotAvatar } from "./brand/EduBotAvatar";
+import { Avatar3D } from "./brand/Avatar3D";
+import { AVATAR_PERSONAS, personaTagline } from "./brand/avatars";
 import { useToast } from "./ui/Toast";
+
+// Opções do seletor de avatar do card "Meu Desempenho": o mascote EduBot (2D,
+// sempre disponível) + os cientistas 3D (Einstein, Curie). `persona: null` = EduBot.
+const AVATAR_OPTIONS = [
+  { id: "edubot", label: "EduBot", persona: null },
+  ...AVATAR_PERSONAS.map((p) => ({
+    id: p.id,
+    label: p.variant === "einstein" ? "Einstein" : "Curie",
+    persona: p,
+  })),
+];
 
 // Fala gerada localmente a partir dos dados do aluno (calorosa e natural).
 function buildCoachMessage(profile: StudentProfile, lang: Lang): string {
@@ -57,6 +70,10 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
   const [message, setMessage] = useState(localMessage);
   const [aiLoading, setAiLoading] = useState(false);
   const [fromAi, setFromAi] = useState(false);
+  // Avatar escolhido: EduBot (2D) ou um cientista 3D (Einstein/Curie).
+  const [avatarId, setAvatarId] = useState<string>("edubot");
+  const [threeFailed, setThreeFailed] = useState(false);
+  const selected = AVATAR_OPTIONS.find((o) => o.id === avatarId) ?? AVATAR_OPTIONS[0];
 
   // Ao trocar de idioma (ou perfil), volta para o texto local
   useEffect(() => {
@@ -84,8 +101,46 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
   return (
     <div className="mb-6 overflow-hidden rounded-[8px] border border-line bg-gradient-to-br from-indigo-50 to-white p-6 shadow-soft">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-        <div className="shrink-0">
-          <EduBotAvatar size={120} speaking={speaking} />
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          {selected.persona && !threeFailed ? (
+            <Avatar3D
+              persona={selected.persona}
+              speaking={speaking}
+              width={150}
+              height={190}
+              onError={() => setThreeFailed(true)}
+            />
+          ) : (
+            <EduBotAvatar size={120} speaking={speaking} />
+          )}
+
+          {/* Seletor de personagem: EduBot + cientistas (A12 nos rótulos curtos) */}
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {AVATAR_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => {
+                  setAvatarId(opt.id);
+                  setThreeFailed(false);
+                }}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  avatarId === opt.id
+                    ? "bg-brand text-white"
+                    : "border border-line bg-white text-muted hover:bg-slate-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {selected.persona && (
+            <span className="max-w-[160px] text-center text-[11px] text-muted">
+              {threeFailed
+                ? t("Avatar 3D indisponível neste navegador.", "3D avatar unavailable in this browser.")
+                : personaTagline(selected.persona, lang)}
+            </span>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
