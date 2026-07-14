@@ -4,11 +4,12 @@ recomendação vem do agente edubot_agent no backend (GET /edubot/recommendation
 que aplica as 6 regras pedagógicas sobre o perfil real e persiste o resultado
 no histórico de intervenções (exibido ao lado).
 */
-import { Bot, FileDown, LoaderCircle, Sparkles } from "lucide-react";
+import { Bot, LoaderCircle, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Recommendation, StudentProfile, getEdubotRecommendation } from "../services/api";
 import { useT } from "../i18n";
 import { EduBotLogo } from "./brand/EduBotLogo";
+import { MyDataPanel } from "./MyDataPanel";
 
 interface ReportProps {
   profile: StudentProfile;
@@ -39,15 +40,6 @@ export const Report = ({ profile, onTracked }: ReportProps) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const exportProfile = () => {
-    const blob = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `perfil-${profile.estudante.ra}.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
   };
 
   return (
@@ -147,17 +139,8 @@ export const Report = ({ profile, onTracked }: ReportProps) => {
           </div>
         </div>
 
-        <div className="rounded-[8px] border border-line bg-white p-6">
-          <h2 className="text-xl font-bold text-ink">{t("Exportar dados", "Export data")}</h2>
-          <p className="mt-2 text-sm text-muted">{t("Baixe o JSON com o seu perfil completo rastreado.", "Download the JSON with your full tracked profile.")}</p>
-          <button
-            onClick={exportProfile}
-            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-ink font-semibold text-white"
-          >
-            <FileDown size={18} />
-            {t("Exportar JSON", "Export JSON")}
-          </button>
-        </div>
+        {/* D.5: "Meus dados" (LGPD) — consentimentos, export e exclusão. */}
+        <MyDataPanel profile={profile} />
       </aside>
     </section>
   );

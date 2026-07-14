@@ -38,6 +38,9 @@ services:
       # Segredo para assinar tokens de sessão (A18). Defina EDUBOT_SECRET num
       # arquivo .env na raiz; sem ele o auth.py usa um default só de dev.
       EDUBOT_SECRET: ${EDUBOT_SECRET:-dev-secret-change-me}
+      # A.3: origem(ns) permitidas de CORS (o app React servido pelo Apache).
+      # Vírgula separa múltiplas; "*" libera geral (só dev).
+      EDUBOT_CORS_ORIGINS: ${EDUBOT_CORS_ORIGINS:-http://localhost:8010}
       # Proatividade agendada (A13): varredura periódica da turma. Ligada por
       # padrão no container; ajuste a cadência via .env (hora diária ou, para
       # demo, um intervalo em minutos).
@@ -55,11 +58,34 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      # Bedrock API key (bearer token) — o SDK anthropic a lê como api_key.
+      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # Coach (fala do EduBot): usa a MESMA camada de provider (llm.py) dos
       # outros agentes — Fase 3d unificou o caminho, sem boto3 paralelo. Só muda
       # o modelo (mais barato) via override. Sem provider real => texto local.
       EDUBOT_COACH_MODEL: ${EDUBOT_COACH_MODEL:-claude-haiku-4-5-20251001}
+      EDUBOT_COACH_MAX_TOKENS: ${EDUBOT_COACH_MAX_TOKENS:-220}
+      # B.2/B.4 — guarda de orçamento diário, redator por caso e circuit breaker.
+      # (O compose só repassa o que está listado aqui: sem estas linhas, os
+      # valores do .env NÃO chegam ao container.)
+      EDUBOT_DAILY_BUDGET_USD: ${EDUBOT_DAILY_BUDGET_USD:-1.00}
+      EDUBOT_REDACTOR_MODEL: ${EDUBOT_REDACTOR_MODEL:-}
+      EDUBOT_REDACTOR_MAX_TOKENS: ${EDUBOT_REDACTOR_MAX_TOKENS:-250}
+      EDUBOT_LLM_BREAKER_THRESHOLD: ${EDUBOT_LLM_BREAKER_THRESHOLD:-3}
+      EDUBOT_LLM_BREAKER_COOLDOWN: ${EDUBOT_LLM_BREAKER_COOLDOWN:-600}
+      # V.1 — voz (AWS Polly). "auto" tenta o Polly e cai no Web Speech; "off"
+      # força o fallback sem tentar a rede.
+      EDUBOT_SPEECH: ${EDUBOT_SPEECH:-auto}
+      EDUBOT_SPEECH_CACHE_DIR: ${EDUBOT_SPEECH_CACHE_DIR:-./speech_cache}
+      EDUBOT_POLLY_VOICE_PT: ${EDUBOT_POLLY_VOICE_PT:-Camila}
+      EDUBOT_POLLY_VOICE_EN: ${EDUBOT_POLLY_VOICE_EN:-Joanna}
+      # Etapa 8 (Plano 2) — gamificação. "off" desliga a camada inteira (award/
+      # register viram no-op; o front esconde a UI). Curva de nível e tamanho do
+      # ranking ajustáveis.
+      EDUBOT_GAMIFICATION: ${EDUBOT_GAMIFICATION:-on}
+      EDUBOT_XP_LEVEL_BASE: ${EDUBOT_XP_LEVEL_BASE:-60}
+      EDUBOT_LEADERBOARD_SIZE: ${EDUBOT_LEADERBOARD_SIZE:-10}
     ports:
       - 5010:8090
     volumes:

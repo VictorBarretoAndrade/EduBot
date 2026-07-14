@@ -7,14 +7,15 @@ partir dos dados do perfil (offline, sem custo). O botão "Versão do EduBot (IA
 pede um texto mais natural ao Claude na AWS Bedrock — SOB DEMANDA (controle de
 custo). A fala pode ser OUVIDA com a boca do avatar animada.
 */
-import { Pause, Play, Sparkles } from "lucide-react";
+import { Lock, Pause, Play, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { StudentProfile, getCoachMessage } from "../services/api";
+import { StudentProfile, getCoachMessage, getGamificationMe } from "../services/api";
 import { Lang, useLanguage } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { EduBotAvatar } from "./brand/EduBotAvatar";
 import { Avatar3D } from "./brand/Avatar3D";
 import { AVATAR_PERSONAS, personaTagline } from "./brand/avatars";
+import { getPersona, setPersona } from "../services/persona";
 import { useToast } from "./ui/Toast";
 
 // Opções do seletor de avatar do card "Meu Desempenho": o mascote EduBot (2D,
@@ -70,10 +71,28 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
   const [message, setMessage] = useState(localMessage);
   const [aiLoading, setAiLoading] = useState(false);
   const [fromAi, setFromAi] = useState(false);
-  // Avatar escolhido: EduBot (2D) ou um cientista 3D (Einstein/Curie).
-  const [avatarId, setAvatarId] = useState<string>("edubot");
+  // Avatar escolhido: EduBot (2D) ou um cientista 3D (Einstein/Curie). V.2: a
+  // escolha é lembrada entre visitas (localStorage).
+  const [avatarId, setAvatarId] = useState<string>(() => getPersona());
   const [threeFailed, setThreeFailed] = useState(false);
-  const selected = AVATAR_OPTIONS.find((o) => o.id === avatarId) ?? AVATAR_OPTIONS[0];
+  // R.1/R.2 — nível (para o cadeado das personas) e título ativo do aluno.
+  const [locks, setLocks] = useState<Record<string, { unlocked: boolean; level: number }>>({});
+  const [title, setTitle] = useState<string | null>(null);
+  useEffect(() => {
+    getGamificationMe()
+      .then((me) => {
+        if (!me.enabled) return;
+        setTitle(me.title);
+        const map: Record<string, { unlocked: boolean; level: number }> = {};
+        me.personas.forEach((p) => (map[p.id] = { unlocked: p.unlocked, level: p.unlock_level }));
+        setLocks(map);
+      })
+      .catch(() => undefined);
+  }, []);
+  const isLocked = (id: string) => locks[id] && !locks[id].unlocked;
+  // se a persona atual está travada, cai no EduBot (mascote livre)
+  const effectiveId = isLocked(avatarId) ? "edubot" : avatarId;
+  const selected = AVATAR_OPTIONS.find((o) => o.id === effectiveId) ?? AVATAR_OPTIONS[0];
 
   // Ao trocar de idioma (ou perfil), volta para o texto local
   useEffect(() => {
@@ -114,24 +133,37 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
             <EduBotAvatar size={120} speaking={speaking} />
           )}
 
-          {/* Seletor de personagem: EduBot + cientistas (A12 nos rótulos curtos) */}
+          {/* Seletor de personagem: EduBot + cientistas. R.1: personas travadas
+              mostram o nível necessário (cadeado) e não são selecionáveis. */}
           <div className="flex flex-wrap justify-center gap-1.5">
-            {AVATAR_OPTIONS.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => {
-                  setAvatarId(opt.id);
-                  setThreeFailed(false);
-                }}
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                  avatarId === opt.id
-                    ? "bg-brand text-white"
-                    : "border border-line bg-white text-muted hover:bg-slate-50"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {AVATAR_OPTIONS.map((opt) => {
+              const locked = isLocked(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  disabled={locked}
+                  onClick={() => {
+                    if (locked) return;
+                    setAvatarId(opt.id);
+                    setPersona(opt.id);   // V.2: lembra a escolha
+                    setThreeFailed(false);
+                  }}
+                  aria-pressed={effectiveId === opt.id}
+                  title={locked ? t(`Desbloqueia no nível ${locks[opt.id].level}`, `Unlocks at level ${locks[opt.id].level}`) : opt.label}
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                    effectiveId === opt.id
+                      ? "bg-brand text-white"
+                      : locked
+                      ? "cursor-not-allowed border border-line bg-slate-50 text-slate-400"
+                      : "border border-line bg-white text-muted hover:bg-slate-50"
+                  }`}
+                >
+                  {locked && <Lock size={11} />}
+                  {opt.label}
+                  {locked && <span className="text-[10px]">Nv{locks[opt.id].level}</span>}
+                </button>
+              );
+            })}
           </div>
 
           {selected.persona && (

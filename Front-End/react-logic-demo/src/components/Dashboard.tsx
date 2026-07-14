@@ -4,12 +4,48 @@ nome/curso do aluno, consumo de recursos, taxa de erro do quiz, dias sem
 acesso, formato preferido e competências com status do backend.
 Layout e identidade visual do protótipo Lovable preservados.
 */
-import { Bell, Code2, Timer, Trophy, ClipboardCheck, TrendingUp, Sparkles, X } from "lucide-react";
+import { Bell, Code2, Timer, Trophy, ClipboardCheck, TrendingUp, Sparkles, Volume2, Square, X, Flame, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer } from "recharts";
-import { StudentProfile, UnreadIntervention, getInterventions, ackIntervention } from "../services/api";
-import { useT } from "../i18n";
+import { GamificationMe, StudentProfile, UnreadIntervention, getGamificationMe, getInterventions, ackIntervention } from "../services/api";
+import { useLanguage, useT } from "../i18n";
+import { useSpeech } from "../hooks/useSpeech";
+import { EduBotAvatar } from "./brand/EduBotAvatar";
+import { WeeklyGoalsCard } from "./Gamification";
+
+// G.6 — chip de gamificação no topo do dashboard: sequência, nível e XP da
+// semana. Some quando a gamificação está desligada (enabled:false).
+const DashboardStreak = () => {
+  const t = useT();
+  const [me, setMe] = useState<GamificationMe | null>(null);
+  useEffect(() => {
+    getGamificationMe().then(setMe).catch(() => setMe(null));
+  }, []);
+  if (!me || !me.enabled) return null;
+  const next = me.achievements.find((a) => !a.unlocked);
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-white px-4 py-3 shadow-sm">
+      <span className="flex items-center gap-1.5 font-bold text-orange-600">
+        <Flame size={20} className={me.streak.current_days > 0 ? "" : "opacity-40"} />
+        {me.streak.current_days} <span className="text-xs font-medium text-muted">{t("dias", "days")}</span>
+      </span>
+      <span className="h-5 w-px bg-line" />
+      <span className="flex items-center gap-1.5 font-bold text-brand">
+        {t("Nível", "Level")} {me.level}
+      </span>
+      <span className="h-5 w-px bg-line" />
+      <span className="flex items-center gap-1.5 font-bold text-amber-600">
+        <Zap size={18} /> {me.xp_week} <span className="text-xs font-medium text-muted">{t("XP/semana", "XP/week")}</span>
+      </span>
+      {next && (
+        <span className="ml-auto text-xs text-muted">
+          {t("Próxima conquista:", "Next achievement:")} <strong className="text-ink">{next.nome}</strong>
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface DashboardProps {
   profile: StudentProfile;
@@ -22,7 +58,12 @@ interface DashboardProps {
 // agir (gerar trilha de reforço) ou dispensar.
 const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
   const t = useT();
+  const { lang } = useLanguage();
+  const { speak, stop, speaking, supported } = useSpeech();
   const [items, setItems] = useState<UnreadIntervention[]>([]);
+  // V.2: qual intervenção o EduBot está falando (para trocar o botão e mostrar
+  // o mini-avatar animado só naquele card).
+  const [speakingId, setSpeakingId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -34,9 +75,24 @@ const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
     };
   }, []);
 
+  // Quando a fala termina (speaking volta a false), limpa o card ativo.
+  useEffect(() => {
+    if (!speaking) setSpeakingId(null);
+  }, [speaking]);
+
   const dismiss = (id: number) => {
     setItems((cur) => cur.filter((i) => i.intervention_id !== id));
     ackIntervention(id).catch(() => undefined);
+  };
+
+  const listen = (item: UnreadIntervention) => {
+    if (speakingId === item.intervention_id) {
+      stop();
+      setSpeakingId(null);
+      return;
+    }
+    setSpeakingId(item.intervention_id);
+    void speak(item.descricao || item.tipo, lang);
   };
 
   if (items.length === 0) return null;
@@ -50,9 +106,15 @@ const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
         {items.map((item) => (
           <div key={item.intervention_id} className="rounded-[8px] border border-line bg-white p-4">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <span className="text-xs font-bold uppercase tracking-wide text-muted">{item.tipo}</span>
-                {item.descricao && <p className="mt-1 text-sm text-slate-700">{item.descricao}</p>}
+              <div className="flex min-w-0 items-start gap-3">
+                {/* V.2: mini-avatar do EduBot, animado enquanto fala este card */}
+                <div className="shrink-0">
+                  <EduBotAvatar size={40} speaking={speakingId === item.intervention_id} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold uppercase tracking-wide text-muted">{item.tipo}</span>
+                  {item.descricao && <p className="mt-1 text-sm text-slate-700">{item.descricao}</p>}
+                </div>
               </div>
               <button
                 onClick={() => dismiss(item.intervention_id)}
@@ -72,6 +134,17 @@ const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
               >
                 {t("Gerar minha trilha de reforço", "Generate my reinforcement track")}
               </button>
+              {supported && (
+                <button
+                  onClick={() => listen(item)}
+                  className="flex h-10 items-center gap-2 rounded-[8px] border border-brand bg-white px-4 text-sm font-semibold text-brand transition hover:bg-indigo-50"
+                  aria-label={speakingId === item.intervention_id
+                    ? t("Parar", "Stop") : t("Ouvir o EduBot", "Listen to EduBot")}
+                >
+                  {speakingId === item.intervention_id ? <Square size={16} /> : <Volume2 size={16} />}
+                  {speakingId === item.intervention_id ? t("Parar", "Stop") : t("Ouvir", "Listen")}
+                </button>
+              )}
               <button
                 onClick={() => dismiss(item.intervention_id)}
                 className="h-10 rounded-[8px] border border-line bg-white px-4 text-sm font-semibold text-muted transition hover:bg-slate-50"
@@ -112,16 +185,46 @@ export const Dashboard = ({ profile, onOpenContent, onOpenReforco }: DashboardPr
   const allResources = profile.ovas.flatMap((ova) => ova.recursos);
   const completedActivities = allResources.filter((r) => r.tipo === "atividade" && r.concluido).length;
   const totalActivities = allResources.filter((r) => r.tipo === "atividade").length;
+  // U.5: conta zerada (nada consumido, sem leitura) → estado vazio acolhedor.
+  const isFresh = profile.recursos.consumidos === 0 && totalReadMinutes === 0;
 
   return (
     <section className="space-y-8">
-      <div>
-        <p className="text-lg text-muted">{t("Dashboard do Aluno", "Student Dashboard")}</p>
-        <h1 className="mt-1 text-4xl font-bold text-ink">{profile.estudante.nome}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-lg text-muted">{t("Dashboard do Aluno", "Student Dashboard")}</p>
+          <h1 className="mt-1 text-4xl font-bold text-ink">{profile.estudante.nome}</h1>
+        </div>
+        {/* G.6 — sequência/nível/XP (some se a gamificação estiver desligada) */}
+        <DashboardStreak />
       </div>
+
+      {/* U.5 — primeiro acesso: chama para abrir o primeiro módulo */}
+      {isFresh && (
+        <div className="flex flex-col items-start gap-4 rounded-[8px] border border-brand/30 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 text-lg font-bold text-brand">
+              <Sparkles size={20} /> {t("Bem-vindo(a) ao EduBot!", "Welcome to EduBot!")}
+            </h3>
+            <p className="mt-1 text-sm text-slate-700">
+              {t("Comece pelo seu primeiro módulo — eu te acompanho a cada passo.",
+                 "Start with your first module — I'll guide you every step of the way.")}
+            </p>
+          </div>
+          <button
+            onClick={onOpenContent}
+            className="h-11 shrink-0 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600"
+          >
+            {t("Abrir meu primeiro módulo", "Open my first module")}
+          </button>
+        </div>
+      )}
 
       {/* A13 — o EduBot "fala primeiro": recomendações não lidas, com ação */}
       <EduBotInbox onOpenReforco={onOpenReforco} />
+
+      {/* E.3 — metas semanais sugeridas pelo EduBot (some se gamificação off) */}
+      <WeeklyGoalsCard />
 
       <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div className="overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">

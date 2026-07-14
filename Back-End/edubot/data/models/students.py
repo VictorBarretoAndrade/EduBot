@@ -20,3 +20,7 @@ class Students(BaseModel):
     # MELHORIA (Roteiro Cena 4): papel do usuário — 'aluno' | 'tutor' | 'admin'.
     # Habilita o Painel do Tutor (gestão pedagógica). Default 'aluno'.
     role = CharField(default="aluno")
+    # G.4/R.2 (Plano 2): apelido público no ranking (opt-in) e título ativo
+    # concedido por conquistas. Nulos até o aluno participar/escolher.
+    nickname = CharField(max_length=40, null=True)
+    title = CharField(max_length=40, null=True)

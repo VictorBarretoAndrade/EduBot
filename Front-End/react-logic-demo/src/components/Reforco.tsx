@@ -40,6 +40,16 @@ interface ReforcoProps {
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
+// P.2 — rótulo do formato preferido com ícone, para o chip "no seu formato".
+const formatChip = (formato: string, t: (pt: string, en: string) => string) => {
+  const map: Record<string, string> = {
+    video: `🎬 ${t("vídeo primeiro", "video first")}`,
+    texto: `📖 ${t("texto primeiro", "text first")}`,
+    podcast: `🎧 ${t("podcast primeiro", "podcast first")}`
+  };
+  return map[formato] ?? formato;
+};
+
 export const Reforco = ({ onTracked }: ReforcoProps) => {
   const t = useT();
   const [ovas, setOvas] = useState<PersonalizedOVASummary[]>([]);
@@ -112,11 +122,19 @@ export const Reforco = ({ onTracked }: ReforcoProps) => {
         </button>
 
         <div className="rounded-[8px] border border-line bg-white p-8 shadow-soft">
-          {active.competencia && (
-            <span className="rounded-[8px] bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-800">
-              {t("Foco:", "Focus:")} {active.competencia.nome}
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {active.competencia && (
+              <span className="rounded-[8px] bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-800">
+                {t("Foco:", "Focus:")} {active.competencia.nome}
+              </span>
+            )}
+            {/* P.2 — a trilha começa pelo formato em que o aluno mais aprende. */}
+            {active.formato_preferido && (
+              <span className="rounded-[8px] bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+                {t("No seu formato:", "In your format:")} {formatChip(active.formato_preferido, t)}
+              </span>
+            )}
+          </div>
           <h1 className="mt-3 text-3xl font-bold text-ink">{active.titulo}</h1>
           {active.mensagem_aluno && (
             <p className="mt-3 rounded-[8px] bg-indigo-50/60 p-5 text-lg leading-8 text-slate-800">
@@ -367,7 +385,7 @@ const ReforcoQuiz = ({
     for (const question of questions) {
       const selected = LETTERS[answers[question.question_id]];
       try {
-        const graded = await answerQuestion(session.student_id, question.question_id, selected);
+        const graded = await answerQuestion(question.question_id, selected);
         newFeedback[question.question_id] = graded.is_correct;
       } catch (err) {
         console.error(err);

@@ -18,11 +18,51 @@
 #
 # Os dois caminhos usam o MESMO SDK `anthropic` e a MESMA interface
 # `client.messages.create(...)` — só muda a construção do cliente.
+import logging
 import os
+import time
+
+logger = logging.getLogger("edubot.llm")
 
 # mock | bedrock | anthropic
 PROVIDER = os.getenv("EDUBOT_LLM_PROVIDER", "mock").lower()
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+
+# --- Circuit breaker (B.4) -------------------------------------------------
+# Sob falha da LLM (timeout/erro de provider), evitar pagar timeout em cascata
+# no sweep noturno: após N falhas CONSECUTIVAS, `is_real()` passa a devolver
+# False por um período de "esfriamento" — os caminhos degradam para template/
+# mock automaticamente (best-effort já existente). Um sucesso zera o contador.
+BREAKER_THRESHOLD = int(os.getenv("EDUBOT_LLM_BREAKER_THRESHOLD", "3"))
+BREAKER_COOLDOWN_SECONDS = int(os.getenv("EDUBOT_LLM_BREAKER_COOLDOWN", "600"))  # 10 min
+_consecutive_failures = 0
+_circuit_open_until = 0.0
+
+
+def _record_success():
+    global _consecutive_failures, _circuit_open_until
+    _consecutive_failures = 0
+    _circuit_open_until = 0.0
+
+
+def _record_failure():
+    global _consecutive_failures, _circuit_open_until
+    _consecutive_failures += 1
+    if _consecutive_failures >= BREAKER_THRESHOLD:
+        _circuit_open_until = time.time() + BREAKER_COOLDOWN_SECONDS
+        logger.warning("Circuit breaker ABERTO: %s falhas consecutivas da LLM; "
+                       "degradando para template/mock por %ss.",
+                       _consecutive_failures, BREAKER_COOLDOWN_SECONDS)
+
+
+def circuit_open():
+    """True enquanto o breaker está aberto (janela de esfriamento não expirou)."""
+    return time.time() < _circuit_open_until
+
+
+def reset_breaker():
+    """Zera o estado do breaker (usado em testes)."""
+    _record_success()
 
 # Modelo Claude. Na Bedrock o id leva o prefixo "anthropic." (adicionado
 # automaticamente abaixo). Troque por "claude-opus-4-8" para o modelo mais
@@ -34,8 +74,10 @@ _client = None
 
 
 def is_real():
-    """True quando um provider de LLM real está configurado (não-mock)."""
-    return PROVIDER in ("bedrock", "anthropic")
+    """True quando um provider de LLM real está configurado (não-mock) E o
+    circuit breaker (B.4) não está aberto. Com o breaker aberto, os caminhos de
+    IA degradam para template/mock sem tentar a rede."""
+    return PROVIDER in ("bedrock", "anthropic") and not circuit_open()
 
 
 def model_id(model=None):
@@ -62,10 +104,14 @@ def get_client():
         return _client
 
     if PROVIDER == "bedrock":
-        # Cliente Messages-API da Bedrock (recomendado). Lê as credenciais AWS
-        # do ambiente/perfil/role; só a região é obrigatória.
-        from anthropic import AnthropicBedrockMantle
-        _client = AnthropicBedrockMantle(aws_region=AWS_REGION)
+        # Cliente Messages-API do Amazon Bedrock. Autentica de duas formas,
+        # ambas resolvidas automaticamente pelo SDK:
+        #   - Bedrock API key (bearer token): env AWS_BEARER_TOKEN_BEDROCK
+        #     (o SDK a lê como `api_key`); ou
+        #   - credenciais SigV4: AWS_ACCESS_KEY_ID/SECRET (+ SESSION_TOKEN).
+        # Só a região é obrigatória.
+        from anthropic import AnthropicBedrock
+        _client = AnthropicBedrock(aws_region=AWS_REGION)
     elif PROVIDER == "anthropic":
         # API direta da Anthropic (lê ANTHROPIC_API_KEY do ambiente).
         from anthropic import Anthropic
@@ -92,4 +138,12 @@ def messages_create(system, messages, tools=None, max_tokens=None, model=None):
     }
     if tools:
         kwargs["tools"] = tools
-    return client.messages.create(**kwargs)
+    try:
+        resp = client.messages.create(**kwargs)
+    except Exception:
+        # B.4: alimenta o circuit breaker e repropaga — os chamadores já tratam
+        # a exceção degradando para template/mock (padrão best-effort).
+        _record_failure()
+        raise
+    _record_success()
+    return resp

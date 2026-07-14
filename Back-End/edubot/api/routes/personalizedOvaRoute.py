@@ -12,7 +12,6 @@
 #
 # Todas exigem token (@require_auth). O aluno vem de g.student (nunca do
 # payload), e o acesso a uma OVA personalizada é restrito ao seu dono.
-import sys, os
 
 
 from flask import Blueprint, g
@@ -33,21 +32,11 @@ from edubot.api.auth import require_auth
 from edubot.api.http import get_lang
 from edubot.i18n import tr
 from edubot.services.student_context import build_student_profile
+# A.6: _alternatives_list agora vem da fonte única (era duplicada com questionRoute).
+from edubot.services.quiz import alternatives_list as _alternatives_list
 from edubot.agent import run_personalized_ova_agent
 
 app_personalized_ova = Blueprint("personalized_ova", __name__)
-
-
-# Aceita o JSONField tanto como dict (MySQL) quanto como string (SQLite dev),
-# como em questionRoute (B9). Nunca expõe o gabarito ao cliente.
-# Fase 4 (A12): serve alternatives_en quando lang="en" (mesma ordem do PT).
-def _alternatives_list(question, lang="pt"):
-    alternatives = question.alternatives
-    if lang == "en" and question.alternatives_en:
-        alternatives = question.alternatives_en
-    if isinstance(alternatives, str):
-        alternatives = json.loads(alternatives)
-    return alternatives["alternatives"]
 
 
 @app_personalized_ova.route("/edubot/personalized-ova", methods=["POST"])
@@ -89,6 +78,8 @@ def create_personalized_ova():
             "itens_questoes": result["resultado"].get("itens_questoes", 0),
             "mock": result.get("mock"),
             "model_id": result.get("model_id"),
+            # P.2 — formato preferido pelo qual a trilha começou (chip no front).
+            "formato_preferido": result.get("formato_preferido"),
         }, default=str), 201
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500
@@ -175,6 +166,12 @@ def get_personalized_ova(pova_id):
                     "competency_id": question.competency_id.competency_id,
                 })
 
+        # P.2 — o chip "no seu formato" ao reabrir: reflete o formato pelo qual a
+        # trilha foi ORDENADA (o 1º recurso). Só mostra se a trilha realmente
+        # começa por um formato de mídia consumível (vídeo/texto/podcast).
+        formato_preferido = recursos[0]["resource_type"] if recursos and \
+            recursos[0]["resource_type"] in ("video", "texto", "podcast") else None
+
         comp = pova.target_competency_id
         return json.dumps({
             "personalized_ova_id": pova.personalized_ova_id,
@@ -188,6 +185,7 @@ def get_personalized_ova(pova_id):
                 "nome": tr(comp.competency_description,
                            comp.competency_description_en, lang),
             } if comp else None,
+            "formato_preferido": formato_preferido,
             "recursos": recursos,
             "questoes": questoes,
         }, default=str), 200

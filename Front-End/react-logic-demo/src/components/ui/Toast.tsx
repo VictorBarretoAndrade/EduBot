@@ -71,7 +71,12 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-5 right-5 z-50 flex w-80 max-w-[90vw] flex-col gap-3">
+      {/* U.7: região "viva" — leitores de tela anunciam cada novo aviso. */}
+      <div
+        className="fixed bottom-5 right-5 z-50 flex w-80 max-w-[90vw] flex-col gap-3"
+        aria-live="polite"
+        aria-atomic="false"
+      >
         {toasts.map((toast) => {
           const Icon = ICONS[toast.kind];
           return (

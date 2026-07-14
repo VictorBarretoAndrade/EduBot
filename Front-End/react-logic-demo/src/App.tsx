@@ -8,6 +8,8 @@ O visual original (Lovable) foi mantido; apenas a fonte dos dados mudou.
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { Sidebar, Topbar } from "./components/Sidebar";
 import { Login } from "./components/Login";
+import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
+import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
 import { LoaderCircle } from "lucide-react";
 import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken } from "./services/api";
 import { useLanguage, useT } from "./i18n";
@@ -34,19 +36,36 @@ const ViewFallback = () => (
 // Fase 5 (A17): URLs navegáveis por hash (#/dashboard, #/quiz...). HashRouting
 // dispensa reescrita no Apache (o app é servido em subpath /app/) e dá botão
 // voltar/avançar + links compartilháveis. As views válidas espelham a Sidebar.
+// E.1 (Plano 2): `#/modulo/:id` abre o leitor daquele OVA — módulos viram
+// deep-linkáveis (F5 reabre o mesmo módulo; uma intervenção pode apontar o alvo).
 const KNOWN_VIEWS = ["dashboard", "contents", "exercises", "quiz", "reforco", "evolution", "report", "tutor"];
-const viewFromHash = () => {
+const parseHash = (): { view: string; ovaId?: number } => {
+  const m = window.location.hash.match(/^#\/modulo\/(\d+)/);
+  if (m) return { view: "module", ovaId: Number(m[1]) };
   const raw = window.location.hash.replace(/^#\/?/, "");
-  return KNOWN_VIEWS.includes(raw) ? raw : "dashboard";
+  return { view: KNOWN_VIEWS.includes(raw) ? raw : "dashboard" };
 };
 
 const App = () => {
-  const [activeView, setActiveView] = useState<string>(() => viewFromHash());
+  const initialHash = parseHash();
+  const [activeView, setActiveView] = useState<string>(() =>
+    initialHash.view === "module" ? "contents" : initialHash.view);
   const [session, setSession] = useState<Session | null>(() => (getToken() ? getSession() : null));
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   // OVA aberto no leitor nativo (null = nenhum). Tem precedência sobre activeView.
   const [readerOva, setReaderOva] = useState<OvaState | null>(null);
+  // E.1: id do módulo pedido pela URL (#/modulo/:id); resolvido para readerOva
+  // quando o perfil carrega (o OVA vem de profile.ovas).
+  const [moduleId, setModuleId] = useState<number | null>(initialHash.ovaId ?? null);
+  // D.5: modal de consentimento no primeiro login (flag em localStorage).
+  const [needsConsent, setNeedsConsent] = useState<boolean>(
+    () => localStorage.getItem(CONSENT_FLAG) !== "1"
+  );
+  // U.5: onboarding logo após o consentimento (outra flag em localStorage).
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(
+    () => localStorage.getItem(ONBOARDING_FLAG) !== "1"
+  );
   const t = useT();
   const { lang } = useLanguage();
 
@@ -88,29 +107,53 @@ const App = () => {
   // aba onde o OVA estava aberto (o hash não mudaria e não dispararia o evento).
   const changeView = useCallback((view: string) => {
     setReaderOva(null);
+    setModuleId(null);
     setActiveView(view);
     if (window.location.hash !== `#/${view}`) window.location.hash = `#/${view}`;
   }, []);
 
-  // Sincroniza com o botão voltar/avançar do navegador e normaliza o hash
-  // inicial para uma URL compartilhável.
+  // Sincroniza com o botão voltar/avançar do navegador. `#/modulo/:id` mantém o
+  // moduleId (o leitor é reaberto pelo efeito); as demais views fecham o leitor.
   useEffect(() => {
     const onHashChange = () => {
-      setReaderOva(null);
-      setActiveView(viewFromHash());
+      const p = parseHash();
+      if (p.view === "module" && p.ovaId != null) {
+        setModuleId(p.ovaId);
+      } else {
+        setModuleId(null);
+        setReaderOva(null);
+        setActiveView(p.view);
+      }
     };
     window.addEventListener("hashchange", onHashChange);
     if (!window.location.hash) {
-      window.history.replaceState(null, "", `#/${viewFromHash()}`);
+      window.history.replaceState(null, "", `#/${parseHash().view}`);
     }
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
-  // Abre um OVA no leitor nativo (chamado pela Área de Conteúdo)
+  // E.1: resolve o módulo pedido pela URL para o leitor, assim que o perfil
+  // (profile.ovas) estiver disponível — F5 dentro de um módulo reabre o mesmo.
+  useEffect(() => {
+    if (moduleId != null && profile) {
+      const ova = profile.ovas.find((o) => o.ova_id === moduleId);
+      if (ova) setReaderOva(ova);
+    }
+  }, [moduleId, profile]);
+
+  // Abre um OVA no leitor nativo (chamado pela Área de Conteúdo). Reflete a URL
+  // em #/modulo/:id (deep-link) — F5/voltar funcionam dentro do módulo.
   const openOva = (ova: OvaState) => {
     setReaderOva(ova);
+    setModuleId(ova.ova_id);
+    if (window.location.hash !== `#/modulo/${ova.ova_id}`) {
+      window.location.hash = `#/modulo/${ova.ova_id}`;
+    }
     window.scrollTo({ top: 0 });
   };
+
+  // Fecha o leitor voltando para "Conteúdos" (limpa o #/modulo da URL).
+  const closeReader = () => changeView("contents");
 
   if (!session) {
     return <Login onLogged={(logged) => setSession(logged)} />;
@@ -138,7 +181,7 @@ const App = () => {
         <OvaReader
           ova={readerOva}
           studentId={session.student_id}
-          onBack={() => setReaderOva(null)}
+          onBack={closeReader}
           onTracked={refreshProfile}
         />
       );
@@ -161,6 +204,17 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
+      {/* D.5 consentimento primeiro; U.5 onboarding logo depois. */}
+      {needsConsent ? (
+        <ConsentModal onDone={() => setNeedsConsent(false)} />
+      ) : (
+        needsOnboarding && (
+          <OnboardingModal
+            studentName={profile.estudante.nome}
+            onDone={() => setNeedsOnboarding(false)}
+          />
+        )
+      )}
       <div className="flex">
         <Sidebar activeView={readerOva ? "contents" : activeView} onChangeView={changeView} studentName={profile.estudante.nome} role={profile.estudante.role} onLogout={logout} />
         <main className="min-w-0 flex-1">

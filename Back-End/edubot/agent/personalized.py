@@ -35,8 +35,11 @@ Use as ferramentas disponíveis, nesta ordem:
 mensagem motivacional dirigida ao aluno pelo primeiro nome, e uma justificativa para o \
 professor. Chame esta ferramenta uma única vez, ao final.
 
-Selecione conteúdo SOMENTE da competência-alvo. Prefira começar por um vídeo ou texto \
-introdutório. Depois de criar a OVA, responda com uma frase curta de confirmação."""
+Selecione conteúdo SOMENTE da competência-alvo. COMECE a trilha pelo formato em que o \
+aluno mais aprende — o campo `formato_preferido_do_aluno` de listar_recursos_remediacao \
+indica esse formato (vídeo/texto/podcast); coloque esse recurso primeiro. Se não houver \
+material nesse formato, use o que houver (não deixe a trilha vazia). Depois de criar a \
+OVA, responda com uma frase curta de confirmação."""
 
 
 USER_PROMPT_TEMPLATE = """Gere a OVA personalizada de reforço para este aluno, seguindo \
@@ -109,7 +112,8 @@ def _collect_results(messages):
 # Cliente mockado: simula o Claude escolhendo as tools, de forma determinística.
 # ---------------------------------------------------------------------------
 class _MockAgentClient:
-    def invoke(self, system, messages, tools, profile):
+    def invoke(self, system, messages, tools, ctx):
+        profile = ctx.get("profile", {})
         done = _collect_results(messages)
 
         if "listar_competencias_fracas" not in done:
@@ -161,71 +165,53 @@ class _MockAgentClient:
         return _text_envelope(text)
 
 
-# ---------------------------------------------------------------------------
-# Cliente REAL: o MESMO loop de tool-use, agora com o Claude na Bedrock/Anthropic.
-# Devolve o envelope da Messages API (resp.model_dump()) que o loop já consome.
-# ---------------------------------------------------------------------------
-class _RealAgentClient:
-    def invoke(self, system, messages, tools, profile):
-        resp = llm.messages_create(
-            system=system,
-            messages=messages,
-            tools=[{"name": t["name"], "description": t["description"],
-                    "input_schema": t["input_schema"]} for t in tools],
-            max_tokens=2048,
-        )
-        return resp.model_dump()
-
-
-_client = _RealAgentClient() if llm.is_real() else _MockAgentClient()
-
-
+# B.3: o loop de tool-use foi extraído para agent/loop.py (genérico, reutilizado
+# por outros fluxos do agente). Aqui só permanece o que é ESPECÍFICO da OVA
+# personalizada: o system prompt, o mock determinístico e o mapeamento do
+# resultado. O comportamento (e o teste de regressão) é idêntico.
 def run_personalized_ova_agent(student, profile):
     """Roda o agente de tool-use e devolve o resultado da geração.
 
     student: linha Students (g.student) — usada pelas tools como contexto seguro.
     profile: dict de build_student_profile (entrada do agente).
     """
-    system = SYSTEM_PROMPT
-    messages = [{"role": "user", "content": _build_user_prompt(profile)}]
-    ctx = {"student": student}
+    from .loop import run_agent
 
-    created = None
-    final_text = ""
-    iterations = 0
+    est = profile.get("estudante", {}) or {}
+    fracas = profile.get("competencias", [])
+    digest = {
+        "primeiro_nome": (est.get("nome") or "").split(" ")[0],
+        "competencia_alvo": (min(fracas, key=lambda c: c.get("dominio_estimado")
+                                 if c.get("dominio_estimado") is not None else 1.0)
+                             ["nome"] if fracas else None),
+    }
 
-    for _ in range(MAX_ITERATIONS):
-        iterations += 1
-        response = _client.invoke(system=system, messages=messages,
-                                  tools=TOOLS_SCHEMA, profile=profile)
-        content = response.get("content", [])
-        messages.append({"role": "assistant", "content": content})
+    result = run_agent(
+        SYSTEM_PROMPT, _build_user_prompt(profile), TOOLS_SCHEMA,
+        ctx={"student": student, "profile": profile},
+        model=None, max_iterations=MAX_ITERATIONS,
+        trigger_type="personalized_ova",
+        mock_client=_MockAgentClient(),
+        input_digest=digest)
 
-        if response.get("stop_reason") == "tool_use":
-            tool_results = []
-            for block in content:
-                if block.get("type") != "tool_use":
-                    continue
-                result = execute_tool(block["name"], block.get("input"), ctx)
-                if block["name"] == "criar_ova_personalizada" and result.get("personalized_ova_id"):
-                    created = result
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block["id"],
-                    "content": json.dumps(result, ensure_ascii=False, default=str),
-                })
-            messages.append({"role": "user", "content": tool_results})
-        else:
-            final_text = "".join(b.get("text", "") for b in content if b.get("type") == "text")
-            break
+    created = result["results_by_tool"].get("criar_ova_personalizada")
+    if isinstance(created, dict) and not created.get("personalized_ova_id"):
+        created = None
+
+    # P.2 — formato pelo qual a trilha foi montada (para o front mostrar o chip
+    # "no seu formato"); vem da tool de recursos (mesma fonte que o agente usou).
+    recursos_tool = result["results_by_tool"].get("listar_recursos_remediacao") or {}
+    formato_preferido = recursos_tool.get("formato_preferido_do_aluno") \
+        if isinstance(recursos_tool, dict) else None
 
     return {
         "personalized_ova_id": created["personalized_ova_id"] if created else None,
         "resultado": created,
-        "mensagem_final": final_text,
-        "iteracoes": iterations,
-        "mock": isinstance(_client, _MockAgentClient),
-        "model_id": BEDROCK_MODEL_ID,
+        "mensagem_final": result["final_text"],
+        "iteracoes": result["iterations"],
+        "mock": result["mock"],
+        "model_id": result["model_id"] or BEDROCK_MODEL_ID,
+        "formato_preferido": formato_preferido,
     }
 
 

@@ -87,6 +87,23 @@ export class ApiError extends Error {
   }
 }
 
+// U.1: o backend recusa o quiz travado com 403 + {error:"quiz_locked", gate, perc}.
+// Este helper extrai essa info do corpo do ApiError (ou null se for outro erro).
+export interface QuizLock {
+  gate: number;
+  perc: number;
+}
+export function quizLockFromError(err: unknown): QuizLock | null {
+  if (!(err instanceof ApiError) || err.status !== 403) return null;
+  try {
+    const body = JSON.parse(err.message);
+    if (body?.error === "quiz_locked") return { gate: body.gate ?? 0, perc: body.perc ?? 0 };
+  } catch {
+    /* corpo não-JSON */
+  }
+  return null;
+}
+
 // Fase 4 (A12): idioma atual (mesma chave do i18n.tsx). As rotas de CONTEÚDO
 // recebem ?lang= e o backend serve as traduções do banco com fallback PT —
 // o dicionário manual contentDict.ts foi aposentado.
@@ -131,6 +148,9 @@ export interface CompetencyState {
   tentativas?: number;
   erros?: number;
   taxa_erro?: number | null;
+  // D.2: domínio estimado (0..1) por BKT; null quando ainda não há sinal de
+  // mastery (o front mostra "domínio: 74%" quando presente).
+  dominio_estimado?: number | null;
 }
 
 export interface InterventionState {
@@ -262,6 +282,8 @@ export interface PersonalizedOVAContent {
   status: string;
   created_at: string;
   competencia: { competency_id: number; nome: string } | null;
+  // P.2 — formato pelo qual a trilha começou (chip "no seu formato").
+  formato_preferido: string | null;
   recursos: OvaResource[];
   questoes: OvaQuestion[];
 }
@@ -276,6 +298,7 @@ export interface CreatedPersonalizedOVA {
   itens_questoes: number;
   mock: boolean;
   model_id: string;
+  formato_preferido: string | null;
 }
 
 // Dispara o agente: diagnostica o assunto fraco, seleciona conteúdo e persiste
@@ -324,13 +347,18 @@ export const saveOVAProgress = (
   opts: { keepalive?: boolean } = {}
 ) => request<string>(withLang("/progress/ova"), { method: "POST", body: data, keepalive: opts.keepalive });
 
-export const getOVAQuestions = (ovaId: number, studentId: number) =>
-  request<OvaQuestion[]>(withLang("/question/ova"), { method: "POST", body: { ova_id: ovaId, student_id: studentId } });
+// A.6: o aluno é resolvido pelo token no backend (g.student). Não enviamos mais
+// student_id no corpo — o backend já o ignorava, mas o contrato mentia.
+export const getOVAQuestions = (ovaId: number) =>
+  request<OvaQuestion[]>(withLang("/question/ova"), { method: "POST", body: { ova_id: ovaId } });
 
-export const answerQuestion = (studentId: number, questionId: number, selected: string) =>
-  request<{ is_correct: boolean }>(withLang("/question/answer"), {
+// D.1: `responseMs` (tempo do render da questão ao submit) é o sinal de esforço
+// que alimenta os eventos `answered` e o mastery no backend. Opcional.
+// G.6: a resposta traz `gamification` (XP ganho, conquistas novas) p/ o micro-momento.
+export const answerQuestion = (questionId: number, selected: string, responseMs?: number) =>
+  request<{ is_correct: boolean; gamification: GamificationAward | null }>(withLang("/question/answer"), {
     method: "POST",
-    body: { student_id: studentId, question_id: questionId, selected }
+    body: { question_id: questionId, selected, response_ms: responseMs }
   });
 
 // A3: o aluno é resolvido pelo token no backend — não enviamos student_id.
@@ -369,6 +397,63 @@ export const getTutorAlerts = () => request<{ alertas: TutorAlert[] }>("/tutor/a
 export const evaluateTurma = () =>
   request<{ alertas_criados: number }>("/tutor/evaluate", { method: "POST" });
 
+// A.4: marca um alerta como tratado (read=true). Destrava a dedup por tipo — sem
+// isto o 1º alerta de cada tipo suprimia todos os futuros do mesmo aluno.
+export const ackTutorAlert = (alertId: number) =>
+  request<{ ok: boolean }>("/tutor/alert/ack", { method: "POST", body: { alert_id: alertId } });
+
+// D.6 — heatmap turma × competência (domínio estimado por BKT).
+export interface MasteryColumn {
+  competency_id: number;
+  nome: string;
+  n: number;
+  media: number | null;
+  distribuicao: { fragil: number; em_desenvolvimento: number; desenvolvida: number };
+}
+export interface MasteryRow {
+  student_id: number;
+  nome: string;
+  celulas: { competency_id: number; p_mastery: number | null; status: string | null }[];
+}
+export const getTutorMastery = () =>
+  request<{ competencias: MasteryColumn[]; matriz: MasteryRow[] }>("/tutor/mastery");
+
+// B.5 — fila de aprovação: ações de tier alto propostas pelo EduBot.
+export interface QueueItem {
+  alert_id: number;
+  student_id: number;
+  aluno: string;
+  type: string;
+  message: string;
+  severity: string;
+  proposed_action: { type: string; mensagem_aluno?: string; justificativa?: string } | null;
+  created_at: string;
+}
+export const getTutorQueue = () => request<{ fila: QueueItem[] }>("/tutor/queue");
+
+// B.6 — KPI do agente: taxa de aceitação das intervenções por tipo.
+export interface AgentKpi {
+  tipo: string;
+  total: number;
+  classificadas: number;
+  aceita: number;
+  melhorou: number;
+  dispensada: number;
+  expirada: number;
+  pendente: number;
+  taxa_aceitacao: number | null;
+}
+// P.3 — mesmo shape, agrupado por formato SUGERIDO (video/texto/podcast).
+export interface AgentKpiByFormat extends Omit<AgentKpi, "tipo"> {
+  formato: string;
+}
+export const getAgentKpi = () =>
+  request<{ kpis: AgentKpi[]; kpis_por_formato: AgentKpiByFormat[] }>("/tutor/agent-kpi");
+export const approveQueueItem = (alertId: number) =>
+  request<{ ok: boolean }>("/tutor/queue/approve", { method: "POST", body: { alert_id: alertId } });
+export const rejectQueueItem = (alertId: number) =>
+  request<{ ok: boolean }>("/tutor/queue/reject", { method: "POST", body: { alert_id: alertId } });
+
 // ---------------------------------------------------------------------------
 // Tutor IA por OVA — chat de tutoria restrito ao conteúdo do OVA consumido
 // ---------------------------------------------------------------------------
@@ -398,3 +483,196 @@ export const tutorChat = (ovaId: number, context: string, messages: TutorMessage
     method: "POST",
     body: { ova_id: ovaId, context, messages }
   });
+
+// ---------------------------------------------------------------------------
+// D.1 — eventos de aprendizado (xAPI-lite). O front acumula eventos e faz flush
+// em lote (services/events.ts); esta é a chamada crua para POST /events.
+// ---------------------------------------------------------------------------
+export interface LearningEventInput {
+  verb: string;
+  object_type: string;
+  object_id?: number | null;
+  context?: Record<string, unknown> | null;
+  occurred_at?: string;
+}
+
+export const postEvents = (events: LearningEventInput[], opts: { keepalive?: boolean } = {}) =>
+  request<{ accepted: number; errors: number }>("/events", {
+    method: "POST",
+    body: { events },
+    keepalive: opts.keepalive
+  });
+
+// ---------------------------------------------------------------------------
+// D.5 — consentimento (LGPD) e direitos do titular.
+// ---------------------------------------------------------------------------
+export interface Consent {
+  purpose: "tracking_pedagogico" | "ia_sobre_dados" | "imagem_voz";
+  granted: boolean;
+  opt_in: boolean;
+  granted_at: string | null;
+  revoked_at: string | null;
+}
+
+export const getConsents = () => request<{ consents: Consent[] }>("/consents");
+
+export const setConsent = (purpose: Consent["purpose"], granted: boolean) =>
+  request<{ consents: Consent[] }>("/consents", {
+    method: "POST",
+    body: { purpose, granted }
+  });
+
+export const requestDataDeletion = () =>
+  request<{ ok: boolean; status: string }>("/student/me/delete-request", { method: "POST" });
+
+// ---------------------------------------------------------------------------
+// D.3 — revisão espaçada: agenda "Revisões desta semana" do aluno logado.
+// ---------------------------------------------------------------------------
+export interface ReviewItem {
+  review_id: number;
+  competency_id: number;
+  competencia: string | null;
+  due_date: string;
+  status: string;
+  vencida: boolean;
+  interval_days: number;
+}
+
+export const getReviews = () => request<{ reviews: ReviewItem[] }>(withLang("/reviews"));
+
+// ---------------------------------------------------------------------------
+// H.1 (Plano 2) — tendência de domínio (setas na teia de competências).
+// ---------------------------------------------------------------------------
+export interface MasteryTrendItem {
+  competency_id: number;
+  competencia: string | null;
+  atual: number;
+  anterior: number;
+  delta: number;
+  direcao: "up" | "down" | "flat";
+}
+
+export const getMasteryTrend = () =>
+  request<{ trend: MasteryTrendItem[] }>(withLang("/mastery/trend"));
+
+// ---------------------------------------------------------------------------
+// Etapa 8 (Plano 2) — gamificação: XP, nível, sequência, conquistas, ranking.
+// ---------------------------------------------------------------------------
+export interface AchievementState {
+  id: string;
+  nome: string;
+  unlocked: boolean;
+}
+export interface PersonaUnlock {
+  id: string;
+  unlock_level: number;
+  unlocked: boolean;
+}
+export interface TitleOption {
+  id: string;
+  titulo: string;
+}
+export interface GamificationMe {
+  enabled: boolean;
+  level: number;
+  xp_total: number;
+  into_level: number;
+  level_span: number;
+  next_level_at: number;
+  xp_week: number;
+  streak: { current_days: number; best_days: number; shield_available: boolean };
+  achievements: AchievementState[];
+  personas: PersonaUnlock[];
+  available_titles: TitleOption[];
+  title: string | null;
+  title_id: string | null;
+  nickname: string | null;
+}
+export interface LeaderboardEntry {
+  apelido: string;
+  xp_semana: number;
+  nivel: number;
+  eu: boolean;
+}
+export interface Leaderboard {
+  enabled: boolean;
+  week_start?: string;
+  participando?: boolean;
+  top: LeaderboardEntry[];
+  me: { rank: number | null; top_percent: number | null; xp_semana: number; nivel: number } | null;
+}
+// Resumo devolvido pelo /question/answer p/ o micro-momento do quiz (G.6).
+export interface GamificationAward {
+  xp_awarded: number;
+  achievements: string[];
+  streak: number;
+}
+
+export const getGamificationMe = () =>
+  request<GamificationMe>(withLang("/gamification/me"));
+export const getLeaderboard = () =>
+  request<Leaderboard>("/gamification/leaderboard");
+export const participateRanking = (nickname: string) =>
+  request<{ ok: boolean; nickname: string; participando: boolean }>(
+    "/gamification/participate", { method: "POST", body: { nickname } }
+  );
+export const setActiveTitle = (titleId: string | null) =>
+  request<{ ok: boolean; title: string | null }>(
+    "/gamification/title", { method: "POST", body: { title_id: titleId } }
+  );
+
+// ---------------------------------------------------------------------------
+// E.3 (Plano 2) — metas semanais.
+// ---------------------------------------------------------------------------
+export interface WeeklyGoal {
+  goal_id: number;
+  kind: string;
+  titulo: string;
+  target: number;
+  progress: number;
+  status: string;
+}
+export const getGoals = () =>
+  request<{ enabled: boolean; goals: WeeklyGoal[] }>(withLang("/goals"));
+export const acceptGoal = (goalId: number) =>
+  request<{ ok: boolean; goal_id: number; status: string }>(
+    "/goals/accept", { method: "POST", body: { goal_id: goalId } }
+  );
+
+// R.3 — modo desafio: só questões difíceis de competência dominada (403 se locked).
+export const getChallengeQuestions = (ovaId: number) =>
+  request<OvaQuestion[]>(withLang("/question/ova"), {
+    method: "POST", body: { ova_id: ovaId, desafio: true }
+  });
+
+// E.4 — engajamento da turma (tutor).
+export interface TutorEngagement {
+  total_alunos: number;
+  participacao_ranking: { opt_in: number; total: number };
+  distribuicao_sequencia: Record<string, number>;
+  xp_medio_semana: number;
+  em_risco: { student_id: number; nome: string; sequencia: number }[];
+  antes_depois: { dias_ativos_antes: number; dias_ativos_depois: number };
+}
+export const getTutorEngagement = () =>
+  request<TutorEngagement>("/tutor/engagement");
+
+// ---------------------------------------------------------------------------
+// V.1 — voz do EduBot (AWS Polly + visemas). available:false => o front usa o
+// fallback (Web Speech). O mp3 é servido em audio_url (caminho relativo à API).
+// ---------------------------------------------------------------------------
+export interface Viseme {
+  time_ms: number;
+  viseme: string;
+}
+export interface SpeakResult {
+  available: boolean;
+  audio_url?: string;
+  visemes?: Viseme[];
+  cached?: boolean;
+}
+// URL absoluta de um recurso servido pela API (ex.: o mp3 da voz).
+export const apiUrl = (path: string) => BASE_URL + path;
+
+export const synthesizeSpeech = (text: string, lang: "pt" | "en") =>
+  request<SpeakResult>("/edubot/speak", { method: "POST", body: { text, lang } });

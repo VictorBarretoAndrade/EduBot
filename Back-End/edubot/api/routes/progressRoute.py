@@ -14,7 +14,7 @@
 from flask import Blueprint, request, g
 from flask_cors import cross_origin
 from edubot.api.http import get_payload
-from peewee import PeeweeException
+from peewee import PeeweeException, fn
 import json
 import datetime
 
@@ -27,6 +27,7 @@ from edubot.api.auth import require_auth
 from edubot.api.http import get_lang
 from edubot.i18n import tr
 from edubot.services.proactivity import trigger_evaluation
+from edubot.services.events import emit as emit_event
 
 app_progress = Blueprint("progress", __name__)
 
@@ -102,16 +103,28 @@ def save_ova_progress():
                 read_time=initial_read, perc_scrolled=perc_scrolled,
                 completed=completed, last_access=datetime.datetime.now())
         else:
+            # A.6: a acumulação de read_time é feita NO BANCO
+            # (COALESCE(read_time,0) + delta), não em Python. Antes era
+            # read-modify-write: dois syncs concorrentes (ex.: duas abas do mesmo
+            # aluno) liam o mesmo valor e um sobrescrevia o outro, perdendo um
+            # delta. COALESCE mantém a portabilidade SQLite/MySQL (evita NULL+n).
+            # perc_scrolled/completed seguem por max do pré-read: uma corrida só
+            # atrasa a marca d'água, que o próximo sync corrige (auto-heal).
+            updates = {
+                OVAProgress.perc_scrolled: max(progress.perc_scrolled or 0, perc_scrolled),
+                OVAProgress.completed: bool(progress.completed) or completed,
+                OVAProgress.last_access: datetime.datetime.now(),
+            }
             if seconds_delta is not None:
-                # acumula (contrato novo)
-                progress.read_time = (progress.read_time or 0) + seconds_delta
+                # acumula (contrato novo) — atômico
+                updates[OVAProgress.read_time] = fn.COALESCE(OVAProgress.read_time, 0) + seconds_delta
             else:
                 # legado: valor absoluto, nunca retrocede
-                progress.read_time = max(progress.read_time or 0, read_time_abs)
-            progress.perc_scrolled = max(progress.perc_scrolled or 0, perc_scrolled)
-            progress.completed = progress.completed or completed
-            progress.last_access = datetime.datetime.now()
-            progress.save()
+                updates[OVAProgress.read_time] = max(progress.read_time or 0, read_time_abs)
+            (OVAProgress
+             .update(updates)
+             .where((OVAProgress.student_id == g.student) & (OVAProgress.ova_id == ova))
+             .execute())
 
         # A13 — proatividade por evento: ao CONCLUIR um OVA (transição), o agente
         # reavalia o aluno e pode empurrar o próximo passo (ex.: quiz pendente,
@@ -119,7 +132,26 @@ def save_ova_progress():
         # para não repetir a montagem cara do perfil (A9).
         now_completed = completed or perc_scrolled >= 90
         if now_completed and not was_completed:
-            trigger_evaluation(g.student, lang=get_lang())
+            # D.1 — `completed` na transição de conclusão: alimenta a contagem
+            # por verbo e a janela de engajamento do outcome (B.6).
+            emit_event(g.student, "completed", "ova", ova.ova_id,
+                       perc=perc_scrolled)
+            trigger_evaluation(g.student, lang=get_lang(), trigger_type="ova_completed")
+            # G.1 (Plano 2) — concluir um módulo é esforço: concede XP (1x por
+            # OVA/dia). Best-effort, flag-guarded dentro de award.
+            try:
+                from edubot.services.gamification import award, check_achievements
+                award(g.student.student_id, "modulo_concluido", "ova", ova.ova_id)
+                check_achievements(g.student.student_id)
+            except Exception:
+                pass
+        # G.3 — ler/estudar conta para a sequência (dia de estudo), independentemente
+        # de concluir. Idempotente por dia; best-effort.
+        try:
+            from edubot.services.gamification import register_daily_activity
+            register_daily_activity(g.student.student_id)
+        except Exception:
+            pass
         return json.dumps("Progress saved"), 200
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500

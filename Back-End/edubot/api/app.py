@@ -1,5 +1,6 @@
 # Import the main libraries
 import logging
+import os
 
 from flask import Flask, jsonify
 from werkzeug.exceptions import HTTPException
@@ -19,10 +20,27 @@ from edubot.api.routes.edubotRoute import app_edubot
 from edubot.api.routes.personalizedOvaRoute import app_personalized_ova
 # MELHORIA (Roteiro Cena 4): painel do tutor + central de alertas
 from edubot.api.routes.tutorRoute import app_tutor
+# ETAPA 3: eventos de aprendizado (D.1) e consentimento/LGPD (D.5)
+from edubot.api.routes.eventRoute import app_event
+from edubot.api.routes.consentRoute import app_consent
+# ETAPA 4: revisão espaçada (D.3)
+from edubot.api.routes.reviewRoute import app_review
+# ETAPA 5: voz do EduBot (V.1 — Polly + visemas)
+from edubot.api.routes.speechRoute import app_speech
+# ETAPA 7 (Plano 2): tendência de domínio do aluno (H.1)
+from edubot.api.routes.masteryRoute import app_mastery
+# ETAPA 8 (Plano 2): gamificação (XP, nível, sequência, conquistas, ranking)
+from edubot.api.routes.gamificationRoute import app_gamification
+# ETAPA 9 (Plano 2): metas semanais (E.3)
+from edubot.api.routes.goalsRoute import app_goals
 
 # Create the Flask app and configure CORS
+# A.3: CORS restrito à(s) origem(ns) do frontend por env (antes liberava
+# qualquer origem). Default = Apache local do compose; produção define
+# EDUBOT_CORS_ORIGINS. "*" ainda é possível explicitamente para dev.
 app = Flask(__name__)
-cors = CORS(app)
+_cors_origins = os.environ.get("EDUBOT_CORS_ORIGINS", "http://localhost:8010")
+cors = CORS(app, origins=[o.strip() for o in _cors_origins.split(",") if o.strip()])
 
 logger = logging.getLogger("edubot.api")
 
@@ -56,6 +74,13 @@ app.register_blueprint(app_progress)
 app.register_blueprint(app_edubot)
 app.register_blueprint(app_personalized_ova)
 app.register_blueprint(app_tutor)
+app.register_blueprint(app_event)
+app.register_blueprint(app_consent)
+app.register_blueprint(app_review)
+app.register_blueprint(app_speech)
+app.register_blueprint(app_mastery)
+app.register_blueprint(app_gamification)
+app.register_blueprint(app_goals)
 
 # Start the application
 if __name__ == "__main__":

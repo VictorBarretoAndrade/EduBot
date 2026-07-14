@@ -32,11 +32,25 @@ from edubot.data.models.resources import Resources
 from edubot.data.models.interventions import Interventions
 from edubot.data.models.personalized_ova import PersonalizedOVA, PersonalizedOVAItem
 from edubot.data.models.alerts import Alerts
+from edubot.data.models.agent_decisions import AgentDecisions
+from edubot.data.models.learning_events import LearningEvents
+from edubot.data.models.consents import Consents
+from edubot.data.models.student_mastery import StudentMastery
+from edubot.data.models.review_schedule import ReviewSchedule
+from edubot.data.models.student_difficulty import StudentDifficulty
+from edubot.data.models.student_mastery_history import StudentMasteryHistory
+from edubot.data.models.xp_events import XpEvents
+from edubot.data.models.student_streak import StudentStreak
+from edubot.data.models.student_achievements import StudentAchievements
+from edubot.data.models.weekly_goals import WeeklyGoals
 
 ALL_MODELS = [
     Courses, Subjects, Offerings, Competencies, OVAs, Students, Questions,
     Answers, Attempts, Interactions, OVAProgress, ResourceProgress, Resources,
-    Interventions, PersonalizedOVA, PersonalizedOVAItem, Alerts,
+    Interventions, PersonalizedOVA, PersonalizedOVAItem, Alerts, AgentDecisions,
+    LearningEvents, Consents, StudentMastery, ReviewSchedule, StudentDifficulty,
+    StudentMasteryHistory, XpEvents, StudentStreak, StudentAchievements,
+    WeeklyGoals,
 ]
 
 
@@ -45,7 +59,10 @@ def _seed():
     Subjects.create(subject_id=1, subject_name="Assunto")
     Offerings.create(offering_id=1, course_id=1, subject_id=1)
     Competencies.create(competency_id=1, competency_description="Comp A", subject_id=1)
-    OVAs.create(ova_id=1, ova_name="OVA 1", subject_id=1, num_interactions=0, link="a.html")
+    # quiz_gate_perc=0: OVA do seed é "introdutório" (sem gate), para os testes
+    # que não são sobre o gate. test_quiz_gate cria um OVA com gate explícito.
+    OVAs.create(ova_id=1, ova_name="OVA 1", subject_id=1, num_interactions=0,
+                link="a.html", quiz_gate_perc=0)
     Students.create(student_id=1, ra="111", student_password="111",
                     student_name="Ana Souza", course_id=1, is_admin=False, role="aluno")
     Students.create(student_id=2, ra="222", student_password="222",
@@ -84,3 +101,12 @@ def auth():
             "Content-Type": "application/json",
         }
     return _headers
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_throttle():
+    """A.3: o rate-limit do login é estado de módulo (in-process). Zera antes de
+    cada teste para não vazar contagem entre testes."""
+    from edubot.api.auth import reset_login_throttle
+    reset_login_throttle()
+    yield

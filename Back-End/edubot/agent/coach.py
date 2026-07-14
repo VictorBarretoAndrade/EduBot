@@ -44,9 +44,18 @@ _SYSTEM = (
 
 
 def coach_message(profile, lang="pt"):
-    """Devolve (texto, model_id) ou None se a IA não estiver disponível."""
+    """Devolve (texto, model_id) ou None se a IA não estiver disponível.
+
+    D.5: a fala do coach é LLM SOBRE OS DADOS do aluno — exige consentimento
+    `ia_sobre_dados`. Sem ele, retorna None (o front usa o texto local
+    determinístico), como quando a IA não está configurada."""
     if not llm.is_real():
         return None
+    student_id = (profile.get("estudante", {}) or {}).get("student_id")
+    if student_id is not None:
+        from edubot.services.consents import has_consent
+        if not has_consent(student_id, "ia_sobre_dados"):
+            return None
 
     idioma = "inglês" if lang == "en" else "português do Brasil"
     user = (
@@ -56,6 +65,8 @@ def coach_message(profile, lang="pt"):
     )
 
     try:
+        import time
+        started = time.time()
         resp = llm.messages_create(
             system=_SYSTEM,
             messages=[{"role": "user", "content": user}],
@@ -63,6 +74,17 @@ def coach_message(profile, lang="pt"):
             model=COACH_MODEL,  # modelo barato só para a fala do coach
         )
         text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        # B.2 — toda chamada REAL entra na trilha de decisões: sem isto, o gasto
+        # do coach (endpoint que o aluno pode chamar à vontade) ficava fora do
+        # somatório do orçamento diário (budget_exceeded).
+        if text:
+            from edubot.services.decisions import record_decision
+            usage = getattr(resp, "usage", None)
+            record_decision(
+                student_id, "coach", model_id=resp.model, mock=False,
+                latency_ms=int((time.time() - started) * 1000),
+                input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                output_tokens=getattr(usage, "output_tokens", 0) or 0)
         return (text, resp.model) if text else None
     except Exception as err:  # noqa: BLE001 — degrada para o texto local
         print(f"[coach] LLM indisponível ({err}); usando texto local.")

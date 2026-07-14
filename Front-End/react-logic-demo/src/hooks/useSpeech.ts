@@ -1,23 +1,23 @@
 /*
-MELHORIA (Roteiro Cena 3) — Voz do EduBot via Web Speech API do navegador.
+V.1 — Voz do EduBot: AWS Polly neural (com lip-sync por visemas) e FALLBACK para
+a Web Speech API do navegador.
 
-Sem depender de serviço externo. Para soar MENOS robótico, escolhemos a melhor
-voz disponível no sistema (prioriza vozes "Natural"/"Neural"/"Online" — o Edge e
-o Chrome trazem vozes neurais bem naturais em pt-BR e en-US) e ajustamos a
-prosódia. Expõe `speaking` para animar a boca do avatar.
-
-Upgrade futuro: trocar por AWS Polly/ElevenLabs (mantendo speak/stop/speaking)
-para voz ainda mais natural e lip-sync por visemas — isso exige outra credencial
-(a chave da Bedrock não cobre voz).
+Mantém a interface original (`speak/stop/speaking/supported`) e adiciona
+`visemeRef` (viseme atual, p/ a boca do avatar). O fluxo:
+  1. tenta POST /edubot/speak (Polly) — toca o mp3 e agenda a timeline de visemas
+     com requestAnimationFrame contra audio.currentTime;
+  2. se a síntese não estiver disponível (sem credencial Polly / falha), cai no
+     Web Speech como antes. A Bedrock API key NÃO cobre Polly, então o fallback é
+     o caminho normal até haver credencial de voz.
 */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Viseme, apiUrl, synthesizeSpeech } from "../services/api";
+import { track } from "../services/events";
 
-// Nomes de vozes de melhor qualidade (neurais/online), por prioridade.
+// Nomes de vozes de melhor qualidade (neurais/online) para o fallback Web Speech.
 const PREFERRED = [
   "natural", "neural", "online", "google",
-  // pt-BR de qualidade
   "francisca", "antonio", "luciana", "camila", "vitória", "vitoria", "maria",
-  // en-US de qualidade
   "aria", "jenny", "guy", "michelle", "samantha"
 ];
 
@@ -25,7 +25,6 @@ function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesi
   const prefix = lang === "en" ? "en" : "pt";
   const inLang = voices.filter((v) => v.lang?.toLowerCase().startsWith(prefix));
   const pool = inLang.length ? inLang : voices;
-  // pontua pelo nome (voz "melhor" primeiro)
   const scored = pool
     .map((v) => {
       const name = v.name.toLowerCase();
@@ -40,8 +39,13 @@ export function useSpeech() {
   const supported = typeof window !== "undefined" && "speechSynthesis" in window;
   const [speaking, setSpeaking] = useState(false);
   const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+  // Viseme atual (p/ o avatar mapear a boca). "sil" = boca neutra/fechada.
+  const visemeRef = useRef<string>("sil");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  // Se o Polly já se mostrou indisponível, nem tenta de novo (vai direto ao fallback).
+  const pollyOffRef = useRef(false);
 
-  // As vozes carregam de forma assíncrona no navegador
   useEffect(() => {
     if (!supported) return;
     const load = () => {
@@ -52,7 +56,13 @@ export function useSpeech() {
     return () => window.speechSynthesis.removeEventListener?.("voiceschanged", load);
   }, [supported]);
 
-  const speak = useCallback(
+  const stopTimeline = useCallback(() => {
+    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+    visemeRef.current = "sil";
+  }, []);
+
+  const speakWebSpeech = useCallback(
     (text: string, lang: "pt" | "en") => {
       if (!supported || !text) return;
       window.speechSynthesis.cancel();
@@ -60,24 +70,100 @@ export function useSpeech() {
       utterance.lang = lang === "en" ? "en-US" : "pt-BR";
       const voice = pickVoice(voicesRef.current, lang);
       if (voice) utterance.voice = voice;
-      // Prosódia mais suave e humana (a padrão soa acelerada/plana)
       utterance.rate = 0.97;
       utterance.pitch = 1.0;
       utterance.volume = 1;
+      // Sem visemas do Polly: aproxima a boca alternando aberto/neutro.
+      let open = false;
+      const tick = () => {
+        visemeRef.current = open ? "a" : "sil";
+        open = !open;
+      };
+      const interval = window.setInterval(tick, 120);
       utterance.onstart = () => setSpeaking(true);
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
+      const finish = () => {
+        window.clearInterval(interval);
+        visemeRef.current = "sil";
+        setSpeaking(false);
+      };
+      utterance.onend = finish;
+      utterance.onerror = finish;
       window.speechSynthesis.speak(utterance);
     },
     [supported]
   );
 
+  const playPolly = useCallback(
+    (audioUrl: string, visemes: Viseme[]) => {
+      const audio = new Audio(apiUrl(audioUrl));
+      audioRef.current = audio;
+      const loop = () => {
+        const tMs = audio.currentTime * 1000;
+        // último viseme cujo tempo já passou
+        let current = "sil";
+        for (const v of visemes) {
+          if (v.time_ms <= tMs) current = v.viseme;
+          else break;
+        }
+        visemeRef.current = current;
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      audio.onplay = () => {
+        setSpeaking(true);
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      const finish = () => {
+        stopTimeline();
+        setSpeaking(false);
+      };
+      audio.onended = finish;
+      audio.onerror = finish;
+      void audio.play().catch(finish);
+    },
+    [stopTimeline]
+  );
+
+  const speak = useCallback(
+    async (text: string, lang: "pt" | "en") => {
+      if (!text) return;
+      // métrica V.1: cliques em "ouvir o EduBot" (evento played sobre speech)
+      track("played", "session", null, { kind: "speech", lang });
+      if (!pollyOffRef.current) {
+        try {
+          const r = await synthesizeSpeech(text, lang);
+          if (r.available && r.audio_url) {
+            if (supported) window.speechSynthesis.cancel();
+            playPolly(r.audio_url, r.visemes ?? []);
+            return;
+          }
+          pollyOffRef.current = true; // indisponível: não tenta mais nesta sessão
+        } catch {
+          pollyOffRef.current = true;
+        }
+      }
+      speakWebSpeech(text, lang);
+    },
+    [playPolly, speakWebSpeech, supported]
+  );
+
   const stop = useCallback(() => {
     if (supported) window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    stopTimeline();
     setSpeaking(false);
-  }, [supported]);
+  }, [supported, stopTimeline]);
 
-  useEffect(() => () => { if (supported) window.speechSynthesis.cancel(); }, [supported]);
+  useEffect(
+    () => () => {
+      if (supported) window.speechSynthesis.cancel();
+      if (audioRef.current) audioRef.current.pause();
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    },
+    [supported]
+  );
 
-  return { speak, stop, speaking, supported };
+  return { speak, stop, speaking, supported, visemeRef };
 }

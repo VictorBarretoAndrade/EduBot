@@ -213,7 +213,13 @@ def tutor_reply(titulo, context, messages, lang="pt"):
                 messages=[{"role": m["role"], "content": m["content"]} for m in messages],
             )
             reply = "".join(b.text for b in resp.content if b.type == "text")
-            return {"reply": reply, "model_id": resp.model, "mock": False, "sources": sources}
+            usage = getattr(resp, "usage", None)
+            # B.2: a rota registra a decisão (metadados + tokens) — o tutor-chat
+            # é chamada REAL paga e precisa contar no orçamento diário.
+            return {"reply": reply, "model_id": resp.model, "mock": False,
+                    "sources": sources,
+                    "input_tokens": getattr(usage, "input_tokens", 0) or 0,
+                    "output_tokens": getattr(usage, "output_tokens", 0) or 0}
         except Exception as err:  # noqa: BLE001 — degrada graciosamente para o mock
             print(f"[tutor] LLM real falhou ({err}); usando mock.")
 

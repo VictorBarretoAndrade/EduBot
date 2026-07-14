@@ -1,7 +1,8 @@
-import { Award, BarChart3, Bell, BookOpen, CalendarDays, Grid2X2, Languages, LogOut, MessageCircle, Search, Stars, TrendingUp, Users } from "lucide-react";
+import { Award, BarChart3, Bell, BookOpen, CalendarDays, Grid2X2, Languages, LogOut, MessageCircle, Search, Stars, TrendingUp, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { StudentProfile } from "../services/api";
 import { useLanguage, useT } from "../i18n";
+import { useInterventions } from "../hooks/useInterventions";
 import { EduBotLogo } from "./brand/EduBotLogo";
 
 interface SidebarProps {
@@ -131,7 +132,8 @@ export const Topbar = ({
     setQuery("");
   };
 
-  const notifications = profile.historico_intervencoes;
+  // E.2 — sino lê a MESMA fonte do card do dashboard (não lidas) via hook único.
+  const { items: notifications, dismiss } = useInterventions();
 
   return (
     <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-line bg-slate-50/90 px-5 backdrop-blur">
@@ -198,11 +200,17 @@ export const Topbar = ({
                 {notifications.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-muted">{t("Nenhum aviso por enquanto.", "No notices yet.")}</p>
                 ) : (
-                  notifications.map((item, index) => (
-                    <div key={`${item.data}-${index}`} className="border-b border-line px-4 py-3 last:border-0">
+                  notifications.map((item) => (
+                    <div key={item.intervention_id} className="border-b border-line px-4 py-3 last:border-0">
                       <div className="flex items-center justify-between text-xs text-muted">
                         <span className="font-bold uppercase tracking-wide">{item.tipo}</span>
-                        <span>{item.data}</span>
+                        <button
+                          onClick={() => dismiss(item.intervention_id)}
+                          className="text-muted transition hover:text-ink"
+                          aria-label={t("Dispensar", "Dismiss")}
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                       {item.descricao && <p className="mt-1 text-sm text-slate-700">{item.descricao}</p>}
                     </div>

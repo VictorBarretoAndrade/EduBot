@@ -234,20 +234,24 @@ class BedrockClientMock:
 _client = BedrockClientMock()
 
 
-def get_recommendation(profile, lang="pt"):
+def get_recommendation(profile, lang="pt", allow_llm=True):
     """Ponto de entrada do agente: perfil do aluno -> recomendação estruturada.
 
     `lang` (Fase 4 — A12): idioma dos campos voltados ao aluno, tanto no mock
     (regras bilíngues) quanto na LLM real (instrução no system prompt).
+    `allow_llm` (D.5): quando False (aluno sem consentimento `ia_sobre_dados`),
+    o agente NÃO chama a LLM sobre os dados desse aluno — roda só as regras
+    determinísticas (o mesmo mock/template). O fallback já existe; aqui é só
+    escolher o ramo.
     O fluxo (montar prompts -> invocar modelo -> parsear o JSON do texto da
     resposta) é exatamente o que será usado com o Bedrock real.
     """
     system_prompt = build_system_prompt(lang)
     user_prompt = build_user_prompt(profile)
 
-    # Caminho REAL (Bedrock/Anthropic) quando configurado. O system prompt já
-    # instrui o formato JSON da recomendação; o parsing é o mesmo do mock.
-    if llm.is_real():
+    # Caminho REAL (Bedrock/Anthropic) quando configurado E consentido (D.5). O
+    # system prompt já instrui o formato JSON; o parsing é o mesmo do mock.
+    if allow_llm and llm.is_real():
         try:
             resp = llm.messages_create(
                 system=system_prompt,

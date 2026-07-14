@@ -118,3 +118,65 @@ def require_auth(view):
         g.student = student
         return view(*args, **kwargs)
     return wrapper
+
+
+def is_staff(student):
+    """True para tutor/admin — fonte única do papel de gestão pedagógica (A15).
+
+    Antes essa lógica vivia solta em tutorRoute (`_is_tutor`); centralizá-la aqui
+    evita divergência entre rotas que precisam distinguir aluno de tutor."""
+    role = getattr(student, "role", "aluno") or "aluno"
+    return role in ("tutor", "admin") or bool(getattr(student, "is_admin", False))
+
+
+def require_roles(*allowed):
+    """Decorator: exige token válido E papel em `allowed` (ou is_admin) (A.3).
+
+    Uso: `@require_roles("tutor", "admin")`. Falha com 401 (sem token) ou 403
+    (papel insuficiente). Expõe g.student como o require_auth."""
+    def deco(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            student = get_current_student()
+            if student is None:
+                return json.dumps({"Error": "Não autenticado"}), 401
+            g.student = student
+            role = getattr(student, "role", "aluno") or "aluno"
+            if role in allowed or bool(getattr(student, "is_admin", False)):
+                return view(*args, **kwargs)
+            return json.dumps({"Error": "Acesso restrito"}), 403
+        return wrapper
+    return deco
+
+
+# ---------------------------------------------------------------------------
+# Rate-limit do login (A.3). In-process, suficiente para 1 réplica de protótipo.
+# Guarda contra força bruta: o RA é enumerável e a senha do seed é o próprio RA
+# até o primeiro login. Para multi-réplica, mover para um store compartilhado
+# (Redis) — documentado no plano.
+# ---------------------------------------------------------------------------
+import time as _time
+from collections import defaultdict, deque
+
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("EDUBOT_LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_WINDOW_SECONDS = int(os.environ.get("EDUBOT_LOGIN_WINDOW_SECONDS", "60"))
+_login_hits = defaultdict(deque)
+
+
+def login_throttled(ra, ip):
+    """True se (ra, ip) já excedeu LOGIN_MAX_ATTEMPTS na janela. Registra a
+    tentativa atual quando ainda dentro do limite."""
+    key = f"{ra}|{ip}"
+    now = _time.time()
+    hits = _login_hits[key]
+    while hits and now - hits[0] > LOGIN_WINDOW_SECONDS:
+        hits.popleft()
+    if len(hits) >= LOGIN_MAX_ATTEMPTS:
+        return True
+    hits.append(now)
+    return False
+
+
+def reset_login_throttle():
+    """Limpa o estado do rate-limit (usado em testes)."""
+    _login_hits.clear()

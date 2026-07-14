@@ -5,10 +5,14 @@ Visão de turma + Central de Alertas preventivos. O botão "Analisar turma" roda
 as regras do EduBot no servidor (POST /tutor/evaluate) e gera os alertas dos
 alunos em risco — o beat "o EduBot envia o plano de retomada e alerta o tutor".
 */
-import { AlertTriangle, Bell, GraduationCap, LoaderCircle, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, Bell, Check, GraduationCap, LoaderCircle, RefreshCw, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { TurmaStudent, TutorAlert, evaluateTurma, getTurma, getTutorAlerts } from "../services/api";
+import { TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts } from "../services/api";
 import { useToast } from "./ui/Toast";
+import { MasteryHeatmap } from "./MasteryHeatmap";
+import { ApprovalQueue } from "./ApprovalQueue";
+import { AgentKpi } from "./AgentKpi";
+import { EngagementPanel } from "./EngagementPanel";
 import { useT } from "../i18n";
 
 const severityStyle: Record<string, string> = {
@@ -54,6 +58,15 @@ export const TutorPanel = () => {
     } finally {
       setEvaluating(false);
     }
+  };
+
+  // A.4: marca o alerta como tratado. Atualiza o estado local (read=true) para
+  // sair da contagem de abertos sem recarregar o painel inteiro.
+  const treat = (alertId: number) => {
+    setAlertas((current) => current.map((a) => (a.alert_id === alertId ? { ...a, read: true } : a)));
+    ackTutorAlert(alertId).catch(() =>
+      toast.error(t("Não foi possível marcar o alerta como tratado.", "Couldn't mark the alert as handled."))
+    );
   };
 
   if (loading) {
@@ -102,6 +115,18 @@ export const TutorPanel = () => {
           </div>
         </div>
       </div>
+
+      {/* B.5 — fila de aprovação das ações propostas pelo agente */}
+      <ApprovalQueue />
+
+      {/* B.6 — KPI do agente (taxa de aceitação por tipo) */}
+      <AgentKpi />
+
+      {/* E.4 — engajamento da turma + validação antes×depois da gamificação */}
+      <EngagementPanel />
+
+      {/* D.6 — heatmap turma × competência (domínio por BKT) */}
+      <MasteryHeatmap />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         {/* Tabela da turma */}
@@ -170,12 +195,26 @@ export const TutorPanel = () => {
               </p>
             )}
             {alertas.map((al) => (
-              <div key={al.alert_id} className={`rounded-[8px] border p-3 ${severityStyle[al.severity] ?? severityStyle.baixa}`}>
+              <div key={al.alert_id} className={`rounded-[8px] border p-3 ${al.read ? "border-line bg-slate-50 text-muted" : severityStyle[al.severity] ?? severityStyle.baixa}`}>
                 <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide">
                   <span>{al.type.replace(/_/g, " ")}</span>
                   <span>{al.severity}</span>
                 </div>
                 <p className="mt-1 text-sm font-medium">{al.message}</p>
+                <div className="mt-2 flex justify-end">
+                  {al.read ? (
+                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                      <Check size={14} /> {t("Tratado", "Handled")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => treat(al.alert_id)}
+                      className="flex items-center gap-1 rounded-[6px] border border-current px-2 py-1 text-xs font-semibold transition hover:bg-white/40"
+                    >
+                      <Check size={14} /> {t("Marcar como tratado", "Mark as handled")}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

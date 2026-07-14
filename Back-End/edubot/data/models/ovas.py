@@ -16,4 +16,7 @@ class OVAs(BaseModel):
     num_interactions = IntegerField()
     # HTML link to the OVA page
     link = TextField()
+    # U.1: % mínimo de leitura para liberar o quiz do módulo (gate pedagógico).
+    # 0 = sem gate. Validado no backend (services/quiz.quiz_unlocked).
+    quiz_gate_perc = IntegerField(default=70)
     

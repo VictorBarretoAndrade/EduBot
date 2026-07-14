@@ -22,6 +22,7 @@ import {
   saveResourceProgress
 } from "../../services/api";
 import { OvaContent, fetchOvaContent, ovaContextText } from "../../services/ovaContent";
+import { track } from "../../services/events";
 import { AudioPlayer } from "../players/AudioPlayer";
 import { MediaProgress, VideoPlayer } from "../players/VideoPlayer";
 import { useToast } from "../ui/Toast";
@@ -36,6 +37,11 @@ const SYNC_INTERVAL_MS = 15000;
 // Página que cabe na viewport (não rola) conta como lida após um tempo mínimo
 // de permanência (A6) — sem isso, um OVA curto nunca completava (scroll ficava 0).
 const SHORT_PAGE_MIN_SECONDS = 20;
+// A.5: tempo de leitura HONESTO. O ticker antes somava 1s/segundo enquanto o
+// componente estivesse montado — aba em segundo plano ou aluno ausente contavam
+// como leitura (a métrica central superavaliava). Agora um segundo só conta se a
+// aba está visível E houve atividade (scroll/mouse/teclado) nos últimos N seg.
+const IDLE_LIMIT_SECONDS = 180;
 
 interface OvaInfo {
   ova_id: number;
@@ -90,6 +96,9 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
   // estudo) não gerava sinal. Agora toda sessão de leitura marca presença.
   useEffect(() => {
     registerInteraction(ova.ova_id, "ova_opened").catch(() => undefined);
+    // D.1: mesmo sinal no schema unificado de eventos (verbo `opened`). Convive
+    // com `interactions` até a aposentadoria (migration futura).
+    track("opened", "ova", ova.ova_id);
   }, [ova.ova_id]);
 
   // Rastreio de leitura (A1/A6/B3).
@@ -103,6 +112,10 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
     const unsyncedRef = { current: 0 };   // segundos ainda não enviados (delta)
     const sessionSecondsRef = { current: 0 }; // segundos desta sessão (p/ página curta)
     const maxScrollRef = { current: 0 };
+    // A.5: marca a última atividade do aluno (agora); o ticker só conta se a
+    // permanência foi recente e a aba está visível.
+    const lastActivityRef = { current: Date.now() };
+    const markActivity = () => { lastActivityRef.current = Date.now(); };
 
     const contentScrollable = () => {
       const el = contentRef.current;
@@ -151,10 +164,16 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
     };
 
     const onScroll = () => {
+      markActivity();
       if (contentScrollable()) bumpProgress(readingPerc());
     };
 
     const ticker = window.setInterval(() => {
+      // A.5: só conta o segundo se a aba está visível E o aluno esteve ativo
+      // recentemente (não conta aba em background nem ausência prolongada).
+      const hidden = document.visibilityState === "hidden";
+      const idle = (Date.now() - lastActivityRef.current) / 1000 > IDLE_LIMIT_SECONDS;
+      if (hidden || idle) return;
       sessionSecondsRef.current += 1;
       unsyncedRef.current += 1;
       // Em página curta o progresso é por tempo (não há scroll a medir)
@@ -164,8 +183,17 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
     }, 1000);
     const syncer = window.setInterval(() => persist(false), SYNC_INTERVAL_MS);
     const onPageHide = () => persist(false, true);
+    // A.5: ao voltar a ficar visível, considera atividade e faz flush; ao ocultar,
+    // sincroniza o que já foi lido (não perde delta ao trocar de aba).
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") markActivity();
+      else persist(false);
+    };
+    const activityEvents = ["mousemove", "keydown", "pointerdown"];
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    activityEvents.forEach((ev) => window.addEventListener(ev, markActivity, { passive: true }));
     onScroll();
 
     return () => {
@@ -173,6 +201,8 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
       window.clearInterval(syncer);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      activityEvents.forEach((ev) => window.removeEventListener(ev, markActivity));
       persist(true, true);
     };
   }, [ova.ova_id, onTracked]);

@@ -20,6 +20,10 @@ export const EduBotAvatar = ({ size = 120, speaking = false }: EduBotAvatarProps
       .eb-float { animation: ebFloat 3.2s ease-in-out infinite; }
       .eb-eye { transform-box: fill-box; transform-origin: center; animation: ebBlink 4.5s ease-in-out infinite; }
       .eb-mouth-talk { transform-box: fill-box; transform-origin: center; animation: ebTalk 0.28s ease-in-out infinite; }
+      /* U.7: respeita quem pediu menos movimento — desliga flutuar/piscar/falar. */
+      @media (prefers-reduced-motion: reduce) {
+        .eb-float, .eb-eye, .eb-mouth-talk { animation: none !important; }
+      }
     `}</style>
     <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EduBot">
       {/* antena */}

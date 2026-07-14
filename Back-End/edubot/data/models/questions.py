@@ -23,3 +23,6 @@ class Questions(BaseModel):
     ova_id = ForeignKeyField(OVAs, backref="questions", on_delete="cascade", on_update="cascade")
     # Foreign key referencing the competency to which the question belongs
     competency_id = ForeignKeyField(Competencies, backref="questions", on_delete="cascade", on_update="cascade")
+    # D.4 — nível de dificuldade: 1 fácil · 2 média · 3 difícil. Alimenta o pool
+    # adaptativo de /question/ova (dificuldade vs. domínio da competência).
+    difficulty = IntegerField(default=2)

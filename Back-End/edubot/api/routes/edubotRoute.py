@@ -7,8 +7,6 @@
 # funcionar como histórico de intervenções do EduBot (consumido pelo painel e
 # devolvido dentro do próprio perfil em historico_intervencoes).
 
-# Add parent directories to the path to enable imports from submodules
-import sys, os
 
 
 from flask import Blueprint, request, g
@@ -26,6 +24,9 @@ from edubot.api.auth import require_auth
 from edubot.api.http import get_lang
 from edubot.i18n import tr
 from edubot.services.student_context import build_student_profile
+from edubot.services.decisions import record_decision
+from edubot.services.events import emit as emit_event
+from edubot.services.consents import has_consent
 from edubot.agent import get_recommendation
 from edubot.agent.tutor import tutor_reply
 from edubot.agent.external_sources import search_external
@@ -43,8 +44,10 @@ def edubot_recommendation():
         # 1. Monta o perfil completo do aluno logado (contexto 4.2)
         profile = build_student_profile(g.student, lang=lang)
 
-        # 2. Chama o agente no idioma do aluno (Fase 4 — A12)
-        recommendation = get_recommendation(profile, lang=lang)
+        # 2. Chama o agente no idioma do aluno (Fase 4 — A12). D.5: sem
+        #    consentimento de IA sobre dados, roda só as regras (allow_llm=False).
+        allow_llm = has_consent(g.student, "ia_sobre_dados")
+        recommendation = get_recommendation(profile, lang=lang, allow_llm=allow_llm)
 
         # 3. Persiste como intervenção para compor o histórico — deduplicado (A8).
         #    O endpoint é um GET consultado a cada clique do aluno; sem dedup,
@@ -71,6 +74,22 @@ def edubot_recommendation():
                 description=recommendation["mensagem_aluno"],
                 result="pendente"
             )
+
+        # B.2 — registra a decisão sob demanda (digest minimizado, sem RA/nome).
+        record_decision(
+            g.student, "on_demand",
+            input_digest={
+                "dias_sem_acesso": profile["dias_sem_acesso"],
+                "percentual_consumido": profile["recursos"]["percentual_consumido"],
+                "taxa_erro_quiz": profile["quiz"]["taxa_erro"],
+                "tipo": recommendation.get("tipo"),
+                "prioridade": recommendation.get("prioridade"),
+                # P.1/P.3 — formato proposto (sensor de preferência via B.6).
+                "formato_sugerido": recommendation.get("formato_preferido"),
+            },
+            model_id=recommendation.get("model_id"),
+            mock=recommendation.get("mock", True),
+            actions=[{"type": "intervention", "tipo": recommendation.get("tipo")}])
 
         return json.dumps({
             "recommendation": recommendation,
@@ -125,6 +144,33 @@ def edubot_tutor_chat():
         messages=messages,
         lang=lang,
     )
+
+    # D.1 — `asked_tutor` é o sinal diagnóstico mais rico (é o que torna a
+    # intervenção do redator específica, B.4). Emitido AQUI no backend: o texto
+    # da pergunta só é persistido com consentimento `ia_sobre_dados` — a
+    # minimização acontece dentro de events.emit (D.5), não na UI.
+    emit_event(g.student, "asked_tutor", "ova", ova_id,
+               text=messages[-1]["content"])
+
+    # G.1 (Plano 2) — perguntar ao tutor é esforço (teto 2/dia): concede XP e
+    # conta como dia de estudo. Best-effort, flag-guarded.
+    try:
+        from edubot.services.gamification import award, register_daily_activity
+        register_daily_activity(g.student.student_id)
+        award(g.student.student_id, "pergunta_ao_tutor", "ova", ova_id)
+    except Exception:
+        pass
+
+    # B.2 — chamada REAL ao LLM conta no orçamento diário; só metadados/tokens
+    # (o conteúdo do chat vai para os eventos acima, não para a trilha).
+    if not result.get("mock", True):
+        record_decision(
+            g.student, "chat",
+            input_digest={"ova_id": ova_id},
+            model_id=result.get("model_id"), mock=False,
+            input_tokens=result.get("input_tokens", 0),
+            output_tokens=result.get("output_tokens", 0))
+
     return json.dumps({
         "reply": result["reply"],
         "ova_id": ova_id,
@@ -220,6 +266,10 @@ def edubot_intervention_ack():
             return json.dumps({"Error": "Intervenção não encontrada"}), 404
         it.result = "lida"
         it.save()
+        # D.1 — evento discreto: o aluno reconheceu/dispensou a intervenção. É o
+        # par do `received_intervention` (permite medir aceite/dispensa em B.6).
+        emit_event(g.student, "dismissed", "intervention", it.intervention_id,
+                   tipo=it.type, result="lida")
         return json.dumps({"ok": True, "intervention_id": intervention_id}), 200
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500

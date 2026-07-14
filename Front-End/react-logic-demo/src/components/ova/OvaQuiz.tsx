@@ -5,9 +5,9 @@ make.js fazia no leitor legado, dentro da seção "Conclusão").
 As questões vêm de POST /question/ova (SEM gabarito) e a correção é server-side
 em POST /question/answer — mesma garantia anti-fraude do componente Quiz da aba.
 */
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Lock, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { OvaQuestion, answerQuestion, getOVAQuestions, registerInteraction } from "../../services/api";
+import { OvaQuestion, QuizLock, answerQuestion, getOVAQuestions, quizLockFromError, registerInteraction } from "../../services/api";
 import { useToast } from "../ui/Toast";
 import { useT } from "../../i18n";
 
@@ -25,20 +25,33 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [feedback, setFeedback] = useState<Record<number, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  // U.1: quiz do módulo bloqueado até ler o conteúdo (gate do backend).
+  const [lock, setLock] = useState<QuizLock | null>(null);
   // Última alternativa submetida por questão — evita reenviar a mesma resposta a
   // cada clique em "Verificar", que gravava tentativas em dobro no servidor (A7).
   const submittedRef = useRef<Record<number, number>>({});
+  // D.1: instante em que as questões carregaram — base do response_ms (esforço).
+  const loadedAtRef = useRef<number>(Date.now());
   const toast = useToast();
 
   useEffect(() => {
     let active = true;
-    getOVAQuestions(ovaId, studentId)
-      .then((data) => active && setQuestions(data))
-      .catch(() => active && setQuestions([]));
+    getOVAQuestions(ovaId)
+      .then((data) => {
+        if (!active) return;
+        setQuestions(data);
+        setLock(null);
+        loadedAtRef.current = Date.now();
+      })
+      .catch((err) => {
+        if (!active) return;
+        setQuestions([]);
+        setLock(quizLockFromError(err));
+      });
     return () => {
       active = false;
     };
-  }, [ovaId, studentId]);
+  }, [ovaId]);
 
   const verify = async () => {
     setSubmitting(true);
@@ -51,7 +64,8 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
       // Só reenvia se a resposta mudou desde a última submissão (A7)
       if (submittedRef.current[question.question_id] === selected) continue;
       try {
-        const graded = await answerQuestion(studentId, question.question_id, LETTERS[selected]);
+        const responseMs = Date.now() - loadedAtRef.current;
+        const graded = await answerQuestion(question.question_id, LETTERS[selected], responseMs);
         next[question.question_id] = graded.is_correct;
         submittedRef.current[question.question_id] = selected;
         submittedAny = true;
@@ -68,6 +82,23 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
       onTracked();
     }
   };
+
+  if (lock) {
+    return (
+      <div className="flex items-start gap-3 rounded-[8px] border border-amber-200 bg-amber-50 p-5 text-amber-800">
+        <Lock size={20} className="mt-0.5 shrink-0" />
+        <div>
+          <p className="font-semibold">{t("Quiz bloqueado", "Quiz locked")}</p>
+          <p className="mt-1 text-sm">
+            {t(
+              `Continue a leitura até ${lock.gate}% para liberar o quiz — você está em ${lock.perc}%.`,
+              `Keep reading to ${lock.gate}% to unlock the quiz — you're at ${lock.perc}%.`
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (questions.length === 0) {
     return <p className="text-muted">{t("Nenhuma questão cadastrada para este OVA.", "No questions registered for this OVA.")}</p>;
@@ -115,6 +146,7 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
             </div>
             {graded !== undefined && (
               <p
+                role="status"
                 className={`mt-3 flex items-center gap-2 font-semibold ${
                   graded ? "text-emerald-700" : "text-rose-700"
                 }`}

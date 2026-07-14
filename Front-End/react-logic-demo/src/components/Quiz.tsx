@@ -4,13 +4,17 @@ navegador: as questões vêm de POST /question/ova (SEM o gabarito) e cada
 resposta é corrigida pelo SERVIDOR via POST /question/answer, que também
 registra a tentativa (alimentando a regra "errou > 50% do quiz" do EduBot).
 */
+import { Trophy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   OvaQuestion,
+  QuizLock,
   StudentProfile,
   answerQuestion,
+  getChallengeQuestions,
   getOVAQuestions,
   getSession,
+  quizLockFromError,
   registerInteraction
 } from "../services/api";
 import { useToast } from "./ui/Toast";
@@ -27,6 +31,8 @@ interface QuizResult {
   correct: number;
   wrong: number;
   score: number;
+  xp: number;                 // G.6 — XP de esforço ganho ao finalizar
+  achievements: string[];     // conquistas novas desbloqueadas
 }
 
 export const Quiz = ({ profile, onTracked }: QuizProps) => {
@@ -37,24 +43,48 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
   const [feedback, setFeedback] = useState<Record<number, boolean>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // U.1: quando o quiz está travado (leitura insuficiente), o backend devolve
+  // 403 com gate/perc — mostramos o motivo em vez de uma lista vazia.
+  const [lock, setLock] = useState<QuizLock | null>(null);
+  // R.3: modo desafio (só questões difíceis de competência dominada).
+  const [challenge, setChallenge] = useState(false);
+  const [challengeLocked, setChallengeLocked] = useState(false);
 
   const session = getSession();
   const toast = useToast();
   // Última alternativa submetida por questão — evita reenviar a mesma resposta
   // a cada clique em "Finalizar", que duplicava as tentativas no servidor (A7).
   const submittedRef = useRef<Record<number, number>>({});
+  // D.1: instante em que as questões carregaram — base do response_ms (esforço).
+  const loadedAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!activeOvaId || !session) return;
     setAnswers({});
     setFeedback({});
     setResult(null);
+    setLock(null);
+    setChallengeLocked(false);
     submittedRef.current = {};
-    getOVAQuestions(activeOvaId, session.student_id)
-      .then(setQuestions)
-      .catch(() => setQuestions([]));
+    const fetcher = challenge ? getChallengeQuestions(activeOvaId) : getOVAQuestions(activeOvaId);
+    fetcher
+      .then((qs) => {
+        setQuestions(qs);
+        setLock(null);
+        loadedAtRef.current = Date.now();
+      })
+      .catch((err) => {
+        setQuestions([]);
+        // AUDITORIA P2 (R.3): o gate de leitura (U.1) TAMBÉM devolve 403 — o
+        // corpo distingue: quiz_locked traz {gate, perc}; challenge_locked não.
+        // Sem essa checagem, um quiz não lido em modo desafio mostrava a
+        // mensagem errada ("domine a competência" em vez de "leia o conteúdo").
+        const gateLock = quizLockFromError(err);
+        if (gateLock) setLock(gateLock);
+        else if (challenge && (err as { status?: number }).status === 403) setChallengeLocked(true);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeOvaId]);
+  }, [activeOvaId, challenge]);
 
   const finishQuiz = async () => {
     if (!session) return;
@@ -62,6 +92,8 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
     const newFeedback: Record<number, boolean> = { ...feedback };
     let failed = false;
     let submittedAny = false;
+    let xpGained = 0;
+    const newAchievements: string[] = [];
 
     // Cada questão é corrigida pelo backend — o gabarito nunca chega ao navegador
     for (const question of questions) {
@@ -70,10 +102,16 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
       // Só reenvia se a resposta mudou desde a última submissão (A7)
       if (submittedRef.current[question.question_id] === selectedIndex) continue;
       try {
-        const graded = await answerQuestion(session.student_id, question.question_id, selectedLetter);
+        const responseMs = Date.now() - loadedAtRef.current;
+        const graded = await answerQuestion(question.question_id, selectedLetter, responseMs);
         newFeedback[question.question_id] = graded.is_correct;
         submittedRef.current[question.question_id] = selectedIndex;
         submittedAny = true;
+        // G.6 — acumula o XP de esforço e as conquistas devolvidas pelo backend
+        if (graded.gamification) {
+          xpGained += graded.gamification.xp_awarded;
+          newAchievements.push(...graded.gamification.achievements);
+        }
       } catch (error) {
         console.error(error);
         failed = true;
@@ -87,7 +125,9 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
     setResult({
       correct,
       wrong: questions.length - correct,
-      score: Number(((correct / Math.max(questions.length, 1)) * 10).toFixed(1))
+      score: Number(((correct / Math.max(questions.length, 1)) * 10).toFixed(1)),
+      xp: xpGained,
+      achievements: newAchievements
     });
     setSubmitting(false);
     if (submittedAny) {
@@ -115,6 +155,17 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
             </button>
           ))}
         </div>
+
+        {/* R.3 — modo desafio: questões difíceis de competência dominada */}
+        <button
+          onClick={() => setChallenge((c) => !c)}
+          aria-pressed={challenge}
+          className={`mt-3 flex h-10 items-center gap-2 rounded-[8px] border px-4 font-semibold transition ${
+            challenge ? "border-amber-400 bg-amber-50 text-amber-800" : "border-line bg-white text-muted hover:bg-slate-50"
+          }`}
+        >
+          <Trophy size={18} /> {challenge ? t("Modo desafio ativado", "Challenge mode on") : t("Modo desafio 🏆", "Challenge mode 🏆")}
+        </button>
 
         <div className="mt-6 space-y-5">
           {questions.map((question, index) => {
@@ -153,14 +204,36 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
                   ))}
                 </div>
                 {graded !== undefined && (
-                  <p className={`mt-3 font-semibold ${graded ? "text-emerald-700" : "text-rose-700"}`}>
+                  <p role="status" className={`mt-3 font-semibold ${graded ? "text-emerald-700" : "text-rose-700"}`}>
                     {graded ? t("Correta!", "Correct!") : t("Incorreta.", "Incorrect.")}
                   </p>
                 )}
               </div>
             );
           })}
-          {questions.length === 0 && (
+          {lock && (
+            <div className="rounded-[8px] border border-amber-200 bg-amber-50 p-6 text-amber-800">
+              <p className="font-semibold">
+                {t("Quiz bloqueado", "Quiz locked")}
+              </p>
+              <p className="mt-1 text-sm">
+                {t(
+                  `Leia ao menos ${lock.gate}% do conteúdo deste OVA para liberar o quiz — você está em ${lock.perc}%.`,
+                  `Read at least ${lock.gate}% of this OVA's content to unlock the quiz — you're at ${lock.perc}%.`
+                )}
+              </p>
+            </div>
+          )}
+          {challengeLocked && (
+            <div className="rounded-[8px] border border-amber-200 bg-amber-50 p-6 text-amber-800">
+              <p className="flex items-center gap-2 font-semibold"><Trophy size={18} /> {t("Desafio bloqueado", "Challenge locked")}</p>
+              <p className="mt-1 text-sm">
+                {t("Domine uma competência deste módulo (chegue a 80%) para desbloquear as questões-desafio.",
+                   "Master a competency in this module (reach 80%) to unlock the challenge questions.")}
+              </p>
+            </div>
+          )}
+          {!lock && !challengeLocked && questions.length === 0 && (
             <p className="rounded-[8px] border border-line bg-white p-6 text-muted">
               {t("Nenhuma questão cadastrada para este OVA.", "No questions registered for this OVA.")}
             </p>
@@ -196,6 +269,18 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
                 <div className="text-2xl font-bold">{result.wrong}</div>
               </div>
             </div>
+            {/* G.6 — micro-momento: XP de esforço ganho + conquistas novas */}
+            {result.xp > 0 && (
+              <div role="status" className="rounded-[8px] bg-amber-50 p-4 text-center text-amber-800">
+                <div className="text-2xl font-bold">+{result.xp} XP</div>
+                <div className="text-sm">{t("pelo seu esforço nesta rodada", "for your effort this round")}</div>
+              </div>
+            )}
+            {result.achievements.length > 0 && (
+              <div role="status" className="rounded-[8px] bg-indigo-50 p-4 text-center text-indigo-800">
+                🏆 {t("Conquista desbloqueada!", "Achievement unlocked!")}
+              </div>
+            )}
             <p className="text-sm text-muted">
               {t("As tentativas foram registradas. Visite o", "Your attempts were recorded. Visit the")}{" "}
               <strong>{t("Professor Mediador", "Mediating Professor")}</strong>{" "}

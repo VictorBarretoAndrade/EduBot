@@ -6,6 +6,7 @@ pelo api.ts e enviado em todas as chamadas seguintes.
 import { LoaderCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { ApiError, Session, login } from "../services/api";
+import { track } from "../services/events";
 import { useT } from "../i18n";
 import { EduBotLogo } from "./brand/EduBotLogo";
 
@@ -25,7 +26,10 @@ export const Login = ({ onLogged }: LoginProps) => {
     setError(null);
     setLoading(true);
     try {
-      onLogged(await login(ra, password));
+      const session = await login(ra, password);
+      // D.1: evento de sessão iniciada (o token já foi armazenado por login()).
+      track("logged_in", "session", session.student_id);
+      onLogged(session);
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 401

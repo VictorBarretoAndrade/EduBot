@@ -4,7 +4,7 @@ leitor legado). Estado de slide em useState; setas e bolinhas de navegação no
 estilo do design system.
 */
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { KeyboardEvent, useState } from "react";
 import { CarouselItem } from "../../services/ovaContent";
 import { useT } from "../../i18n";
 
@@ -28,8 +28,22 @@ export const Carousel = ({ items, onInteract }: CarouselProps) => {
 
   const item = items[index];
 
+  // U.7: navegação por teclado (setas) quando o carrossel tem foco.
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (items.length < 2) return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+  };
+
   return (
-    <div className="rounded-[8px] border border-line bg-slate-50 p-5">
+    <div
+      className="rounded-[8px] border border-line bg-slate-50 p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      role="group"
+      aria-roledescription={t("carrossel", "carousel")}
+      aria-label={t(`Item ${index + 1} de ${items.length}`, `Item ${index + 1} of ${items.length}`)}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+    >
       <div className="grid items-center gap-5 md:grid-cols-2">
         {item.image && (
           <img

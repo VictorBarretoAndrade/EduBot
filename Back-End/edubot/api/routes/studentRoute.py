@@ -8,7 +8,7 @@ import json
 from edubot.data.models.students import Students
 
 # MELHORIA (4.2): autenticação + perfil completo do aluno logado
-from edubot.api.auth import require_auth
+from edubot.api.auth import require_auth, require_roles
 from edubot.api.http import get_lang
 from edubot.services.student_context import build_student_profile
 
@@ -30,8 +30,11 @@ def student_me():
         return json.dumps({"Error": f"{err}"}), 500
 
 # Given a course id, return all the students of this course
+# A.3: expõe nome + ID de alunos (dado pessoal — LGPD). Restrito a tutor/admin;
+# antes era anônimo.
 @app_student.route("/student/course/<int:course_id>", methods=["GET"])
 @cross_origin()
+@require_roles("tutor", "admin")
 def student_by_course(course_id):
     if request.method == "GET":
         try:

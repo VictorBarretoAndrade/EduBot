@@ -1,5 +1,3 @@
-# Add parent directories to the path to enable imports from submodules
-import sys, os
 
 
 # Import necessary libraries
@@ -15,7 +13,9 @@ from edubot.data.models.courses import Courses
 
 # MELHORIA (4.2): token de sessão emitido no login (ver api/auth.py)
 # Fase 4d (A5): verificação por hash PBKDF2 + upgrade-on-login do seed legado
-from edubot.api.auth import generate_token, hash_password, is_hashed, verify_password
+# A.3: rate-limit contra força bruta (RA enumerável, senha do seed = RA)
+from edubot.api.auth import (generate_token, hash_password, is_hashed,
+                             login_throttled, verify_password)
 
 # Create a route blueprint as a reusable component
 app_login = Blueprint('login', __name__)
@@ -29,7 +29,13 @@ def login():
         try:
             # Retrieve the JSON payload sent by the front-end
             login_data = get_payload()
-            
+
+            # A.3: rate-limit por (RA, IP). Bloqueia força bruta antes de tocar o
+            # banco. 429 com Retry-After.
+            ra = str(login_data.get("ra", ""))
+            if login_throttled(ra, request.remote_addr or "?"):
+                return json.dumps({"Error": "Muitas tentativas. Tente novamente em instantes."}), 429, {"Retry-After": "60"}
+
             # Retrieve the student trying to log in
             student = Students.select().where(Students.ra == login_data["ra"]).first()
 
@@ -43,6 +49,14 @@ def login():
             if not is_hashed(student.student_password):
                 student.student_password = hash_password(password)
                 student.save()
+
+            # G.2 (Plano 2) — conquistas retroativas: no login, desbloqueia o que
+            # o aluno já cumpre (ex.: dados anteriores à gamificação). Best-effort.
+            try:
+                from edubot.services.gamification import check_achievements
+                check_achievements(student.student_id)
+            except Exception:
+                pass
             
             # Retrieve the student's course
             course = Courses.select().where(Courses.course_id == student.course_id).first()
