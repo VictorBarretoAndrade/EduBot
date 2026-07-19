@@ -11,7 +11,7 @@ Uma flag em localStorage evita reexibir.
 */
 import { ArrowRight, Bell, BookOpen, Lock, Volume2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { EduBotAvatar } from "./brand/EduBotAvatar";
+import { CompanionAvatar } from "./brand/CompanionAvatar";
 import { useSpeech } from "../hooks/useSpeech";
 import { useLanguage } from "../i18n";
 
@@ -19,12 +19,13 @@ export const ONBOARDING_FLAG = "edubot.onboarding.v1";
 
 interface OnboardingModalProps {
   studentName?: string;
+  persona?: string;
   onDone: () => void;
 }
 
-export const OnboardingModal = ({ studentName, onDone }: OnboardingModalProps) => {
+export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: OnboardingModalProps) => {
   const { lang, t } = useLanguage();
-  const { speak, stop, speaking, supported } = useSpeech();
+  const { speak, stop, speaking, supported, visemeRef } = useSpeech();
   const [step, setStep] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -94,7 +95,7 @@ export const OnboardingModal = ({ studentName, onDone }: OnboardingModalProps) =
         className="w-full max-w-lg rounded-[8px] bg-white p-8 shadow-soft outline-none"
       >
         <div className="flex flex-col items-center gap-4 text-center">
-          <EduBotAvatar size={96} speaking={speaking} />
+          <CompanionAvatar personaId={persona} size={96} speaking={speaking} visemeRef={visemeRef} />
           <div className="flex items-center gap-2 text-brand">
             <Icon size={20} />
             <h1 id="onb-title" className="text-2xl font-bold text-ink">{current.title}</h1>
@@ -103,7 +104,7 @@ export const OnboardingModal = ({ studentName, onDone }: OnboardingModalProps) =
 
           {supported && (
             <button
-              onClick={() => (speaking ? stop() : speak(current.text, lang))}
+              onClick={() => (speaking ? stop() : speak(current.text, lang, persona))}
               className="flex h-9 items-center gap-2 rounded-[8px] border border-brand px-3 text-sm font-semibold text-brand transition hover:bg-indigo-50"
             >
               <Volume2 size={16} /> {speaking ? t("Parar", "Stop") : t("Ouvir", "Listen")}

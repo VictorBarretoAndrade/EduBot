@@ -12,6 +12,7 @@ import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
 import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
 import { LoaderCircle } from "lucide-react";
 import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken } from "./services/api";
+import { syncPersonaFromProfile } from "./services/persona";
 import { useLanguage, useT } from "./i18n";
 
 // MELHORIA — cada tela vira um chunk separado (React.lazy), então o app só baixa
@@ -74,7 +75,11 @@ const App = () => {
   // dashboard/competências sempre coerentes com o backend
   const refreshProfile = useCallback(async () => {
     try {
-      setProfile(await getMe());
+      const me = await getMe();
+      setProfile(me);
+      // AV.2 (Plano 3): alinha o cache local da persona à fonte da verdade (servidor),
+      // para os pontos que a leem antes do perfil (ex.: companheiro no OVA).
+      syncPersonaFromProfile(me.estudante.persona);
       setError(null);
     } catch (err) {
       // Token inválido/expirado -> volta para o login
@@ -179,8 +184,14 @@ const App = () => {
     if (readerOva && session) {
       return (
         <OvaReader
+          // AUDITORIA P3: remonta por OVA — zera o estado por-sessão do companheiro
+          // (saudação/marcos) e do chat ao navegar de um módulo direto para outro
+          // (deep-link #/modulo/:id) sem passar pela lista.
+          key={readerOva.ova_id}
           ova={readerOva}
           studentId={session.student_id}
+          persona={profile.estudante.persona}
+          companionEnabled={profile.features?.companion ?? true}
           onBack={closeReader}
           onTracked={refreshProfile}
         />
@@ -211,6 +222,7 @@ const App = () => {
         needsOnboarding && (
           <OnboardingModal
             studentName={profile.estudante.nome}
+            persona={profile.estudante.persona}
             onDone={() => setNeedsOnboarding(false)}
           />
         )

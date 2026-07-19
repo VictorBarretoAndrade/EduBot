@@ -39,6 +39,23 @@ def test_engagement_shape_and_at_risk(client, auth, seeded_db):
     assert any(r["student_id"] == 1 for r in body["em_risco"])
 
 
+def test_engagement_companion_block(client, auth, seeded_db):
+    # EX.4 (Plano 3): uso do companheiro vem de learning_events (verbos CP.2/4/5).
+    Attempts.create(student_id=1, question_id=1, is_correct=True)  # torna ativo
+    now = datetime.datetime.now()
+    LearningEvents.create(student_id=1, verb="companion_spoke", object_type="ova", occurred_at=now)
+    LearningEvents.create(student_id=1, verb="played", object_type="ova_section", occurred_at=now)
+    LearningEvents.create(student_id=1, verb="played", object_type="ova_section", occurred_at=now)
+    LearningEvents.create(student_id=1, verb="companion_explain", object_type="ova", occurred_at=now)
+    LearningEvents.create(student_id=1, verb="companion_listened", object_type="ova", occurred_at=now)
+    body = json.loads(client.get("/tutor/engagement", headers=auth(9)).data)
+    c = body["companheiro"]
+    assert c["alunos_ativos"] == 1                 # 1 aluno viu o companheiro falar
+    assert c["secoes_ouvidas_semana"] == 2         # 2 "ouvir seção"
+    assert c["explicacoes_semana"] == 1
+    assert c["falas_ouvidas_semana"] == 1
+
+
 def test_active_days_counts_distinct_days_not_events(client, auth, seeded_db):
     # AUDITORIA P2 (F1): 3 eventos em 2 dias distintos devem contar 2 DIAS
     # ativos, não 3 (o DISTINCT era sobre o timestamp, não sobre a data).

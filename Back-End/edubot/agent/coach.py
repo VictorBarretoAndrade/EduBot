@@ -43,12 +43,13 @@ _SYSTEM = (
 )
 
 
-def coach_message(profile, lang="pt"):
+def coach_message(profile, lang="pt", persona=None):
     """Devolve (texto, model_id) ou None se a IA não estiver disponível.
 
     D.5: a fala do coach é LLM SOBRE OS DADOS do aluno — exige consentimento
     `ia_sobre_dados`. Sem ele, retorna None (o front usa o texto local
-    determinístico), como quando a IA não está configurada."""
+    determinístico), como quando a IA não está configurada.
+    persona (CP.4): muda só o TOM da fala (estilo do personagem)."""
     if not llm.is_real():
         return None
     student_id = (profile.get("estudante", {}) or {}).get("student_id")
@@ -63,12 +64,16 @@ def coach_message(profile, lang="pt"):
         f"Dados do aluno (JSON): {json.dumps(_profile_digest(profile), ensure_ascii=False)}\n"
         "Gere a fala do EduBot sobre o progresso deste aluno."
     )
+    # CP.4: estilo da persona anexado ao system (tom; sem mudar o que é dito).
+    from edubot.agent.persona import style_prompt
+    estilo = style_prompt(persona, lang)
+    system = f"{_SYSTEM}\n\n{estilo}" if estilo else _SYSTEM
 
     try:
         import time
         started = time.time()
         resp = llm.messages_create(
-            system=_SYSTEM,
+            system=system,
             messages=[{"role": "user", "content": user}],
             max_tokens=MAX_TOKENS,
             model=COACH_MODEL,  # modelo barato só para a fala do coach

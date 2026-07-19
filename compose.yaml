@@ -86,6 +86,9 @@ services:
       EDUBOT_GAMIFICATION: ${EDUBOT_GAMIFICATION:-on}
       EDUBOT_XP_LEVEL_BASE: ${EDUBOT_XP_LEVEL_BASE:-60}
       EDUBOT_LEADERBOARD_SIZE: ${EDUBOT_LEADERBOARD_SIZE:-10}
+      # Etapa 11 (Plano 3) — companheiro de estudo no leitor de OVA. "off" faz o
+      # leitor não montar o widget (idêntico ao atual). Exposto em /student/me.
+      EDUBOT_COMPANION: ${EDUBOT_COMPANION:-on}
     ports:
       - 5010:8090
     volumes:

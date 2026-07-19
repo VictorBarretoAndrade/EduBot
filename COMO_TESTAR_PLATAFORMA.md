@@ -287,4 +287,34 @@ tutor real também fica preso ao conteúdo do OVA.
 
 ---
 
-*Última atualização: 2026-06-29.*
+## Roteiro de 5 min — o Companheiro de Estudo (Plano 3)
+
+O avatar deixou de ser recompensa e virou um **companheiro que estuda com você**.
+Roteiro rápido para demonstrar (login aluno RA `1` / senha `1`):
+
+1. **Escolha a persona** (30s): abra **Meu Desempenho** → no card do coach, troque o
+   avatar para **Einstein** ou **Curie** (sem cadeados — livres para todos). A escolha
+   é salva no servidor (segue entre dispositivos) e muda o avatar 3D + a voz.
+2. **Abra um módulo** (1min): **Conteúdos** → abra um OVA. O personagem aparece no
+   canto inferior-esquerdo e **saúda** (retomando de onde você parou, se já leu antes).
+   Role a página: ele comenta aos **50%** e ao **concluir**.
+3. **Ouça o conteúdo** (1min): em qualquer seção, clique **🔊 Ouvir** — o personagem
+   lê o texto em voz alta (voz da persona; a boca anima). Clique **✨ Explique** para
+   mandar a seção ao tutor.
+4. **O tutor É o personagem** (1min): o painel lateral tem o avatar e o nome da
+   persona ("Prof. Einstein"), cada resposta tem **▶ ouvir**. Feche e reabra o painel:
+   a conversa **não se perde**.
+5. **Erre o quiz de propósito** (1min): ao final, responda uma questão errada — o
+   companheiro oferece **"Explicar"** (abre o tutor com a pergunta pronta); acerte e
+   ele comemora com o **+XP**.
+6. **Visão do tutor** (30s): entre como tutor (RA `2` / senha `2`) → **Painel do
+   Tutor** → card **"Companheiro de estudo"**: quantos alunos usaram, seções ouvidas,
+   explicações e falas ouvidas na semana.
+
+> Desligar tudo: `EDUBOT_COMPANION=off` no `.env` devolve o leitor idêntico ao
+> anterior. A voz real (AWS Polly) exige credencial própria; sem ela, o companheiro
+> usa a voz do navegador (Web Speech) — funciona igual.
+
+---
+
+*Última atualização: 2026-07-19.*

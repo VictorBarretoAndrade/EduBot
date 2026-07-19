@@ -1,73 +1,70 @@
 /*
-NOVA FUNCIONALIDADE — Chat de Tutor IA por OVA.
+Tutor IA por OVA — o PERSONAGEM conversa com o aluno sobre o conteúdo.
 
-Painel lateral retrátil dentro da página do OVA. O aluno pergunta e recebe
-respostas de um tutor que conhece SOMENTE o conteúdo daquele OVA (o material é
-enviado como contexto — ver services/ovaContent.ts e backend edubot_agent/
-tutor.py). Hoje o "cérebro" é mockado, mas o contrato já é o da LLM real.
+CP.4 (Plano 3):
+  - o estado do chat vive no OvaReader (hook useTutorChat) — fechar/reabrir o painel
+    NÃO perde a conversa (M6); este componente é a UI (input + render);
+  - o header mostra a PERSONA escolhida (avatar + nome) em vez do logo genérico (M7);
+  - cada resposta pode ser OUVIDA na voz da persona (▶), com a boca do avatar animada.
+
+O tutor continua preso ao material do OVA (grounding no backend); a persona muda só
+o TOM. As "Fontes" (seções que embasaram a resposta) seguem exibidas.
 */
-import { Bot, BookMarked, LoaderCircle, Send, User, X } from "lucide-react";
+import { BookMarked, Bot, LoaderCircle, Pause, Play, Send, User, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { TutorMessage, TutorSource, tutorChat } from "../../services/api";
+import { ChatMessage } from "../../hooks/useTutorChat";
 import { useToast } from "../ui/Toast";
-import { useT } from "../../i18n";
-import { EduBotLogo } from "../brand/EduBotLogo";
-
-// Mensagem do chat com as fontes (seções do OVA) que embasaram a resposta.
-type ChatMessage = TutorMessage & { sources?: TutorSource[] };
+import { useLanguage, useT } from "../../i18n";
+import { CompanionAvatar } from "../brand/CompanionAvatar";
+import { AVATAR_PERSONAS, personaName } from "../brand/avatars";
+import { useSpeech } from "../../hooks/useSpeech";
 
 interface TutorChatProps {
-  ovaId: number;
   ovaName: string;
-  context: string;
+  personaId: string;
+  messages: ChatMessage[];
+  loading: boolean;
+  onAsk: (question: string) => Promise<boolean>;
   onClose: () => void;
 }
 
-export const TutorChat = ({ ovaId, ovaName, context, onClose }: TutorChatProps) => {
+function tutorName(personaId: string, lang: "pt" | "en", t: (pt: string, en: string) => string): string {
+  const p = AVATAR_PERSONAS.find((x) => x.id === personaId);
+  return p ? personaName(p, lang) : t("Professor Mediador", "Mediating Professor");
+}
+
+export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClose }: TutorChatProps) => {
   const t = useT();
+  const { lang } = useLanguage();
+  const { speak, stop, speaking, visemeRef } = useSpeech();
+  const [input, setInput] = useState("");
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+
   const SUGGESTIONS = [
     t("Resuma os principais pontos deste conteúdo", "Summarize the main points of this content"),
     t("Explique o conceito mais importante com outras palavras", "Explain the most important concept in other words"),
-    t("Me dê um exemplo prático do que estudei", "Give me a practical example of what I studied")
+    t("Me dê um exemplo prático do que estudei", "Give me a practical example of what I studied"),
   ];
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: t(
-        `Olá! Posso conversar com você sobre o que está lendo agora, em "${ovaName}". Pergunte o que quiser sobre este conteúdo. 😊`,
-        `Hi! I can talk with you about what you're reading now, in "${ovaName}". Ask anything about this content. 😊`
-      )
-    }
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const toast = useToast();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  // Quando a fala termina (speaking cai), limpa o índice em reprodução.
+  useEffect(() => {
+    if (!speaking) setSpeakingIdx(null);
+  }, [speaking]);
+
   const ask = async (question: string) => {
     const text = question.trim();
     if (!text || loading) return;
-    const history: TutorMessage[] = [...messages, { role: "user", content: text }];
-    setMessages(history);
     setInput("");
-    setLoading(true);
-    try {
-      // Envia só o histórico de diálogo (sem a saudação inicial sintética).
-      const dialog = history.filter(
-        (m, i) => !(i === 0 && m.role === "assistant")
-      );
-      const { reply, sources } = await tutorChat(ovaId, context, dialog);
-      setMessages((current) => [...current, { role: "assistant", content: reply, sources }]);
-    } catch {
+    const ok = await onAsk(text);
+    if (!ok) {
       toast.error(t("Não foi possível falar com o tutor agora. Tente novamente.", "Couldn't reach the assistant right now. Try again."));
-      setMessages((current) => current.slice(0, -1));
       setInput(text);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -76,22 +73,27 @@ export const TutorChat = ({ ovaId, ovaName, context, onClose }: TutorChatProps) 
     ask(input);
   };
 
+  const listen = (idx: number, content: string) => {
+    setSpeakingIdx(idx);
+    speak(content, lang, personaId); // voz da persona (AV.4)
+  };
+
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-      <header className="flex items-center justify-between gap-3 border-b border-line bg-gradient-to-r from-brand to-indigo-500 px-5 py-4 text-white">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 p-1">
-            <EduBotLogo size={30} />
+      <header className="flex items-center justify-between gap-3 border-b border-line bg-gradient-to-r from-brand to-indigo-500 px-4 py-3 text-white">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-white/20">
+            <CompanionAvatar personaId={personaId} speaking={speaking} visemeRef={visemeRef} size={44} />
           </div>
-          <div>
-            <div className="font-bold leading-tight">{t("Professor Mediador", "Mediating Professor")}</div>
-            <div className="text-xs text-white/80">{t("Conversando sobre", "Talking about")} “{ovaName}”</div>
+          <div className="min-w-0">
+            <div className="truncate font-bold leading-tight">{tutorName(personaId, lang, t)}</div>
+            <div className="truncate text-xs text-white/80">{t("Conversando sobre", "Talking about")} “{ovaName}”</div>
           </div>
         </div>
         <button
           onClick={onClose}
           aria-label={t("Fechar", "Close")}
-          className="flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/20"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-white/20"
         >
           <X size={18} />
         </button>
@@ -119,6 +121,18 @@ export const TutorChat = ({ ovaId, ovaName, context, onClose }: TutorChatProps) 
                 >
                   {message.content}
                 </div>
+
+                {/* Ouvir a resposta na voz da persona (não na saudação inicial) */}
+                {!isUser && index > 0 && (
+                  <button
+                    onClick={() => (speakingIdx === index ? stop() : listen(index, message.content))}
+                    className="mt-1 flex items-center gap-1 rounded-full border border-line bg-white px-2 py-0.5 text-[11px] font-semibold text-brand transition hover:bg-indigo-50"
+                  >
+                    {speakingIdx === index ? <Pause size={11} /> : <Play size={11} />}
+                    {speakingIdx === index ? t("Parar", "Stop") : t("Ouvir", "Listen")}
+                  </button>
+                )}
+
                 {/* Referenciação automática: seções do OVA que embasaram a resposta */}
                 {!isUser && message.sources && message.sources.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">

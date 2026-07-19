@@ -21,15 +21,34 @@ const PREFERRED = [
   "aria", "jenny", "guy", "michelle", "samantha"
 ];
 
-function pickVoice(voices: SpeechSynthesisVoice[], lang: string): SpeechSynthesisVoice | undefined {
+// AV.4: viés de gênero por persona no fallback Web Speech (as vozes do navegador
+// são inconsistentes entre plataformas; isto só REORDENA, nunca exclui — se nada
+// casar, o comportamento é idêntico ao anterior). O Polly já dá a voz certa.
+const PERSONA_GENDER: Record<string, "male" | "female"> = {
+  einstein: "male", curie: "female", edubot: "female",
+};
+const GENDER_HINTS: Record<"male" | "female", string[]> = {
+  male: ["male", "masculin", "homem", "thiago", "antonio", "antônio", "ricardo",
+         "daniel", "matthew", "paulo", "felipe", "guy"],
+  female: ["female", "feminin", "mulher", "camila", "vitória", "vitoria", "joanna",
+           "francisca", "luciana", "maria", "danielle", "aria", "jenny", "michelle"],
+};
+
+function pickVoice(
+  voices: SpeechSynthesisVoice[], lang: string, persona?: string
+): SpeechSynthesisVoice | undefined {
   const prefix = lang === "en" ? "en" : "pt";
   const inLang = voices.filter((v) => v.lang?.toLowerCase().startsWith(prefix));
   const pool = inLang.length ? inLang : voices;
+  const gender = persona ? PERSONA_GENDER[persona] : undefined;
+  const hints = gender ? GENDER_HINTS[gender] : [];
   const scored = pool
     .map((v) => {
       const name = v.name.toLowerCase();
       const rank = PREFERRED.findIndex((p) => name.includes(p));
-      return { v, score: rank === -1 ? 999 : rank };
+      // casar o gênero da persona tem prioridade sobre a lista de qualidade.
+      const genderMatch = hints.some((h) => name.includes(h)) ? 0 : 1;
+      return { v, score: genderMatch * 1000 + (rank === -1 ? 999 : rank) };
     })
     .sort((a, b) => a.score - b.score);
   return scored[0]?.v;
@@ -63,12 +82,12 @@ export function useSpeech() {
   }, []);
 
   const speakWebSpeech = useCallback(
-    (text: string, lang: "pt" | "en") => {
+    (text: string, lang: "pt" | "en", persona?: string) => {
       if (!supported || !text) return;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang === "en" ? "en-US" : "pt-BR";
-      const voice = pickVoice(voicesRef.current, lang);
+      const voice = pickVoice(voicesRef.current, lang, persona);
       if (voice) utterance.voice = voice;
       utterance.rate = 0.97;
       utterance.pitch = 1.0;
@@ -124,13 +143,14 @@ export function useSpeech() {
   );
 
   const speak = useCallback(
-    async (text: string, lang: "pt" | "en") => {
+    async (text: string, lang: "pt" | "en", persona?: string) => {
       if (!text) return;
       // métrica V.1: cliques em "ouvir o EduBot" (evento played sobre speech)
       track("played", "session", null, { kind: "speech", lang });
       if (!pollyOffRef.current) {
         try {
-          const r = await synthesizeSpeech(text, lang);
+          // AV.4: persona escolhe a voz (Einstein/Curie têm voz própria no Polly).
+          const r = await synthesizeSpeech(text, lang, persona);
           if (r.available && r.audio_url) {
             if (supported) window.speechSynthesis.cancel();
             playPolly(r.audio_url, r.visemes ?? []);
@@ -141,7 +161,7 @@ export function useSpeech() {
           pollyOffRef.current = true;
         }
       }
-      speakWebSpeech(text, lang);
+      speakWebSpeech(text, lang, persona);
     },
     [playPolly, speakWebSpeech, supported]
   );

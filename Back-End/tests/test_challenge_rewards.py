@@ -62,14 +62,16 @@ def test_answering_hard_mastered_awards_challenge_xp(client, auth, seeded_db):
         (StudentAchievements.achievement_id == "desafiante")).exists()
 
 
-# --- R.1 personas por nível ------------------------------------------------
-def test_persona_unlock_by_level(seeded_db):
-    assert G.personas_state(1) == [
-        {"id": "einstein", "unlock_level": 3, "unlocked": False},
-        {"id": "curie", "unlock_level": 5, "unlocked": False},
-    ]
-    unlocked = {p["id"]: p["unlocked"] for p in G.personas_state(4)}
-    assert unlocked["einstein"] is True and unlocked["curie"] is False
+# --- AV.1 (Plano 3): personas LIVRES (a trava R.1 por nível foi REVOGADA) ---
+def test_personas_always_unlocked(seeded_db):
+    # personas são ferramenta de estudo, não recompensa: livres em qualquer nível.
+    for level in (1, 4, 9):
+        assert G.personas_state(level) == [
+            {"id": "einstein", "unlock_level": 0, "unlocked": True},
+            {"id": "curie", "unlock_level": 0, "unlocked": True},
+        ]
+    # sem argumento também (assinatura de compat)
+    assert all(p["unlocked"] for p in G.personas_state())
 
 
 # --- R.2 títulos -----------------------------------------------------------

@@ -12,25 +12,30 @@ nativos (parágrafos, imagens, Carousel, Accordion), além de:
   - painel lateral retrátil do Tutor IA (TutorChat), com o material do OVA como
     contexto.
 */
-import { ArrowLeft, BookOpenText, CheckCircle2, ListChecks, LoaderCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpenText, CheckCircle2, ListChecks, LoaderCircle, Sparkles, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  GamificationAward,
   OvaResource,
   getOVAResources,
   registerInteraction,
   saveOVAProgress,
   saveResourceProgress
 } from "../../services/api";
-import { OvaContent, fetchOvaContent, ovaContextText } from "../../services/ovaContent";
+import { OvaContent, OvaSection, fetchOvaContent, ovaContextText } from "../../services/ovaContent";
 import { track } from "../../services/events";
 import { AudioPlayer } from "../players/AudioPlayer";
 import { MediaProgress, VideoPlayer } from "../players/VideoPlayer";
 import { useToast } from "../ui/Toast";
 import { useLanguage, useT } from "../../i18n";
+import { useSpeech } from "../../hooks/useSpeech";
+import { useCompanionScript } from "../../hooks/useCompanionScript";
+import { useTutorChat } from "../../hooks/useTutorChat";
 import { Accordion } from "./Accordion";
 import { Carousel } from "./Carousel";
 import { OvaQuiz } from "./OvaQuiz";
 import { TutorChat } from "./TutorChat";
+import { StudyCompanion } from "./StudyCompanion";
 
 const COMPLETED_PERC = 90;
 const SYNC_INTERVAL_MS = 15000;
@@ -47,16 +52,26 @@ interface OvaInfo {
   ova_id: number;
   ova_name: string;
   link: string;
+  perc_scrolled?: number;
+  completed?: boolean;
 }
 
 interface OvaReaderProps {
   ova: OvaInfo;
   studentId: number;
+  // CP.1 (Plano 3): persona do companheiro (vem do perfil) e flag da feature.
+  persona: string;
+  companionEnabled: boolean;
   onBack: () => void;
   onTracked: () => void;
 }
 
-export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps) => {
+const COMPANION_HIDDEN_KEY = "edubot.companion.hidden";
+// EX.3 (Plano 3): rótulo de interação NEUTRO (independente de idioma) para não
+// misturar PT/EN na telemetria. O rótulo PT antigo segue reconhecido nos relatórios.
+const OVA_ASSISTANT_OPENED = "ova_assistant_opened";
+
+export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, onTracked }: OvaReaderProps) => {
   const [content, setContent] = useState<OvaContent | null>(null);
   const [error, setError] = useState(false);
   const [resources, setResources] = useState<OvaResource[]>([]);
@@ -72,6 +87,81 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
   const toast = useToast();
   const t = useT();
   const { lang } = useLanguage();
+
+  // --- Companheiro de estudo (CP.1/CP.2), voz (CP.5) e chat do tutor (CP.4) ---
+  // O contexto do tutor (material do OVA) é derivado do conteúdo carregado.
+  const tutorContext = useMemo(() => (content ? ovaContextText(content) : ""), [content]);
+  const { speak, stop, speaking, visemeRef } = useSpeech();
+  const companion = useCompanionScript(ova.ova_id);
+  // Histórico do chat ELEVADO para cá: fechar/reabrir o painel não perde a conversa.
+  const chat = useTutorChat(ova.ova_id, ova.ova_name, tutorContext, persona);
+  const [muted, setMuted] = useState(false);
+  const [hidden, setHidden] = useState<boolean>(
+    () => typeof window !== "undefined" && localStorage.getItem(COMPANION_HIDDEN_KEY) === "1"
+  );
+  const hideCompanion = () => { setHidden(true); localStorage.setItem(COMPANION_HIDDEN_KEY, "1"); };
+  const showCompanion = () => { setHidden(false); localStorage.removeItem(COMPANION_HIDDEN_KEY); };
+
+  // Abre o tutor com uma pergunta pré-preenchida (Explique esta seção / ajuda no
+  // quiz). Reaproveita o MESMO chat — nenhum endpoint novo.
+  const askTutor = (question: string) => {
+    setShowTutor(true);
+    void chat.ask(question);
+  };
+
+  // CP.5 — lê uma seção em voz alta, na voz da persona (a boca do avatar anima).
+  const readSection = (section: OvaSection) => {
+    const parts = [
+      section.heading || "",
+      ...section.blocks
+        .filter((b): b is { kind: "paragraph"; text: string } => b.kind === "paragraph")
+        .map((b) => b.text),
+    ].filter(Boolean);
+    const texto = parts.join(". ").slice(0, 2500);
+    if (!texto) return;
+    track("played", "ova_section", ova.ova_id, { kind: "tts", secao: section.heading });
+    speak(texto, lang, persona);
+  };
+
+  const listenCompanion = () => {
+    if (!companion.line) return;
+    companion.listened();
+    speak(companion.line.text, lang, persona);
+  };
+
+  // CP.3 — o companheiro reage à correção do quiz (comemora / oferece ajuda).
+  const onQuizGraded = ({ correct, gamification }: { correct: boolean; gamification: GamificationAward | null }) => {
+    if (!companionEnabled) return;
+    if (correct) {
+      const novas = gamification?.achievements ?? [];
+      if (novas.length > 0) {
+        companion.say({
+          trigger: "achievement", kind: "celebrating",
+          text: t("🏆 Você desbloqueou uma conquista!", "🏆 You unlocked an achievement!"),
+        });
+      } else {
+        const xp = gamification?.xp_awarded ?? 0;
+        companion.say({
+          trigger: "quiz_ok", kind: "celebrating",
+          text: xp > 0
+            ? t(`Boa! +${xp} XP 🎉`, `Nice! +${xp} XP 🎉`)
+            : t("Boa, resposta certa! 🎉", "Nice, correct answer! 🎉"),
+        });
+      }
+    } else {
+      companion.say({
+        trigger: "quiz_wrong",
+        text: t("Quase! Quer que eu te explique essa parte?", "Almost! Want me to explain this part?"),
+        action: {
+          label: t("Explicar", "Explain"),
+          run: () => askTutor(t(
+            "Errei uma questão do quiz. Pode explicar de novo os pontos principais deste conteúdo?",
+            "I got a quiz question wrong. Can you re-explain the main points of this content?"
+          )),
+        },
+      });
+    }
+  };
 
   // Carrega o conteúdo do OVA (HTML -> modelo estruturado) e os recursos de mídia
   useEffect(() => {
@@ -207,7 +297,37 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
     };
   }, [ova.ova_id, onTracked]);
 
-  const tutorContext = useMemo(() => (content ? ovaContextText(content) : ""), [content]);
+  // CP.2 — saudação ao abrir o módulo (retomada se já havia progresso salvo).
+  useEffect(() => {
+    if (!companionEnabled) return;
+    const perc = ova.perc_scrolled ?? 0;
+    const text = perc > 5 && !ova.completed
+      ? t(`Bem-vindo de volta! Você parou em ${perc}% — vamos continuar? 😊`,
+          `Welcome back! You left off at ${perc}% — shall we continue? 😊`)
+      : t(`Vamos estudar "${ova.ova_name}" juntos! Eu fico por aqui se precisar. 😊`,
+          `Let's study "${ova.ova_name}" together! I'm right here if you need me. 😊`);
+    companion.say({ trigger: "open", text, spontaneous: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ova.ova_id]);
+
+  // CP.2 — marcos de leitura (50% e conclusão), derivados do progresso já medido.
+  useEffect(() => {
+    if (!companionEnabled) return;
+    if (progress >= COMPLETED_PERC) {
+      companion.say({
+        trigger: "done", spontaneous: true,
+        text: t("Leitura concluída! Que tal testar no quiz aqui embaixo? 💪",
+                "Reading complete! How about trying the quiz below? 💪"),
+      });
+    } else if (progress >= 50) {
+      companion.say({
+        trigger: "half", spontaneous: true,
+        text: t("Metade do caminho! O que vem agora costuma cair no quiz… 👀",
+                "Halfway there! What comes next often shows up in the quiz… 👀"),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
 
   const logInteraction = (label: string) => {
     registerInteraction(ova.ova_id, label).catch(() => undefined);
@@ -266,7 +386,7 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
           <button
             onClick={() => {
               setShowTutor((value) => !value);
-              if (!showTutor) logInteraction("Abriu o assistente do OVA");
+              if (!showTutor) logInteraction(OVA_ASSISTANT_OPENED);
             }}
             className={`flex h-11 items-center gap-2 rounded-[8px] px-5 font-semibold transition ${
               showTutor ? "bg-indigo-50 text-brand" : "bg-brand text-white hover:bg-indigo-600"
@@ -311,10 +431,36 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
             {/* Seções do conteúdo */}
             {content.sections.map((section) => (
               <section key={section.id} className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
-                {section.heading && (
-                  <h2 className="mb-5 border-b border-line pb-3 text-2xl font-bold text-ink">
-                    {section.heading}
-                  </h2>
+                {(section.heading || companionEnabled) && (
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                    {section.heading
+                      ? <h2 className="text-2xl font-bold text-ink">{section.heading}</h2>
+                      : <span />}
+                    {companionEnabled && (
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          onClick={() => readSection(section)}
+                          className="flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+                          title={t("Ouvir esta seção", "Listen to this section")}
+                        >
+                          <Volume2 size={14} /> {t("Ouvir", "Listen")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            track("companion_explain", "ova", ova.ova_id, { secao: section.heading });
+                            askTutor(t(
+                              `Explique a seção "${section.heading ?? "atual"}" com outras palavras.`,
+                              `Explain the "${section.heading ?? "current"}" section in other words.`
+                            ));
+                          }}
+                          className="flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+                          title={t("Explique esta seção com o tutor", "Explain this section with the tutor")}
+                        >
+                          <Sparkles size={14} /> {t("Explique", "Explain")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
                 <div className="space-y-5">
                   {section.blocks.map((block, index) => {
@@ -346,7 +492,7 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
                   {section.hasQuiz && (
                     <div className="pt-2">
                       <h3 className="mb-4 text-xl font-bold text-ink">{t("Teste seus conhecimentos", "Test your knowledge")}</h3>
-                      <OvaQuiz ovaId={ova.ova_id} studentId={studentId} onTracked={onTracked} />
+                      <OvaQuiz ovaId={ova.ova_id} studentId={studentId} onTracked={onTracked} onGraded={onQuizGraded} />
                     </div>
                   )}
                 </div>
@@ -419,7 +565,7 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
         <button
           onClick={() => {
             setShowTutor(true);
-            logInteraction("Abriu o assistente do OVA");
+            logInteraction(OVA_ASSISTANT_OPENED);
           }}
           className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-l-[10px] bg-brand py-4 pl-3 pr-2 font-semibold text-white shadow-soft transition hover:bg-indigo-600 [writing-mode:vertical-rl]"
           aria-label={t("Abrir o assistente do conteúdo", "Open the content assistant")}
@@ -440,14 +586,35 @@ export const OvaReader = ({ ova, studentId, onBack, onTracked }: OvaReaderProps)
           <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[420px] p-4 lg:static lg:z-auto lg:w-[380px] lg:shrink-0 lg:p-0">
             <div className="h-full lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
               <TutorChat
-                ovaId={ova.ova_id}
                 ovaName={ova.ova_name}
-                context={tutorContext}
+                personaId={persona}
+                messages={chat.messages}
+                loading={chat.loading}
+                onAsk={chat.ask}
                 onClose={() => setShowTutor(false)}
               />
             </div>
           </aside>
         </>
+      )}
+
+      {/* CP.1 — companheiro de estudo flutuante (canto inferior-esquerdo). */}
+      {companionEnabled && (
+        <StudyCompanion
+          personaId={persona}
+          line={companion.line}
+          speaking={speaking}
+          visemeRef={visemeRef}
+          muted={muted}
+          hidden={hidden}
+          onListen={listenCompanion}
+          onStop={stop}
+          onToggleMute={() => setMuted((m) => !m)}
+          onDismiss={companion.dismiss}
+          onHide={hideCompanion}
+          onShow={showCompanion}
+          onOpenTutor={() => setShowTutor(true)}
+        />
       )}
     </div>
   );

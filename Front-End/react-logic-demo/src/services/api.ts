@@ -161,7 +161,8 @@ export interface InterventionState {
 }
 
 export interface StudentProfile {
-  estudante: { student_id: number; nome: string; ra: string; curso: string | null; role: string };
+  estudante: { student_id: number; nome: string; ra: string; curso: string | null; role: string; persona: string };
+  features?: { companion: boolean };
   dias_sem_acesso: number | null;
   recursos: {
     total: number;
@@ -478,10 +479,10 @@ export interface TutorReply {
 
 // Envia a pergunta + o histórico + o material (context) do OVA. O backend
 // responde como tutor preso ao conteúdo (ver edubot_agent/tutor.py).
-export const tutorChat = (ovaId: number, context: string, messages: TutorMessage[]) =>
+export const tutorChat = (ovaId: number, context: string, messages: TutorMessage[], persona?: string) =>
   request<TutorReply>(withLang("/edubot/tutor-chat"), {
     method: "POST",
-    body: { ova_id: ovaId, context, messages }
+    body: { ova_id: ovaId, context, messages, persona }
   });
 
 // ---------------------------------------------------------------------------
@@ -653,6 +654,14 @@ export interface TutorEngagement {
   xp_medio_semana: number;
   em_risco: { student_id: number; nome: string; sequencia: number }[];
   antes_depois: { dias_ativos_antes: number; dias_ativos_depois: number };
+  // EX.4 (Plano 3) — uso do companheiro de estudo (de learning_events).
+  companheiro: {
+    alunos_ativos: number;
+    total_alunos: number;
+    secoes_ouvidas_semana: number;
+    falas_ouvidas_semana: number;
+    explicacoes_semana: number;
+  };
 }
 export const getTutorEngagement = () =>
   request<TutorEngagement>("/tutor/engagement");
@@ -674,5 +683,9 @@ export interface SpeakResult {
 // URL absoluta de um recurso servido pela API (ex.: o mp3 da voz).
 export const apiUrl = (path: string) => BASE_URL + path;
 
-export const synthesizeSpeech = (text: string, lang: "pt" | "en") =>
-  request<SpeakResult>("/edubot/speak", { method: "POST", body: { text, lang } });
+export const synthesizeSpeech = (text: string, lang: "pt" | "en", persona?: string) =>
+  request<SpeakResult>("/edubot/speak", { method: "POST", body: { text, lang, persona } });
+
+// AV.2 (Plano 3) — persona do companheiro de estudo (persistida no aluno).
+export const setStudentPersona = (persona: string) =>
+  request<{ persona: string }>("/student/persona", { method: "POST", body: { persona } });

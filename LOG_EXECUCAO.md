@@ -1340,3 +1340,243 @@ validadas no stack real (MySQL).
 **Validação final**: `pytest` 207/207 · `ova_react_build` exit 0 (tsc estrito) ·
 front HTTP 200 · smoke ao vivo no MySQL: dias ativos 4.0→2.0 (real), apelido
 duplicado 409, título traduzido com title_id, streak com escudo.
+
+---
+
+# PLANO 3 — O Personagem que Estuda com Você
+
+## ETAPA 10 — Personas livres + fundação técnica do companheiro (2026-07-14)
+
+Mudança de visão do produto: os avatares (EduBot, Prof. Einstein, Dra. Curie)
+deixam de ser RECOMPENSA de gamificação e viram FERRAMENTA DE ESTUDO — livres
+para todos, atributo do aluno, prontos para acompanhar o estudo dentro dos OVAs.
+
+### AV.1 — Trava por nível REVOGADA
+- `gamification.py`: `PERSONA_UNLOCK` removido; `PERSONA_IDS = ["einstein","curie"]`;
+  `personas_state()` devolve tudo `unlocked=True` (shape mantido 1 release por
+  compat com front em cache).
+- `PerformanceCoach.tsx`: cadeado/`isLocked`/`Nv{n}` removidos; todos os botões de
+  persona sempre habilitados.
+- Decisão R.1 do Plano 2 marcada como REVOGADA no PLANO_EXECUCAO_2.md.
+
+### AV.2 — Persona persistida no servidor (antes só localStorage)
+- Migration `018_persona.sql` (idempotente): `students.persona VARCHAR(24) NOT NULL
+  DEFAULT 'edubot'`. Model `students.py` + campo.
+- `GET /student/me` inclui `estudante.persona` (a linha do aluno já está carregada
+  → 0 query nova; golden de 8 queries intacto — golden_profile.json atualizado).
+- `POST /student/persona` (novo em studentRoute) valida contra `{edubot, einstein,
+  curie}` (case-insensitive) → 400 se inválida; grava e devolve `{persona}`.
+- `services/persona.ts` vira server-backed: `getPersona` (cache local p/ login),
+  `syncPersonaFromProfile` (alinha ao servidor quando o perfil carrega, chamado no
+  `App.tsx`), `setPersona` (cache local imediato + POST fire-and-forget).
+- `PerformanceCoach` lê a persona de `profile.estudante.persona` — DESACOPLADO da
+  gamificação (funciona com `EDUBOT_GAMIFICATION=off`); o fetch morto de
+  `/gamification/me` (só setava um `title` nunca renderizado) foi removido.
+
+### AV.3 — CompanionAvatar (um componente) + lip-sync real
+- Novo `components/brand/CompanionAvatar.tsx`: resolve `edubot`→mascote 2D e
+  `einstein`/`curie`→`Avatar3D`, com fallback 2D automático se o WebGL falhar
+  (lógica que estava embutida no PerformanceCoach subiu para cá; nova tentativa ao
+  trocar de persona).
+- `Avatar3D.tsx`: prop `visemeRef` + mapa VISEMA→abertura da boca. Com a timeline
+  do Polly (ou a alternância do Web Speech) do `useSpeech`, a boca segue os fonemas;
+  sem `visemeRef` (uso legado), mantém a oscilação por `speaking`. Custo zero: o
+  `useSpeech` já produzia a timeline (V.1); só passou a ser consumida.
+
+### AV.4 — Voz própria por persona
+- `speech.py`: `PERSONA_VOICE` (einstein: Thiago/Matthew; curie: Vitoria/Danielle;
+  edubot/desconhecida → VOICES padrão Camila/Joanna). `synthesize(text, lang,
+  persona=None)` resolve a voz por `_voice_for`; a voz entra na chave do cache
+  (personas geram áudios distintos sem colisão).
+- `/edubot/speak` aceita `persona` opcional.
+- `useSpeech.speak(text, lang, persona?)` repassa ao Polly; no fallback Web Speech,
+  viés leve de gênero por persona (só REORDENA a lista de vozes, nunca exclui).
+
+### Validação da Etapa 10
+- `pytest` **214/214** (207 → 214: +5 test_persona, +2 test_speech; o teste de
+  personas-por-nível virou test_personas_always_unlocked).
+- `ova_react_build` **exit 0** (tsc estrito + vite build, 2447 módulos).
+- Smoke no **MySQL real**: migration 018 aplicada 2× (idempotente); coluna
+  `persona varchar(24) NOT NULL DEFAULT edubot`; `POST /student/persona einstein` →
+  refletido no `/student/me`; persona inválida → **400**; `/gamification/me` com
+  personas `einstein=True, curie=True`; `/edubot/speak` com persona → `available:false`
+  gracioso (sem credencial Polly).
+
+**Nada visível mudou no leitor de OVA ainda** — a Etapa 10 é fundação; o companheiro
+dentro do módulo é a Etapa 11.
+
+## ETAPA 11 — O companheiro de estudo dentro do OVA (2026-07-19)
+
+O coração do Plano 3: ao abrir um módulo, o personagem escolhido está lá — saúda,
+acompanha a leitura, comemora o quiz, lê o conteúdo em voz alta e é o próprio tutor.
+
+### CP.4 (backend) — persona no cérebro do tutor/coach
+- Novo `agent/persona.py`: `style_prompt(persona, lang)` (parágrafo de ESTILO no
+  system prompt da LLM real — muda o TOM, nunca o grounding) e `bordao(persona, seed,
+  lang)` (prefixo determinístico, 2 variações, para o MOCK ser perceptível/testável).
+  Einstein = analogias físicas; Curie = método de laboratório; edubot/desconhecida =
+  neutro (sem estilo/bordão).
+- `tutor.py`: `tutor_reply(..., persona=None)` anexa o estilo ao system e passa a
+  persona ao mock (prepend do bordão). `coach.py`: idem no `_SYSTEM`.
+- Rotas: `/edubot/tutor-chat` (persona no body) e `/edubot/coach-message` (persona na
+  query) repassam ao cérebro.
+
+### CP.1 — flag + widget StudyCompanion
+- `EDUBOT_COMPANION` (compose + .env.example) exposto em `/student/me` como
+  `features.companion` (0 query nova; golden atualizado). `off` = o leitor não monta
+  o companheiro (idêntico ao atual).
+- `components/ova/StudyCompanion.tsx`: avatar (CompanionAvatar, com lip-sync) +
+  balão de fala no canto inferior-esquerdo; controles ▶ ouvir (voz da persona), 🔊/🔇
+  silenciar a sessão, ✕ ocultar (persistido em localStorage `edubot.companion.hidden`,
+  com botão de reabrir — nunca vira beco sem saída). Balão `aria-live="polite"`;
+  respeita `prefers-reduced-motion`.
+
+### CP.2 — motor de gatilhos (100% no cliente, custo zero)
+- `hooks/useCompanionScript.ts`: falas ESPONTÂNEAS (abrir/50%/concluir) respeitam
+  cooldown de 45 s e teto de 6/sessão e disparam 1× por gatilho; REAÇÕES (quiz) não
+  contam no teto e sempre aparecem; fala nova substitui a anterior; NENHUM áudio
+  automático (voz só via ▶). Telemetria: `companion_spoke/dismissed/listened` no
+  schema D.1 (sem migration). O texto vem do OvaReader (i18n).
+
+### CP.3 — quiz do OVA em paridade
+- `OvaQuiz` expõe `onGraded({correct, gamification})` (a API já devolvia o payload) →
+  o companheiro comemora (XP/conquista) ou oferece "Explicar" ao errar. `response_ms`
+  passou a ter base individual por questão (reinicia o cronômetro após cada submit).
+
+### CP.4 (frontend) — o personagem é o tutor
+- `hooks/useTutorChat.ts`: histórico do chat ELEVADO para o OvaReader — fechar/reabrir
+  o painel não perde a conversa (M6). `TutorChat` virou controlado (messages/loading/
+  onAsk por props), com header da PERSONA (avatar + nome; "Professor Mediador" para o
+  edubot) e ▶ ouvir por resposta na voz da persona.
+- "Explique esta seção" (✨) no cabeçalho de cada seção → abre o tutor com a pergunta
+  pré-preenchida, no MESMO chat (conta como `pergunta_ao_tutor` no XP; sem endpoint
+  novo).
+
+### CP.5 — ouvir o conteúdo
+- Botão "Ouvir" (🔊) por seção lê os parágrafos em voz alta na voz da persona
+  (limite ~2.500 chars); a boca do avatar anima pelos visemas. Telemetria
+  `played/ova_section`.
+
+### Validação da Etapa 11
+- `pytest` **221/221** (214 → 221: +7 em test_companion.py).
+- `ova_react_build` **exit 0** (tsc estrito; o three.js virou chunk lazy `CompanionAvatar`).
+- Smoke no **MySQL real**: `/student/me` → `features.companion=true`; `/edubot/tutor-chat`
+  com `persona=einstein` → resposta começa com o bordão "Pensando como um físico
+  curioso, "; sem persona → tom neutro.
+- **Playwright** (leitor real, deep-link `#/modulo/1`): companheiro montado com a
+  saudação no balão, 6 botões "Ouvir" + 6 "Explique" nas seções, tutor com header da
+  persona, **sem erros de runtime** (o único 403 do console é o gate de leitura do
+  quiz — comportamento esperado). Screenshot conferido: avatar renderiza (sem frame
+  branco).
+
+## ETAPA 12 — Personagem em toda a jornada + polimentos (2026-07-19)
+
+Consistência: a persona escolhida aparece em TODOS os pontos de fala, e fechamos os
+itens de higiene M12–M14 da releitura.
+
+### EX.1 — Dashboard e Onboarding com a persona (M12)
+- `Dashboard.tsx` (EduBotInbox das intervenções) e `OnboardingModal.tsx`: `EduBotAvatar`
+  fixo → `CompanionAvatar` com a persona do perfil; a fala das intervenções e dos
+  passos do onboarding usa a VOZ da persona (AV.4). Persona desce por props do App.
+
+### EX.2 — Reforço apresentado pelo personagem (M13)
+- `Reforco.tsx`: a `mensagem_aluno` do agente virou uma APRESENTAÇÃO do personagem
+  (avatar + balão + ▶ ouvir na voz da persona) — o personagem "entrega" a trilha que
+  o agente montou, em vez de um parágrafo seco.
+
+### EX.3 — Higiene da releitura (M14 e cia.)
+- Rótulo de interação do assistente do OVA → constante neutra `"ova_assistant_opened"`
+  (não mistura mais PT/EN na telemetria; o rótulo antigo segue reconhecido).
+- Removido o `preloadAvatar` (no-op morto) do `Avatar3D.tsx`.
+- `PerformanceCoach`: o fetch de `/gamification/me` já havia sido REMOVIDO na Etapa 10
+  (o `title` era código morto) — nada a simplificar; item fechado.
+
+### EX.4 — Medição do uso do companheiro
+- `/tutor/engagement` ganhou o bloco `companheiro` (tudo de `learning_events`, sem
+  migration): `alunos_ativos` (distintos com `companion_spoke` em 28d), `secoes_
+  ouvidas_semana` (`played/ova_section`), `explicacoes_semana` (`companion_explain`,
+  verbo novo emitido pelo botão "Explique") e `falas_ouvidas_semana`
+  (`companion_listened`). `EngagementPanel.tsx` mostra o card — o tutor vê se o
+  personagem está sendo usado ou ignorado (critério honesto para manter/ajustar).
+
+### Otimização de bundle (achado na validação)
+- Ao levar o `CompanionAvatar` a componentes EAGER (OnboardingModal), o three.js
+  (~800 kB) vazou para o bundle inicial (60 kB → 283 kB gzip). Corrigido com
+  `React.lazy` do `Avatar3D` DENTRO do `CompanionAvatar`: quem usa o mascote EduBot
+  (padrão) NUNCA baixa o three.js; só ao escolher Einstein/Curie o chunk carrega
+  (fallback = mascote 2D via Suspense). Bundle inicial de volta a 60 kB gzip.
+
+### Validação da Etapa 12
+- `pytest` **222/222** (221 → 222: +1 em test_engagement.py — bloco companheiro).
+- `ova_react_build` **exit 0** (tsc estrito; three.js agora é chunk lazy sob demanda).
+- Smoke no **MySQL real**: `/tutor/engagement` (tutor RA 2) devolve o bloco
+  `companheiro`.
+- **Playwright**: dashboard carrega sem erros de console; com `persona=einstein`, o
+  leitor monta o **avatar 3D** (3 canvas via chunk lazy) no widget + header do tutor
+  ("Prof. Einstein") + avatar das mensagens. Screenshot conferido. (Único 403 do
+  console = gate de leitura do quiz, esperado.)
+
+## PLANO 3 COMPLETO (Etapas 10–12)
+
+O avatar deixou de ser recompensa e virou COMPANHEIRO DE ESTUDO: livre para todos,
+persistido no servidor, com voz própria e lip-sync, presente em toda a jornada
+(leitor de OVA, tutor, dashboard, onboarding, reforço). Pendências deixadas por
+design: auditoria de consistência das Etapas 10–12; personas 3D adicionais (avatares
+GLB, migration 013 reservada); credencial Polly para a voz real; token Bedrock novo
+para a IA real (o atual expirou).
+
+## Ajuste de UX — companheiro clicável (feedback do usuário, 2026-07-19)
+
+Feedback: "clico no boneco mas ele não faz nada". O avatar era só visual (sem
+onClick) — a interação estava nos botões do balão, que só aparece nos gatilhos.
+Correção: o AVATAR virou clicável e abre um MENU de ações ("O que posso fazer por
+você?"): **Tirar uma dúvida** (abre o tutor), **Ouvir a dica atual**, **Silenciar a
+voz**, **Ocultar o EduBot**. Um badge "⋯" no canto do avatar + ring no hover
+sinalizam a interatividade. O balão de fala (gatilhos) segue funcionando com ▶ ouvir
+e dispensar. Prop nova `onOpenTutor` no StudyCompanion. Build exit 0; Playwright
+confirma o menu (0→1 ao clicar, 4 itens).
+
+## AUDITORIA DE CONSISTÊNCIA 3 — Plano 3, Etapas 10 a 12 (2026-07-19)
+
+Método dos planos 1 e 2: baseline verde → releitura crítica de cada entrega →
+corrigir e fixar → smoke real → documentar. Baseline: 222 testes verdes.
+
+### Defeito encontrado e CORRIGIDO
+- **A — estado do companheiro/chat não resetava entre módulos (deep-link).**
+  `useCompanionScript(ova.ova_id)` e `useTutorChat(...)` guardam estado em refs/
+  useState. No fluxo normal (voltar à lista → abrir outro OVA) o OvaReader remonta e
+  reseta. Mas navegar por deep-link `#/modulo/:id` de um módulo DIRETO para outro
+  mantém o componente montado (React reconcilia por posição) → a saudação do 2º
+  módulo era suprimida (firedTriggers/cooldown persistiam) e o chat mostrava o
+  histórico + saudação do 1º. Correção: `key={ova.ova_id}` no OvaReader (App.tsx) —
+  remonta por OVA, semanticamente correto (outro módulo = nova sessão). **Verificado
+  ao vivo (Playwright)**: módulo 1 "você parou em 39%" → nav direto p/ módulo 2 →
+  reseta e saúda "Vamos estudar Cálculo juntos!".
+
+### Limpeza
+- Comentário de cabeçalho do PerformanceCoach atualizado (mencionava EduBotAvatar;
+  agora usa CompanionAvatar).
+
+### Verificado e OK (sem defeitos)
+- Backend: `persona.py` (style/bordão/normalize), `tutor.py` e `coach.py` aplicam o
+  estilo ao system nas DUAS vias (real e mock) e passam persona; `speech._voice_for`
+  + chave de cache por voz; bloco `companheiro` do engagement (verbos corretos,
+  default arg de janela ok); `student_context.features` (0 query, golden atualizado).
+- Sem imports órfãos (contagem verificada em Dashboard, PerformanceCoach, Reforco,
+  TutorChat, OvaReader, StudyCompanion, CompanionAvatar, App); sem console.log/dead
+  code; migration 018 e model `persona` consistentes (VARCHAR(24) default edubot).
+- CompanionAvatar com three.js lazy (bundle inicial 60 kB gzip); menu do companheiro
+  (clique no boneco) com click-away e itens corretos.
+
+### Simplificações aceitas (não são defeitos)
+- Companheiro celebra conquista com mensagem GENÉRICA ("🏆 Você desbloqueou uma
+  conquista!") — o payload de `/question/answer` traz IDs, não nomes traduzidos.
+- Sem fila de prioridade explícita entre gatilhos — "fala nova substitui a anterior"
+  basta (reações e marcos raramente coincidem).
+- EX.2: o companheiro no reforço é o BLOCO DE APRESENTAÇÃO da trilha (avatar + balão
+  + ▶ ouvir), não um widget flutuante com gatilhos de scroll — o OVA personalizado é
+  centrado em mídia, sem seções de texto roladas onde os marcos fariam sentido.
+
+**Validação final**: `pytest` 222/222 · `ova_react_build` exit 0 (tsc estrito, three.js
+lazy) · smoke MySQL real (engagement com bloco companheiro) · Playwright confirmou o
+reset por módulo (Defeito A) e o menu do companheiro.

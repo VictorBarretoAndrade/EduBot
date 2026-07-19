@@ -41,9 +41,10 @@ XP_RULES = {
 
 LEVEL_BASE = int(os.getenv("EDUBOT_XP_LEVEL_BASE", "60"))
 
-# R.1 (Plano 2) — personas de avatar desbloqueadas por NÍVEL (o EduBot é livre).
-# O front usa isto para mostrar o cadeado; a validação de nível é do backend.
-PERSONA_UNLOCK = {"einstein": 3, "curie": 5}
+# AV.1 (Plano 3) — a decisão R.1 do Plano 2 (personas desbloqueadas por NÍVEL) foi
+# REVOGADA: personas são ferramenta de estudo, não recompensa, e ficam LIVRES para
+# todos desde o 1º acesso. O catálogo é a única fonte; o desbloqueio some.
+PERSONA_IDS = ["einstein", "curie"]
 
 # R.2 (Plano 2) — títulos concedidos por conquista (id -> rótulo pt/en). O aluno
 # escolhe o título ativo entre os que ganhou (students.title).
@@ -476,10 +477,11 @@ def _title_id_from_label(label):
     return None
 
 
-def personas_state(level):
-    """Estado das personas de avatar (desbloqueadas por nível) — R.1."""
-    return [{"id": pid, "unlock_level": lvl, "unlocked": level >= lvl}
-            for pid, lvl in PERSONA_UNLOCK.items()]
+def personas_state(level=None):
+    """Estado das personas de avatar — AV.1 (Plano 3): LIVRES para todos. `level`
+    é ignorado (mantido na assinatura por compat); `unlock_level`/`unlocked` seguem
+    no shape por 1 release para não quebrar front em cache."""
+    return [{"id": pid, "unlock_level": 0, "unlocked": True} for pid in PERSONA_IDS]
 
 
 def me_state(student, lang="pt"):

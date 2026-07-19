@@ -348,13 +348,21 @@ gamificação funcionou.
 **Depende de**: Etapa 8.
 **Duração estimada**: 2–3 semanas.
 
-## R.1 — Personas de avatar por nível/conquista (P/M)
+## R.1 — Personas de avatar por nível/conquista (P/M) — ⚠️ REVOGADA no Plano 3 (AV.1)
 
-- `AVATAR_PERSONAS` ganha `unlock: {level: N}` (EduBot livre; Einstein nível 3;
-  Curie nível 5; futuros GLB do V.3 entram aqui).
-- `PerformanceCoach`: persona bloqueada aparece com cadeado + "nível 3";
+> **REVOGADA em 2026-07-14 (PLANO_EXECUCAO_3.md, AV.1).** A decisão de produto mudou:
+> as personas deixam de ser recompensa de gamificação e passam a ser **ferramenta de
+> estudo, LIVRES para todos desde o 1º acesso**. `PERSONA_UNLOCK` foi removido;
+> `personas_state()` devolve tudo `unlocked=True`; o cadeado saiu do `PerformanceCoach`;
+> a persona passou a ser atributo do aluno (`students.persona`), desacoplada da
+> gamificação. As recompensas de nível continuam sendo R.2 (títulos/insígnias) e R.3
+> (desafios). Texto original abaixo mantido por rastreio histórico.
+
+- ~~`AVATAR_PERSONAS` ganha `unlock: {level: N}` (EduBot livre; Einstein nível 3;
+  Curie nível 5; futuros GLB do V.3 entram aqui).~~
+- ~~`PerformanceCoach`: persona bloqueada aparece com cadeado + "nível 3";
   desbloquear dispara celebração; a validação de nível é conferida no backend ao
-  servir `GET /gamification/me` (o front não é fonte de verdade).
+  servir `GET /gamification/me` (o front não é fonte de verdade).~~
 
 ## R.2 — Títulos e insígnias de perfil (P)
 

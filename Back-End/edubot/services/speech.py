@@ -20,6 +20,13 @@ VOICES = {
     "pt": os.getenv("EDUBOT_POLLY_VOICE_PT", "Camila"),
     "en": os.getenv("EDUBOT_POLLY_VOICE_EN", "Joanna"),
 }
+# AV.4 (Plano 3): voz própria por persona (todas neurais do Polly). Antes o
+# Einstein falava com a voz "Camila"; agora cada companheiro soa distinto. Persona
+# desconhecida (ou 'edubot') cai nas VOICES padrão.
+PERSONA_VOICE = {
+    "einstein": {"pt": "Thiago", "en": "Matthew"},
+    "curie": {"pt": "Vitoria", "en": "Danielle"},
+}
 CACHE_DIR = os.getenv("EDUBOT_SPEECH_CACHE_DIR", "./speech_cache")
 MAX_CHARS = 2900  # limite do Polly neural (3000) com folga
 # Liga/desliga a síntese real. "auto" tenta o Polly; "off" força o fallback.
@@ -66,10 +73,20 @@ def _parse_visemes(marks_text):
     return visemes
 
 
-def synthesize(text, lang="pt"):
+def _voice_for(lang, persona):
+    """Resolve a voz do Polly: persona conhecida usa a sua; senão, a voz padrão."""
+    pv = PERSONA_VOICE.get((persona or "").lower())
+    if pv and pv.get(lang):
+        return pv[lang]
+    return VOICES.get(lang, VOICES["pt"])
+
+
+def synthesize(text, lang="pt", persona=None):
     """Devolve {key, visemes, cached} ou None (indisponível → o front usa fallback).
 
-    O mp3 é gravado no cache e servido por GET /edubot/speech/<key>.mp3."""
+    `persona` (AV.4) escolhe a voz; a voz entra na chave do cache, então personas
+    diferentes geram áudios diferentes sem colidir. O mp3 é gravado no cache e
+    servido por GET /edubot/speech/<key>.mp3."""
     global _unavailable
     if not is_available():
         return None
@@ -78,7 +95,7 @@ def synthesize(text, lang="pt"):
         return None
     text = text[:MAX_CHARS]
     lang = "en" if lang == "en" else "pt"
-    voice = VOICES.get(lang, VOICES["pt"])
+    voice = _voice_for(lang, persona)
     key = _key(f"{voice}|{text}", lang)
     mp3_path, vis_path = _cache_paths(key)
 

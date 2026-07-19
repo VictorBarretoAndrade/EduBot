@@ -11,7 +11,7 @@ import { PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer } from "
 import { GamificationMe, StudentProfile, UnreadIntervention, getGamificationMe, getInterventions, ackIntervention } from "../services/api";
 import { useLanguage, useT } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
-import { EduBotAvatar } from "./brand/EduBotAvatar";
+import { CompanionAvatar } from "./brand/CompanionAvatar";
 import { WeeklyGoalsCard } from "./Gamification";
 
 // G.6 — chip de gamificação no topo do dashboard: sequência, nível e XP da
@@ -56,7 +56,7 @@ interface DashboardProps {
 // A13 — Caixa de entrada proativa: intervenções que o EduBot criou sozinho
 // (pós-quiz, conclusão de OVA, varredura agendada). O aluno vê sem pedir e pode
 // agir (gerar trilha de reforço) ou dispensar.
-const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
+const EduBotInbox = ({ onOpenReforco, persona }: { onOpenReforco: () => void; persona: string }) => {
   const t = useT();
   const { lang } = useLanguage();
   const { speak, stop, speaking, supported } = useSpeech();
@@ -92,7 +92,7 @@ const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
       return;
     }
     setSpeakingId(item.intervention_id);
-    void speak(item.descricao || item.tipo, lang);
+    void speak(item.descricao || item.tipo, lang, persona);
   };
 
   if (items.length === 0) return null;
@@ -107,9 +107,9 @@ const EduBotInbox = ({ onOpenReforco }: { onOpenReforco: () => void }) => {
           <div key={item.intervention_id} className="rounded-[8px] border border-line bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
-                {/* V.2: mini-avatar do EduBot, animado enquanto fala este card */}
+                {/* EX.1: mini-avatar da PERSONA, animado enquanto fala este card */}
                 <div className="shrink-0">
-                  <EduBotAvatar size={40} speaking={speakingId === item.intervention_id} />
+                  <CompanionAvatar personaId={persona} size={40} speaking={speakingId === item.intervention_id} />
                 </div>
                 <div className="min-w-0">
                   <span className="text-xs font-bold uppercase tracking-wide text-muted">{item.tipo}</span>
@@ -221,7 +221,7 @@ export const Dashboard = ({ profile, onOpenContent, onOpenReforco }: DashboardPr
       )}
 
       {/* A13 — o EduBot "fala primeiro": recomendações não lidas, com ação */}
-      <EduBotInbox onOpenReforco={onOpenReforco} />
+      <EduBotInbox onOpenReforco={onOpenReforco} persona={profile.estudante.persona} />
 
       {/* E.3 — metas semanais sugeridas pelo EduBot (some se gamificação off) */}
       <WeeklyGoalsCard />

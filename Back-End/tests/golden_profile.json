@@ -28,9 +28,13 @@
   "estudante": {
     "curso": "Curso X",
     "nome": "Ana Souza",
+    "persona": "edubot",
     "ra": "111",
     "role": "aluno",
     "student_id": 1
+  },
+  "features": {
+    "companion": true
   },
   "historico_intervencoes": [
     {

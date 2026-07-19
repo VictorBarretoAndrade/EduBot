@@ -1,11 +1,15 @@
-# Como abrir o frontend novo (React / Lovable)
+# Como abrir o EduBot (frontend React)
 
-Guia rápido para abrir a **interface nova** (React + Vite + Tailwind, "Adapta
-Learn IA"), onde fica a aba **Reforço** (OVA personalizada gerada pelo agente
-EduBot), além de Conteúdos, Quiz, Tutor IA e Meu Desempenho.
+Guia rápido para abrir a plataforma **EduBot** (React + Vite + Tailwind), onde ficam
+as abas **Conteúdos**, **Quiz**, **Reforço** (OVA personalizada gerada pelo agente),
+**Meu Desempenho** (competências, gamificação, coach com avatares) e o **Painel do
+Tutor** (para tutor/admin).
 
-> O frontend novo é **só do aluno**. Os dashboards do coordenador continuam no
-> frontend clássico (`/html/plots.html`).
+> **O frontend clássico (jQuery: `login.html`, `painel.html`, `plots.html`) foi
+> APOSENTADO** (Fase 5 / A17). Hoje existe **um app React único** servido em `/app/`.
+> A raiz `/` apenas redireciona para lá. Aluno, tutor e admin usam o mesmo app — o
+> que muda é o que cada papel enxerga (o tutor/admin ganha o **Painel do Tutor**
+> dentro do próprio app).
 
 ---
 
@@ -18,50 +22,60 @@ ter Node/npm instalado na máquina.
 **Pré-requisito:** Docker Desktop instalado e rodando.
 
 ```powershell
-cd OVA-Rastreamento     # pasta que contém o compose.yaml
-docker compose up --build
+cd EduBot          # pasta que contém o compose.yaml (é a raiz do repositório)
+docker compose up -d --build
 ```
 
-Aguarde os containers subirem (banco, backend, build do React e Apache). Depois
-abra no navegador:
+Aguarde os containers subirem. Sinais de sucesso:
 
-- **Interface nova (React):** http://localhost:8010/app/
-- Interface clássica (login e dashboards): http://localhost:8010/html/login.html
+- `ova_db` fica **healthy**;
+- `ova_react_build` termina com **exit 0** (ele compila e sai — é o esperado);
+- `ova_back_end` e `ova_front_end` ficam **up**.
 
-> Da tela de login clássica também há o link **"✨ Nova interface"**, que leva
-> para `/app/`.
+Depois abra no navegador:
 
-### Login
+- **EduBot:** http://localhost:8010/app/  (a raiz http://localhost:8010/ redireciona para cá)
 
-| Perfil | RA | Senha |
+### Login (senha = RA)
+
+| Perfil | RA (usuário) | Senha |
 |--------|----|-------|
 | Aluno  | 1  | 1     |
+| Tutor  | 2  | 2     |
 | Admin (coordenador) | 4 | 4 |
 
-> O app novo é a visão do **aluno** — entre com o RA `1` / senha `1`.
+> O aluno (RA `1`) vê Conteúdos/Quiz/Reforço/Meu Desempenho. **Tutor (RA `2`)** e
+> **admin (RA `4`)** veem também o **Painel do Tutor** (KPIs do agente, fila de
+> aprovação, heatmap de domínio, engajamento) na barra lateral.
 
 ### Onde está a feature de Reforço
 
-Depois de logar em http://localhost:8010/app/, clique em **"Reforço"** na barra
-lateral → **"Gerar OVA de reforço"**. O agente diagnostica o assunto em que você
-foi pior e monta uma trilha (vídeos, textos e questões). As OVAs geradas ficam
-listadas ali; clique em **"Abrir"** para consumir.
+Depois de logar, clique em **"Reforço"** na barra lateral → **"Gerar OVA de
+reforço"**. O agente diagnostica o assunto em que você foi pior e monta uma trilha
+(vídeos, textos e questões). As OVAs geradas ficam listadas ali; clique em
+**"Abrir"** para consumir.
 
 > Para o agente ter o que recomendar, é preciso ter conteúdo cadastrado com
-> `competency_id` (veja a seção "Onde colocar perguntas, vídeos..." no
-> [README.md](README.md)) e algum desempenho registrado (ex.: errar questões do
-> quiz daquele assunto).
+> `competency_id` (veja [COMO_ADICIONAR_CONTEUDO.md](COMO_ADICIONAR_CONTEUDO.md)) e
+> algum desempenho registrado (ex.: errar questões do quiz daquele assunto).
 
 ### Parar
 
 ```powershell
-docker compose down
+docker compose down       # para os containers, PRESERVA o banco
+docker compose down -v    # para e APAGA o volume do banco (reset total)
 ```
 
-> ⚠️ Se você já tinha um **volume MySQL antigo** (subiu o projeto antes destas
-> mudanças), aplique as migrações de schema/seed — veja a nota no
-> [README.md](README.md) (`ddl_extra.sql` / `dml_extra.sql`). Em volume novo
-> (primeira vez ou após `docker compose down -v`), os scripts rodam sozinhos.
+> **Migrations (gotcha importante):** em **volume novo** (primeira vez ou após
+> `down -v`), o MySQL roda sozinho ddl → dml → **migrations 001…018** em ordem.
+> Reusando um **volume antigo**, as migrations novas **não** rodam
+> automaticamente — sintoma típico: `GET /student/me` responde 500. Aplique-as (são
+> idempotentes):
+> ```powershell
+> Get-ChildItem Database/sql/migration_*.sql | Sort-Object Name | ForEach-Object {
+>   Get-Content $_.FullName | docker exec -i ova_db mysql -ueduardo -pPassword-1 ova_db
+> }
+> ```
 
 ---
 
@@ -70,7 +84,7 @@ docker compose down
 Use só se for **mexer no código** do React e quiser recarregamento automático.
 
 **Pré-requisito:** Node.js 20+ instalado **e o backend no ar** (o app fala com a
-API em `http://<host>:5010` — suba o backend via `docker compose up`, que expõe
+API em `http://<host>:5010` — suba o backend via `docker compose up -d`, que expõe
 essa porta).
 
 ```powershell
@@ -79,16 +93,15 @@ npm install
 npm run dev
 ```
 
-O Vite sobe em **http://127.0.0.1:5173/** (porta padrão do Vite). Abra esse
-endereço — o app recarrega sozinho a cada alteração.
+O Vite sobe em **http://127.0.0.1:5173/**. Abra esse endereço — o app recarrega
+sozinho a cada alteração.
 
-> Observação: em dev, o app continua chamando a API na porta **5010** e o leitor
-> clássico na **8010** — os valores padrão ficam em `src/services/config.ts` e
-> podem ser sobrescritos por variáveis de ambiente (`VITE_API_URL` /
-> `VITE_CLASSIC_URL`); veja `.env.example`. Por isso o backend (container)
-> precisa estar rodando em paralelo; só o `npm run dev` não basta.
+> Em dev, o app continua chamando a API na porta **5010**; os valores padrão ficam
+> em `src/services/config.ts` e podem ser sobrescritos por variáveis de ambiente
+> (`VITE_API_URL` / `VITE_CLASSIC_URL`). Por isso o backend (container) precisa
+> estar rodando em paralelo; só o `npm run dev` não basta.
 
-Outros scripts (em `package.json`):
+Scripts (em `package.json`):
 
 | Comando | O que faz |
 |---------|-----------|
@@ -96,22 +109,46 @@ Outros scripts (em `package.json`):
 | `npm run build` | Type-check (`tsc`) + build de produção do Vite |
 | `npm run preview` | Serve localmente o build de produção para conferência |
 
+> **Atenção:** o type-check "de verdade" é o `npm run build` (`tsc && vite build`),
+> que é exatamente o que o container `ova_react_build` roda. Um `npx tsc` avulso no
+> host pode usar a ferramenta errada — prefira `npm run build`.
+
+---
+
+## Demonstrar do zero (consentimento + tutorial)
+
+O **modal de consentimento (LGPD)** e o **tutorial do EduBot** aparecem no 1º acesso e
+são controlados por flags no **localStorage** do navegador (`edubot.consent.v1` e
+`edubot.onboarding.v1`), lidas só no carregamento da página.
+
+- Jeito mais limpo para demo: abra em **janela anônima** (`Ctrl+Shift+N`) →
+  login → consentimento → tutorial, na sequência natural.
+- Já logado, para reexibir sem perder a sessão, no Console (`F12`):
+  ```js
+  localStorage.removeItem("edubot.consent.v1");
+  localStorage.removeItem("edubot.onboarding.v1");
+  location.reload();
+  ```
+- Para zerar também os **dados do servidor** (XP, consentimentos, tentativas):
+  `docker compose down -v` e suba de novo.
+
 ---
 
 ## Solução de problemas
 
 | Sintoma | Provável causa / o que fazer |
 |---------|------------------------------|
-| Página em branco em `/app/` | O build do React ainda não terminou — aguarde o serviço `ova_react_build` concluir no `docker compose up`, ou rode com `--build`. |
-| "Não foi possível carregar seus dados. A API está no ar?" | O backend (Flask, porta 5010) não está respondendo. Confira se o container do backend subiu. |
-| Volta para a tela de login sozinho | Token expirado/ausente (sessão de 7 dias). Faça login novamente. |
-| Aba **Reforço** diz que não há conteúdo de reforço | Falta conteúdo com `competency_id` para o assunto fraco, ou o aluno ainda não tem desempenho registrado. Cadastre recursos/questões (ver README) e responda o quiz. |
-| Erro de tipo no build do React | Rode `npm run build` em `Front-End/react-logic-demo` para ver a mensagem do TypeScript; ajuste e rebuild. |
+| Página em branco em `/app/` | O build do React ainda não terminou — aguarde o serviço `ova_react_build` sair com **exit 0**, ou rode com `--build`. |
+| "Não foi possível carregar seus dados" / volta para o login | Backend (Flask, porta 5010) fora do ar, **ou** token expirado. Confira o container do backend e faça login de novo. |
+| `GET /student/me` responde 500 | Volume MySQL antigo sem as migrations novas — aplique os `migration_*.sql` (ver nota na Opção A). |
+| Aba **Reforço** diz que não há conteúdo | Falta conteúdo com `competency_id` para o assunto fraco, ou o aluno ainda não tem desempenho registrado. |
+| Erro de tipo no build | Rode `npm run build` em `Front-End/react-logic-demo` para ver a mensagem do TypeScript; ajuste e rebuild. |
 
 ---
 
 ## Referências
 
 - [README.md](README.md) — visão geral, endpoints, login e como cadastrar conteúdo.
-- [RELATORIO_ALTERACOES.md](RELATORIO_ALTERACOES.md) — integração do React com o backend.
+- [COMO_TESTAR_PLATAFORMA.md](COMO_TESTAR_PLATAFORMA.md) — roteiro de teste ponta a ponta.
+- [COMO_ADICIONAR_CONTEUDO.md](COMO_ADICIONAR_CONTEUDO.md) — cadastrar OVAs, vídeos e questões.
 - [DADOS_E_AGENTE.md](DADOS_E_AGENTE.md) — dados do aluno e o agente EduBot.

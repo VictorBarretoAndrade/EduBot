@@ -12,7 +12,7 @@ classificado por competência). Esta tela:
 O consumo é persistido em resource_progress / attempts, realimentando o perfil
 e o próprio EduBot.
 */
-import { ArrowLeft, ClipboardCheck, ExternalLink, FileText, GraduationCap, LoaderCircle, Sparkles, Stars } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, ExternalLink, FileText, GraduationCap, LoaderCircle, Sparkles, Square, Stars, Volume2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   ExternalResource,
@@ -31,7 +31,9 @@ import {
 import { AudioPlayer } from "./players/AudioPlayer";
 import { MediaProgress, VideoPlayer } from "./players/VideoPlayer";
 import { useToast } from "./ui/Toast";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { useSpeech } from "../hooks/useSpeech";
+import { CompanionAvatar } from "./brand/CompanionAvatar";
 
 interface ReforcoProps {
   profile: StudentProfile;
@@ -50,8 +52,11 @@ const formatChip = (formato: string, t: (pt: string, en: string) => string) => {
   return map[formato] ?? formato;
 };
 
-export const Reforco = ({ onTracked }: ReforcoProps) => {
+export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
   const t = useT();
+  const { lang } = useLanguage();
+  const { speak, stop, speaking, supported, visemeRef } = useSpeech();
+  const persona = profile.estudante.persona;
   const [ovas, setOvas] = useState<PersonalizedOVASummary[]>([]);
   const [active, setActive] = useState<PersonalizedOVAContent | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -136,10 +141,25 @@ export const Reforco = ({ onTracked }: ReforcoProps) => {
             )}
           </div>
           <h1 className="mt-3 text-3xl font-bold text-ink">{active.titulo}</h1>
+          {/* EX.2 — o PERSONAGEM entrega a trilha que o agente montou. */}
           {active.mensagem_aluno && (
-            <p className="mt-3 rounded-[8px] bg-indigo-50/60 p-5 text-lg leading-8 text-slate-800">
-              {active.mensagem_aluno}
-            </p>
+            <div className="mt-3 flex items-start gap-3 rounded-[8px] bg-indigo-50/60 p-4">
+              <div className="shrink-0">
+                <CompanionAvatar personaId={persona} size={72} speaking={speaking} visemeRef={visemeRef} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg leading-8 text-slate-800">{active.mensagem_aluno}</p>
+                {supported && (
+                  <button
+                    onClick={() => (speaking ? stop() : speak(active.mensagem_aluno as string, lang, persona))}
+                    className="mt-2 flex h-9 items-center gap-2 rounded-[8px] border border-brand bg-white px-3 text-sm font-semibold text-brand transition hover:bg-indigo-50"
+                  >
+                    {speaking ? <Square size={16} /> : <Volume2 size={16} />}
+                    {speaking ? t("Parar", "Stop") : t("Ouvir", "Listen")}
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
 

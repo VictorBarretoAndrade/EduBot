@@ -6,7 +6,7 @@ semana, os alunos prestes a perder a sequência (alvo de intervenção de 1 cliq
 e a validação ANTES×DEPOIS (dias ativos/aluno em duas janelas de 28 dias) — o
 gate honesto: a gamificação mexeu o ponteiro?
 */
-import { Activity, AlertCircle, LoaderCircle, TrendingUp } from "lucide-react";
+import { Activity, AlertCircle, Bot, LoaderCircle, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TutorEngagement, getTutorEngagement } from "../services/api";
 import { useT } from "../i18n";
@@ -76,6 +76,35 @@ export const EngagementPanel = () => {
           ))}
         </div>
       </div>
+
+      {/* EX.4 — uso do companheiro de estudo (o personagem está ajudando ou sendo ignorado?) */}
+      {data.companheiro && (
+        <div className="mt-4">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <Bot size={16} className="text-brand" /> {t("Companheiro de estudo", "Study companion")}
+          </p>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div className="rounded-[8px] border border-line p-3 text-center">
+              <div className="text-lg font-bold text-brand">
+                {data.companheiro.alunos_ativos}/{data.companheiro.total_alunos}
+              </div>
+              <div className="text-[11px] text-muted">{t("usaram (28d)", "used it (28d)")}</div>
+            </div>
+            <div className="rounded-[8px] border border-line p-3 text-center">
+              <div className="text-lg font-bold text-brand">{data.companheiro.secoes_ouvidas_semana}</div>
+              <div className="text-[11px] text-muted">{t("seções ouvidas/sem.", "sections heard/wk")}</div>
+            </div>
+            <div className="rounded-[8px] border border-line p-3 text-center">
+              <div className="text-lg font-bold text-brand">{data.companheiro.explicacoes_semana}</div>
+              <div className="text-[11px] text-muted">{t("explicações/sem.", "explanations/wk")}</div>
+            </div>
+            <div className="rounded-[8px] border border-line p-3 text-center">
+              <div className="text-lg font-bold text-brand">{data.companheiro.falas_ouvidas_semana}</div>
+              <div className="text-[11px] text-muted">{t("falas ouvidas/sem.", "lines heard/wk")}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* alunos prestes a perder a sequência */}
       {data.em_risco.length > 0 && (

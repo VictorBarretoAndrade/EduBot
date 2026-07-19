@@ -143,6 +143,7 @@ def edubot_tutor_chat():
         context=data.get("context") or "",
         messages=messages,
         lang=lang,
+        persona=data.get("persona"),   # CP.4: estilo do personagem (tom, não regras)
     )
 
     # D.1 — `asked_tutor` é o sinal diagnóstico mais rico (é o que torna a
@@ -208,12 +209,13 @@ def edubot_external_resources():
 @require_auth
 def edubot_coach_message():
     lang = request.args.get("lang", "pt")
+    persona = request.args.get("persona")   # CP.4: estilo do personagem (opcional)
     try:
         profile = build_student_profile(g.student)
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500
 
-    result = coach_message(profile, lang=lang)
+    result = coach_message(profile, lang=lang, persona=persona)
     if not result:
         return json.dumps({"message": None, "ai": False}), 200
     text, model_id = result

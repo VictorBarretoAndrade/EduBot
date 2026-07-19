@@ -7,7 +7,7 @@ em POST /question/answer — mesma garantia anti-fraude do componente Quiz da ab
 */
 import { CheckCircle2, Lock, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { OvaQuestion, QuizLock, answerQuestion, getOVAQuestions, quizLockFromError, registerInteraction } from "../../services/api";
+import { GamificationAward, OvaQuestion, QuizLock, answerQuestion, getOVAQuestions, quizLockFromError, registerInteraction } from "../../services/api";
 import { useToast } from "../ui/Toast";
 import { useT } from "../../i18n";
 
@@ -17,9 +17,12 @@ interface OvaQuizProps {
   ovaId: number;
   studentId: number;
   onTracked: () => void;
+  // CP.3: cada correção devolve o ganho (XP/conquistas) e se acertou — o
+  // OvaReader usa isso para o companheiro reagir (comemorar / oferecer ajuda).
+  onGraded?: (result: { correct: boolean; gamification: GamificationAward | null }) => void;
 }
 
-export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
+export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps) => {
   const t = useT();
   const [questions, setQuestions] = useState<OvaQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -69,6 +72,11 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked }: OvaQuizProps) => {
         next[question.question_id] = graded.is_correct;
         submittedRef.current[question.question_id] = selected;
         submittedAny = true;
+        // M9: base individual — reinicia o cronômetro após cada submissão, para o
+        // response_ms das questões seguintes não incluir o tempo das anteriores.
+        loadedAtRef.current = Date.now();
+        // CP.3: o companheiro reage a esta correção (acerto/erro + XP/conquista).
+        onGraded?.({ correct: graded.is_correct, gamification: graded.gamification });
       } catch {
         failed = true;
       }

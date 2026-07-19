@@ -19,6 +19,7 @@ import unicodedata
 import uuid
 
 from . import llm
+from .persona import style_prompt, bordao
 
 BEDROCK_MODEL_ID = "anthropic.claude-sonnet-4-5-20250929-v1:0"
 
@@ -121,7 +122,7 @@ def _retrieve(question, passages):
 # Cliente mockado: simula o Claude tutor de forma determinística.
 # ---------------------------------------------------------------------------
 class _MockTutorClient:
-    def invoke(self, system, messages, titulo, passages, headings, lang="pt"):
+    def invoke(self, system, messages, titulo, passages, headings, lang="pt", persona=None):
         # Fase 4 (A12): o mock também responde no idioma do aluno.
         def T(pt, en):
             return en if lang == "en" else pt
@@ -131,6 +132,9 @@ class _MockTutorClient:
             if m.get("role") == "user":
                 question = m.get("content", "")
                 break
+
+        # CP.4: bordão determinístico da persona (perceptível sem LLM real).
+        pre = bordao(persona, seed=len(question), lang=lang)
 
         relevant = _retrieve(question, passages)
 
@@ -145,7 +149,7 @@ class _MockTutorClient:
                 f"That question seems outside the content of this OVA (\"{titulo}\"). "
                 f"As the tutor for this material, I can help you with topics such as: {dicas}. "
                 "What would you like to know more about from this content?")
-            return _text_envelope(text)
+            return _text_envelope(pre + text)
 
         citacoes = " ".join(f"\"{p['text']}\"" for p in relevant)
         secao = relevant[0]["heading"]
@@ -156,7 +160,7 @@ class _MockTutorClient:
             f"Good question! In this OVA's material, in the section about \"{secao}\", "
             f"the content states that: {citacoes} "
             "If you'd like, I can go deeper into this point or relate it to another topic in the OVA.")
-        return _text_envelope(text)
+        return _text_envelope(pre + text)
 
 
 def _text_envelope(text):
@@ -174,7 +178,7 @@ def _text_envelope(text):
 _client = _MockTutorClient()
 
 
-def tutor_reply(titulo, context, messages, lang="pt"):
+def tutor_reply(titulo, context, messages, lang="pt", persona=None):
     """Ponto de entrada do tutor: título + material do OVA + histórico de chat
     -> resposta do tutor (texto).
 
@@ -182,6 +186,7 @@ def tutor_reply(titulo, context, messages, lang="pt"):
     context: material do OVA (texto extraído do conteúdo que o aluno consumiu).
     messages: [{"role": "user"|"assistant", "content": str}, ...]
     lang: idioma da resposta (Fase 4 — A12), no mock e na LLM real.
+    persona: CP.4 — muda só o TOM (estilo do personagem); grounding inalterado.
     """
     context = (context or "")[:MAX_CONTEXT_CHARS]
     passages, headings = _parse_context(context)
@@ -189,6 +194,10 @@ def tutor_reply(titulo, context, messages, lang="pt"):
         titulo=titulo or ("this OVA" if lang == "en" else "este OVA"),
         contexto=context,
         idioma="inglês" if lang == "en" else "português do Brasil")
+    # CP.4: parágrafo de estilo da persona no system prompt (tom, não regras).
+    estilo = style_prompt(persona, lang)
+    if estilo:
+        system = f"{system}\n\n{estilo}"
 
     # Referenciação automática (Cena 2): identifica de quais seções do material a
     # resposta foi ancorada, para o frontend exibir "Fonte: <seção>".
@@ -226,7 +235,7 @@ def tutor_reply(titulo, context, messages, lang="pt"):
     response = _client.invoke(
         system=system, messages=messages,
         titulo=titulo or ("this OVA" if lang == "en" else "este OVA"),
-        passages=passages, headings=headings, lang=lang)
+        passages=passages, headings=headings, lang=lang, persona=persona)
 
     reply = "".join(b.get("text", "") for b in response.get("content", [])
                     if b.get("type") == "text")

@@ -25,7 +25,9 @@ def speak():
     data = get_payload()
     text = data.get("text") or ""
     lang = "en" if data.get("lang") == "en" else "pt"
-    result = speech.synthesize(text, lang)
+    # AV.4: persona opcional escolhe a voz (Einstein/Curie têm voz própria).
+    persona = data.get("persona")
+    result = speech.synthesize(text, lang, persona=persona)
     if result is None:
         # Degradação graciosa: o front usa o Web Speech.
         return json.dumps({"available": False}), 200

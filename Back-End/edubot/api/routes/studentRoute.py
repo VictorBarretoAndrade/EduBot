@@ -9,11 +9,16 @@ from edubot.data.models.students import Students
 
 # MELHORIA (4.2): autenticação + perfil completo do aluno logado
 from edubot.api.auth import require_auth, require_roles
-from edubot.api.http import get_lang
+from edubot.api.http import get_lang, get_payload
 from edubot.services.student_context import build_student_profile
+from edubot.services.gamification import PERSONA_IDS
 
 # Create a route blueprint as a reusable component
 app_student = Blueprint("student", __name__)
+
+# AV.2 (Plano 3): personas válidas = mascote livre + cientistas (catálogo único no
+# gamification). A persona é ferramenta de estudo, disponível a todos.
+VALID_PERSONAS = {"edubot", *PERSONA_IDS}
 
 
 # MELHORIA (4.2): devolve o contexto completo do aluno autenticado (quem está
@@ -28,6 +33,25 @@ def student_me():
         return json.dumps(build_student_profile(g.student, lang=get_lang()), default=str), 200
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500
+
+# AV.2 (Plano 3): grava a persona do companheiro de estudo do aluno logado. A
+# escolha antes vivia só no localStorage; agora é atributo do aluno (segue entre
+# dispositivos e o tutor IA sabe qual persona "fala"). Desacoplada da gamificação:
+# funciona mesmo com EDUBOT_GAMIFICATION=off.
+@app_student.route("/student/persona", methods=["POST"])
+@cross_origin()
+@require_auth
+def set_persona():
+    persona = (get_payload().get("persona") or "").strip().lower()
+    if persona not in VALID_PERSONAS:
+        return json.dumps({"error": "invalid_persona"}), 400
+    try:
+        g.student.persona = persona
+        g.student.save()
+        return json.dumps({"persona": persona}), 200
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500
+
 
 # Given a course id, return all the students of this course
 # A.3: expõe nome + ID de alunos (dado pessoal — LGPD). Restrito a tutor/admin;

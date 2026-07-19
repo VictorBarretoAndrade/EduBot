@@ -483,6 +483,41 @@ def tutor_engagement():
         depois = _active_days_avg(now - win, now)
         antes = _active_days_avg(now - 2 * win, now - win)
 
+        # EX.4 (Plano 3) — uso do companheiro de estudo, tudo de learning_events
+        # (verbos de CP.2/CP.4/CP.5), sem migration. O tutor enxerga se o
+        # personagem está sendo usado ou ignorado — critério honesto p/ manter/ajustar.
+        week_start = now - datetime.timedelta(days=7)
+
+        def _count(verb, obj_type=None, start=week_start):
+            if not ids:
+                return 0
+            q = (LearningEvents
+                 .select()
+                 .where((LearningEvents.student_id.in_(ids)) &
+                        (LearningEvents.verb == verb) &
+                        (LearningEvents.occurred_at >= start)))
+            if obj_type:
+                q = q.where(LearningEvents.object_type == obj_type)
+            return q.count()
+
+        def _distinct_students(verb, start):
+            if not ids:
+                return 0
+            return (LearningEvents
+                    .select(fn.COUNT(LearningEvents.student_id.distinct()))
+                    .where((LearningEvents.student_id.in_(ids)) &
+                           (LearningEvents.verb == verb) &
+                           (LearningEvents.occurred_at >= start))
+                    .scalar()) or 0
+
+        companheiro = {
+            "alunos_ativos": _distinct_students("companion_spoke", now - win),  # 28d
+            "total_alunos": n,
+            "secoes_ouvidas_semana": _count("played", "ova_section"),   # CP.5
+            "falas_ouvidas_semana": _count("companion_listened"),        # CP.2 (▶ no balão)
+            "explicacoes_semana": _count("companion_explain"),           # CP.4
+        }
+
         return json.dumps({
             "total_alunos": n,
             "participacao_ranking": {"opt_in": opt_in, "total": n},
@@ -490,6 +525,7 @@ def tutor_engagement():
             "xp_medio_semana": round(soma_xp / n, 1) if n else 0,
             "em_risco": em_risco,
             "antes_depois": {"dias_ativos_antes": antes, "dias_ativos_depois": depois},
+            "companheiro": companheiro,
         }, default=str), 200
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500

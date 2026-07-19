@@ -15,6 +15,7 @@
 # passou de ~30 queries para 8. O contrato do dict de saída é idêntico
 # (garantido por tests/test_profile_contract.py); só o caminho até ele mudou.
 import datetime
+import os
 
 from peewee import Case, JOIN, fn
 
@@ -401,7 +402,15 @@ def build_student_profile(student, lang="pt"):
             "ra": student.ra,
             "curso": course.course_name if course else None,
             # MELHORIA (Cena 4): papel do usuário, para o frontend liberar o painel
-            "role": getattr(student, "role", "aluno") or "aluno"
+            "role": getattr(student, "role", "aluno") or "aluno",
+            # AV.2 (Plano 3): persona do companheiro (a linha do aluno já está
+            # carregada — 0 query nova, contrato de 8 queries do perfil intacto).
+            "persona": getattr(student, "persona", "edubot") or "edubot"
+        },
+        # CP.1 (Plano 3): flags de feature lidas do ambiente (0 query). `companion`
+        # desligado = o leitor de OVA não monta o companheiro (idêntico ao atual).
+        "features": {
+            "companion": os.getenv("EDUBOT_COMPANION", "on").lower() in ("1", "true", "on", "yes"),
         },
         "dias_sem_acesso": _days_without_access(student),
         "recursos": {

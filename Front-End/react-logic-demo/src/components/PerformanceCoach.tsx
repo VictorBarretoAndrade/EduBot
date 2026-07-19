@@ -1,21 +1,21 @@
 /*
 MELHORIA (Roteiro Cena 3) — "EduBot fala com você".
 
-Um personagem virtualizado (EduBotAvatar) que conversa com o aluno sobre o
-progresso dele, em "Meu Desempenho". Por padrão a fala é GERADA localmente a
+Um personagem virtualizado (CompanionAvatar — mascote EduBot ou a persona 3D
+escolhida) que conversa com o aluno sobre o progresso dele, em "Meu Desempenho".
+Por padrão a fala é GERADA localmente a
 partir dos dados do perfil (offline, sem custo). O botão "Versão do EduBot (IA)"
 pede um texto mais natural ao Claude na AWS Bedrock — SOB DEMANDA (controle de
 custo). A fala pode ser OUVIDA com a boca do avatar animada.
 */
-import { Lock, Pause, Play, Sparkles } from "lucide-react";
+import { Pause, Play, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { StudentProfile, getCoachMessage, getGamificationMe } from "../services/api";
+import { StudentProfile, getCoachMessage } from "../services/api";
 import { Lang, useLanguage } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
-import { EduBotAvatar } from "./brand/EduBotAvatar";
-import { Avatar3D } from "./brand/Avatar3D";
+import { CompanionAvatar } from "./brand/CompanionAvatar";
 import { AVATAR_PERSONAS, personaTagline } from "./brand/avatars";
-import { getPersona, setPersona } from "../services/persona";
+import { setPersona } from "../services/persona";
 import { useToast } from "./ui/Toast";
 
 // Opções do seletor de avatar do card "Meu Desempenho": o mascote EduBot (2D,
@@ -64,35 +64,17 @@ function buildCoachMessage(profile: StudentProfile, lang: Lang): string {
 
 export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
   const { lang, t } = useLanguage();
-  const { speak, stop, speaking, supported } = useSpeech();
+  const { speak, stop, speaking, supported, visemeRef } = useSpeech();
   const toast = useToast();
 
   const localMessage = useMemo(() => buildCoachMessage(profile, lang), [profile, lang]);
   const [message, setMessage] = useState(localMessage);
   const [aiLoading, setAiLoading] = useState(false);
   const [fromAi, setFromAi] = useState(false);
-  // Avatar escolhido: EduBot (2D) ou um cientista 3D (Einstein/Curie). V.2: a
-  // escolha é lembrada entre visitas (localStorage).
-  const [avatarId, setAvatarId] = useState<string>(() => getPersona());
-  const [threeFailed, setThreeFailed] = useState(false);
-  // R.1/R.2 — nível (para o cadeado das personas) e título ativo do aluno.
-  const [locks, setLocks] = useState<Record<string, { unlocked: boolean; level: number }>>({});
-  const [title, setTitle] = useState<string | null>(null);
-  useEffect(() => {
-    getGamificationMe()
-      .then((me) => {
-        if (!me.enabled) return;
-        setTitle(me.title);
-        const map: Record<string, { unlocked: boolean; level: number }> = {};
-        me.personas.forEach((p) => (map[p.id] = { unlocked: p.unlocked, level: p.unlock_level }));
-        setLocks(map);
-      })
-      .catch(() => undefined);
-  }, []);
-  const isLocked = (id: string) => locks[id] && !locks[id].unlocked;
-  // se a persona atual está travada, cai no EduBot (mascote livre)
-  const effectiveId = isLocked(avatarId) ? "edubot" : avatarId;
-  const selected = AVATAR_OPTIONS.find((o) => o.id === effectiveId) ?? AVATAR_OPTIONS[0];
+  // AV.1/AV.2 (Plano 3): personas são LIVRES (sem cadeado) e a escolha vem do
+  // servidor (profile.estudante.persona) — funciona com a gamificação desligada.
+  const [avatarId, setAvatarId] = useState<string>(() => profile.estudante.persona || "edubot");
+  const selected = AVATAR_OPTIONS.find((o) => o.id === avatarId) ?? AVATAR_OPTIONS[0];
 
   // Ao trocar de idioma (ou perfil), volta para o texto local
   useEffect(() => {
@@ -121,56 +103,35 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
     <div className="mb-6 overflow-hidden rounded-[8px] border border-line bg-gradient-to-br from-indigo-50 to-white p-6 shadow-soft">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
         <div className="flex shrink-0 flex-col items-center gap-2">
-          {selected.persona && !threeFailed ? (
-            <Avatar3D
-              persona={selected.persona}
-              speaking={speaking}
-              width={150}
-              height={190}
-              onError={() => setThreeFailed(true)}
-            />
-          ) : (
-            <EduBotAvatar size={120} speaking={speaking} />
-          )}
+          {/* AV.3: componente único — mascote 2D ou cientista 3D (com lip-sync
+              por visemas) e fallback automático se o WebGL falhar. */}
+          <CompanionAvatar personaId={avatarId} speaking={speaking} visemeRef={visemeRef} size={140} />
 
-          {/* Seletor de personagem: EduBot + cientistas. R.1: personas travadas
-              mostram o nível necessário (cadeado) e não são selecionáveis. */}
+          {/* Seletor de personagem: EduBot + cientistas — todos LIVRES (AV.1). */}
           <div className="flex flex-wrap justify-center gap-1.5">
-            {AVATAR_OPTIONS.map((opt) => {
-              const locked = isLocked(opt.id);
-              return (
-                <button
-                  key={opt.id}
-                  disabled={locked}
-                  onClick={() => {
-                    if (locked) return;
-                    setAvatarId(opt.id);
-                    setPersona(opt.id);   // V.2: lembra a escolha
-                    setThreeFailed(false);
-                  }}
-                  aria-pressed={effectiveId === opt.id}
-                  title={locked ? t(`Desbloqueia no nível ${locks[opt.id].level}`, `Unlocks at level ${locks[opt.id].level}`) : opt.label}
-                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                    effectiveId === opt.id
-                      ? "bg-brand text-white"
-                      : locked
-                      ? "cursor-not-allowed border border-line bg-slate-50 text-slate-400"
-                      : "border border-line bg-white text-muted hover:bg-slate-50"
-                  }`}
-                >
-                  {locked && <Lock size={11} />}
-                  {opt.label}
-                  {locked && <span className="text-[10px]">Nv{locks[opt.id].level}</span>}
-                </button>
-              );
-            })}
+            {AVATAR_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => {
+                  setAvatarId(opt.id);
+                  setPersona(opt.id);   // AV.2: persiste no servidor + cache local
+                }}
+                aria-pressed={avatarId === opt.id}
+                title={opt.label}
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                  avatarId === opt.id
+                    ? "bg-brand text-white"
+                    : "border border-line bg-white text-muted hover:bg-slate-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
 
           {selected.persona && (
             <span className="max-w-[160px] text-center text-[11px] text-muted">
-              {threeFailed
-                ? t("Avatar 3D indisponível neste navegador.", "3D avatar unavailable in this browser.")
-                : personaTagline(selected.persona, lang)}
+              {personaTagline(selected.persona, lang)}
             </span>
           )}
         </div>
@@ -201,7 +162,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
               </button>
             ) : (
               <button
-                onClick={() => speak(message, lang)}
+                onClick={() => speak(message, lang, avatarId)}
                 disabled={!supported}
                 className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >

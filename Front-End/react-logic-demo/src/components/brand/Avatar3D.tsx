@@ -14,16 +14,30 @@ timing) — basta alimentar `mouthRef` com a timeline.
 Estilo: low-poly/cartoon amigável. Não é foto-realista (isso exigiria um modelo
 .glb externo); é reconhecível e nunca quebra a demo.
 */
-import { Component, ReactNode, useRef } from "react";
+import { Component, MutableRefObject, ReactNode, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { AvatarPersona, AvatarVariant } from "./avatars";
+
+// AV.3 (Plano 3) — lip-sync real: mapa VISEMA (Polly pt-BR) -> abertura da boca.
+// Quando o `useSpeech` fornece a timeline de visemas do Polly (visemeRef), a boca
+// segue os fonemas; sem timeline (Web Speech), cai na oscilação suave por `speaking`.
+const VISEME_OPEN: Record<string, number> = {
+  sil: 0, p: 0.05, f: 0.15, v: 0.15, k: 0.3, t: 0.25, d: 0.25, s: 0.2,
+  S: 0.28, T: 0.2, r: 0.3, n: 0.2, l: 0.25,
+  a: 0.9, e: 0.55, E: 0.68, i: 0.35, o: 0.72, O: 0.82, u: 0.42, "@": 0.5,
+};
+const visemeOpen = (v: string): number => (v in VISEME_OPEN ? VISEME_OPEN[v] : 0.4);
 
 /* ------------------------------------------------------------------ */
 /* Personagem procedural                                               */
 /* ------------------------------------------------------------------ */
 
-function Character({ persona, speaking }: { persona: AvatarPersona; speaking: boolean }) {
+function Character({ persona, speaking, visemeRef }: {
+  persona: AvatarPersona;
+  speaking: boolean;
+  visemeRef?: MutableRefObject<string>;
+}) {
   const { palette, variant } = persona;
   const rootRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Group>(null);
@@ -40,7 +54,13 @@ function Character({ persona, speaking }: { persona: AvatarPersona; speaking: bo
 
     // --- BOCA (abre/fecha enquanto fala) ---
     let target = 0;
-    if (speaking) {
+    const viseme = visemeRef?.current;
+    if (viseme != null) {
+      // Lip-sync guiado por visemas (Polly) OU pela alternância do Web Speech
+      // fallback — em ambos o useSpeech mantém o visemeRef atualizado.
+      target = visemeOpen(viseme);
+    } else if (speaking) {
+      // Sem visemeRef (uso legado do avatar): oscilação suave.
       const wave = 0.5 + 0.5 * Math.sin(t * 11);
       const flutter = 0.5 + 0.5 * Math.sin(t * 27 + 1.3);
       target = THREE.MathUtils.clamp(0.15 + 0.7 * wave * (0.6 + 0.4 * flutter), 0, 0.9);
@@ -261,12 +281,13 @@ class SceneErrorBoundary extends Component<{ onError: () => void; children: Reac
 interface Avatar3DProps {
   persona: AvatarPersona;
   speaking: boolean;
+  visemeRef?: MutableRefObject<string>;
   width?: number;
   height?: number;
   onError?: () => void;
 }
 
-export function Avatar3D({ persona, speaking, width = 220, height = 280, onError }: Avatar3DProps) {
+export function Avatar3D({ persona, speaking, visemeRef, width = 220, height = 280, onError }: Avatar3DProps) {
   return (
     <div style={{ width, height, borderRadius: 12, overflow: "hidden", background: persona.bg ?? "#eef0fb" }}>
       <SceneErrorBoundary onError={() => onError?.()}>
@@ -279,16 +300,11 @@ export function Avatar3D({ persona, speaking, width = 220, height = 280, onError
           <hemisphereLight intensity={1.15} groundColor={"#b9b9c9"} color={"#ffffff"} />
           <directionalLight position={[2, 3, 3]} intensity={1.3} />
           <directionalLight position={[-2, 1, 1.5]} intensity={0.5} color={"#cfd6ff"} />
-          <Character persona={persona} speaking={speaking} />
+          <Character persona={persona} speaking={speaking} visemeRef={visemeRef} />
         </Canvas>
       </SceneErrorBoundary>
     </div>
   );
-}
-
-// Compat: outrora pré-carregava o GLB. Agora é no-op (avatar é procedural).
-export function preloadAvatar(_persona: AvatarPersona): void {
-  /* nada a pré-carregar — avatar 100% em código */
 }
 
 // Referência de tipo para manter a assinatura estável entre variantes.

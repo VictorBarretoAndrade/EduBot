@@ -24,3 +24,6 @@ class Students(BaseModel):
     # concedido por conquistas. Nulos até o aluno participar/escolher.
     nickname = CharField(max_length=40, null=True)
     title = CharField(max_length=40, null=True)
+    # AV.2 (Plano 3): persona do companheiro de estudo escolhido pelo aluno
+    # ('edubot' | 'einstein' | 'curie'). Antes só em localStorage.
+    persona = CharField(max_length=24, default="edubot")
