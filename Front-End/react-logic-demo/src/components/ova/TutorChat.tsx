@@ -11,7 +11,7 @@ O tutor continua preso ao material do OVA (grounding no backend); a persona muda
 o TOM. As "Fontes" (seções que embasaram a resposta) seguem exibidas.
 */
 import { BookMarked, Bot, LoaderCircle, Pause, Play, Send, User, X } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChatMessage } from "../../hooks/useTutorChat";
 import { useToast } from "../ui/Toast";
 import { useLanguage, useT } from "../../i18n";
@@ -39,6 +39,9 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
   const { speak, stop, speaking, visemeRef } = useSpeech();
   const [input, setInput] = useState("");
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  // VI.3 (Plano 4): trecho da fonte que está expandido (chave "msgIdx-srcIdx").
+  // Substitui o `title` (invisível a teclado/touch) por um bloco expansível.
+  const [openSource, setOpenSource] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
@@ -49,8 +52,23 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
   ];
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    // VI.2: `scroll-behavior: auto` do CSS não afeta o `behavior` explícito do
+    // scrollTo — respeitamos a preferência aqui.
+    const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: reduce ? "auto" : "smooth" });
   }, [messages, loading]);
+
+  // AC.3 (Plano 4): região viva DEDICADA — anuncia só a última fala relevante
+  // (o "pensando" enquanto carrega, ou a resposta do tutor ao chegar). Um
+  // aria-live na lista rolável faria o leitor de tela repetir mensagens antigas
+  // a cada re-render do React.
+  const liveMessage = useMemo(() => {
+    if (loading) return t("O tutor está pensando...", "The tutor is thinking...");
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role !== "user") return messages[i].content;
+    }
+    return "";
+  }, [messages, loading, t]);
 
   // Quando a fala termina (speaking cai), limpa o índice em reprodução.
   useEffect(() => {
@@ -95,9 +113,12 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
           aria-label={t("Fechar", "Close")}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-white/20"
         >
-          <X size={18} />
+          <X size={18} aria-hidden="true" />
         </button>
       </header>
+
+      {/* AC.3: região viva dedicada (invisível) — leitor de tela anuncia a resposta do tutor. */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveMessage}</div>
 
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
         {messages.map((message, index) => {
@@ -108,6 +129,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                   isUser ? "bg-coral text-white" : "bg-brand text-white"
                 }`}
+                aria-hidden="true"
               >
                 {isUser ? <User size={16} /> : <Bot size={16} />}
               </div>
@@ -119,6 +141,8 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
                       : "rounded-tl-none border border-line bg-white text-slate-700"
                   }`}
                 >
+                  {/* AC.3: quem falou (só para leitor de tela — os avatares são decorativos). */}
+                  <span className="sr-only">{isUser ? t("Você:", "You:") : `${tutorName(personaId, lang, t)}:`} </span>
                   {message.content}
                 </div>
 
@@ -126,26 +150,47 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
                 {!isUser && index > 0 && (
                   <button
                     onClick={() => (speakingIdx === index ? stop() : listen(index, message.content))}
-                    className="mt-1 flex items-center gap-1 rounded-full border border-line bg-white px-2 py-0.5 text-[11px] font-semibold text-brand transition hover:bg-indigo-50"
+                    className="mt-1 flex items-center gap-1 rounded-full border border-line bg-white px-2 py-0.5 text-xs font-semibold text-brand transition hover:bg-indigo-50"
                   >
-                    {speakingIdx === index ? <Pause size={11} /> : <Play size={11} />}
+                    {speakingIdx === index ? <Pause size={11} aria-hidden="true" /> : <Play size={11} aria-hidden="true" />}
                     {speakingIdx === index ? t("Parar", "Stop") : t("Ouvir", "Listen")}
                   </button>
                 )}
 
-                {/* Referenciação automática: seções do OVA que embasaram a resposta */}
+                {/* Referenciação automática: seções do OVA que embasaram a resposta.
+                    VI.3: o trecho (antes num `title`) abre num bloco expansível. */}
                 {!isUser && message.sources && message.sources.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {message.sources.map((source, sourceIndex) => (
-                      <span
-                        key={sourceIndex}
-                        title={source.trecho}
-                        className="inline-flex items-center gap-1 rounded-full border border-line bg-slate-50 px-2.5 py-1 text-xs text-muted"
-                      >
-                        <BookMarked size={12} className="text-brand" />
-                        {source.secao}
-                      </span>
-                    ))}
+                  <div className="mt-1.5 flex flex-col gap-1.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {message.sources.map((source, sourceIndex) => {
+                        const key = `${index}-${sourceIndex}`;
+                        const isOpen = openSource === key;
+                        return (
+                          <button
+                            key={sourceIndex}
+                            type="button"
+                            onClick={() => setOpenSource(isOpen ? null : key)}
+                            aria-expanded={isOpen}
+                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
+                              isOpen ? "border-brand bg-indigo-50 text-brand" : "border-line bg-slate-50 text-muted hover:bg-indigo-50"
+                            }`}
+                          >
+                            <BookMarked size={12} className="text-brand" aria-hidden="true" />
+                            {source.secao}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {message.sources.map((source, sourceIndex) =>
+                      openSource === `${index}-${sourceIndex}` ? (
+                        <p
+                          key={`trecho-${sourceIndex}`}
+                          className="rounded-[8px] border border-line bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600"
+                        >
+                          {source.trecho}
+                        </p>
+                      ) : null
+                    )}
                   </div>
                 )}
               </div>
@@ -155,11 +200,11 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
 
         {loading && (
           <div className="flex gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true">
               <Bot size={16} />
             </div>
             <div className="flex items-center gap-2 rounded-[12px] rounded-tl-none border border-line bg-white px-4 py-2.5 text-sm text-muted">
-              <LoaderCircle size={15} className="animate-spin" />
+              <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
               {t("Pensando...", "Thinking...")}
             </div>
           </div>
@@ -186,6 +231,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder={t("Pergunte sobre este conteúdo...", "Ask about this content...")}
+          aria-label={t("Pergunte sobre este conteúdo", "Ask about this content")}
           className="h-11 w-full rounded-[8px] border border-line bg-slate-50 px-4 text-sm text-ink outline-none focus:border-brand"
         />
         <button
@@ -194,7 +240,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
           aria-label={t("Enviar", "Send")}
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] bg-brand text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          <Send size={18} />
+          <Send size={18} aria-hidden="true" />
         </button>
       </form>
     </div>

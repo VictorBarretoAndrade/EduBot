@@ -6,7 +6,7 @@ e passou a consumir o backend Flask:
 O visual original (Lovable) foi mantido; apenas a fonte dos dados mudou.
 */
 import { Suspense, lazy, useCallback, useEffect, useState } from "react";
-import { Sidebar, Topbar } from "./components/Sidebar";
+import { Sidebar, STAFF_VIEWS, Topbar } from "./components/Sidebar";
 import { Login } from "./components/Login";
 import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
 import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
@@ -27,22 +27,34 @@ const Reforco = lazy(() => import("./components/Reforco").then((m) => ({ default
 const Report = lazy(() => import("./components/Report").then((m) => ({ default: m.Report })));
 const OvaReader = lazy(() => import("./components/ova/OvaReader").then((m) => ({ default: m.OvaReader })));
 const TutorPanel = lazy(() => import("./components/TutorPanel").then((m) => ({ default: m.TutorPanel })));
+// Plano 5: detalhe do aluno visto pelo professor (#/aluno/:id) e painel do gestor.
+const TutorStudentDetail = lazy(() => import("./components/TutorStudentDetail").then((m) => ({ default: m.TutorStudentDetail })));
+const ManagerDashboard = lazy(() => import("./components/ManagerDashboard").then((m) => ({ default: m.ManagerDashboard })));
 
-const ViewFallback = () => (
-  <div className="flex min-h-[40vh] items-center justify-center">
-    <LoaderCircle className="animate-spin text-brand" size={32} />
-  </div>
-);
+const ViewFallback = () => {
+  const t = useT();
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
+      {/* VI.2: com reduced-motion o spinner congela — o texto sr-only mantém o sentido. */}
+      <span className="sr-only">{t("Carregando", "Loading")}</span>
+    </div>
+  );
+};
 
 // Fase 5 (A17): URLs navegáveis por hash (#/dashboard, #/quiz...). HashRouting
 // dispensa reescrita no Apache (o app é servido em subpath /app/) e dá botão
 // voltar/avançar + links compartilháveis. As views válidas espelham a Sidebar.
 // E.1 (Plano 2): `#/modulo/:id` abre o leitor daquele OVA — módulos viram
 // deep-linkáveis (F5 reabre o mesmo módulo; uma intervenção pode apontar o alvo).
-const KNOWN_VIEWS = ["dashboard", "contents", "exercises", "quiz", "reforco", "evolution", "report", "tutor"];
-const parseHash = (): { view: string; ovaId?: number } => {
+// Plano 5: "gestor" (dashboard do gestor) entra como view conhecida (staff).
+const KNOWN_VIEWS = ["dashboard", "contents", "exercises", "quiz", "reforco", "evolution", "report", "tutor", "gestor"];
+const parseHash = (): { view: string; ovaId?: number; studentId?: number } => {
   const m = window.location.hash.match(/^#\/modulo\/(\d+)/);
   if (m) return { view: "module", ovaId: Number(m[1]) };
+  // Plano 5 (19.2): #/aluno/:id abre o detalhe daquele aluno para o professor.
+  const a = window.location.hash.match(/^#\/aluno\/(\d+)/);
+  if (a) return { view: "aluno", studentId: Number(a[1]) };
   const raw = window.location.hash.replace(/^#\/?/, "");
   return { view: KNOWN_VIEWS.includes(raw) ? raw : "dashboard" };
 };
@@ -50,7 +62,11 @@ const parseHash = (): { view: string; ovaId?: number } => {
 const App = () => {
   const initialHash = parseHash();
   const [activeView, setActiveView] = useState<string>(() =>
-    initialHash.view === "module" ? "contents" : initialHash.view);
+    initialHash.view === "module" ? "contents"
+      : initialHash.view === "aluno" ? "tutor"  // Plano 5: detalhe do aluno mora "dentro" da Turma
+      : initialHash.view);
+  // Plano 5 (19.2): id do aluno aberto no detalhe do professor (null = nenhum).
+  const [tutorStudentId, setTutorStudentId] = useState<number | null>(initialHash.studentId ?? null);
   const [session, setSession] = useState<Session | null>(() => (getToken() ? getSession() : null));
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +129,7 @@ const App = () => {
   const changeView = useCallback((view: string) => {
     setReaderOva(null);
     setModuleId(null);
+    setTutorStudentId(null); // Plano 5: sair do detalhe de aluno ao trocar de aba
     setActiveView(view);
     if (window.location.hash !== `#/${view}`) window.location.hash = `#/${view}`;
   }, []);
@@ -124,9 +141,17 @@ const App = () => {
       const p = parseHash();
       if (p.view === "module" && p.ovaId != null) {
         setModuleId(p.ovaId);
+        setTutorStudentId(null);
+      } else if (p.view === "aluno" && p.studentId != null) {
+        // Plano 5: detalhe do aluno tem precedência; a aba de fundo é a Turma.
+        setTutorStudentId(p.studentId);
+        setModuleId(null);
+        setReaderOva(null);
+        setActiveView("tutor");
       } else {
         setModuleId(null);
         setReaderOva(null);
+        setTutorStudentId(null);
         setActiveView(p.view);
       }
     };
@@ -145,6 +170,21 @@ const App = () => {
       if (ova) setReaderOva(ova);
     }
   }, [moduleId, profile]);
+
+  // Papel do usuário (staff = tutor/admin). Deriva do perfil carregado.
+  const isStaff = profile?.estudante.role === "tutor" || profile?.estudante.role === "admin";
+
+  // O staff não usa as abas de aluno: se cair numa delas (default de login ou URL
+  // digitada à mão), manda para a Turma. O aluno, por sua vez, não acessa
+  // Turma/Gestor. O detalhe de aluno e o leitor de OVA têm precedência (não mexe).
+  useEffect(() => {
+    if (!profile || tutorStudentId != null || readerOva) return;
+    if (isStaff) {
+      if (!STAFF_VIEWS.includes(activeView)) changeView("tutor");
+    } else if (activeView === "tutor" || activeView === "gestor") {
+      changeView("dashboard");
+    }
+  }, [profile, isStaff, activeView, tutorStudentId, readerOva, changeView]);
 
   // Abre um OVA no leitor nativo (chamado pela Área de Conteúdo). Reflete a URL
   // em #/modulo/:id (deep-link) — F5/voltar funcionam dentro do módulo.
@@ -180,6 +220,12 @@ const App = () => {
   }
 
   const renderView = () => {
+    // Plano 5: detalhe do aluno (professor) tem precedência sobre a aba. Guarda
+    // por papel — o backend também valida (404 fora de escopo), mas o front não
+    // monta a tela para quem não é staff.
+    if (tutorStudentId != null && isStaff) {
+      return <TutorStudentDetail studentId={tutorStudentId} onBack={() => changeView("tutor")} />;
+    }
     // O leitor de OVA tem precedência sobre a aba ativa
     if (readerOva && session) {
       return (
@@ -203,6 +249,7 @@ const App = () => {
     if (activeView === "reforco") return <Reforco profile={profile} onTracked={refreshProfile} />;
     if (activeView === "evolution") return <Evolution profile={profile} />;
     if (activeView === "tutor") return <TutorPanel />;
+    if (activeView === "gestor" && isStaff) return <ManagerDashboard />;
     if (activeView === "report") return <Report profile={profile} onTracked={refreshProfile} />;
     return (
       <Dashboard
@@ -215,6 +262,20 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
+      {/* NA.3 (Plano 4): pular para o conteúdo. preventDefault + foco programático
+          para NÃO tocar no hash (o app usa hash-routing #/dashboard). */}
+      <a
+        href="#conteudo"
+        onClick={(e) => {
+          e.preventDefault();
+          const el = document.getElementById("conteudo");
+          el?.focus();
+          el?.scrollIntoView();
+        }}
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[8px] focus:bg-brand focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+      >
+        {t("Pular para o conteúdo", "Skip to content")}
+      </a>
       {/* D.5 consentimento primeiro; U.5 onboarding logo depois. */}
       {needsConsent ? (
         <ConsentModal onDone={() => setNeedsConsent(false)} />
@@ -229,8 +290,15 @@ const App = () => {
       )}
       <div className="flex">
         <Sidebar activeView={readerOva ? "contents" : activeView} onChangeView={changeView} studentName={profile.estudante.nome} role={profile.estudante.role} onLogout={logout} />
-        <main className="min-w-0 flex-1">
-          <Topbar profile={profile} onChangeView={changeView} />
+        <main id="conteudo" tabIndex={-1} className="min-w-0 flex-1 outline-none">
+          <Topbar
+            profile={profile}
+            onChangeView={changeView}
+            activeView={readerOva ? "contents" : activeView}
+            studentName={profile.estudante.nome}
+            role={profile.estudante.role}
+            onLogout={logout}
+          />
           <div className="mx-auto max-w-[1200px] px-5 py-8 lg:px-10">
             <Suspense fallback={<ViewFallback />}>{renderView()}</Suspense>
           </div>

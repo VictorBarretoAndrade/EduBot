@@ -78,7 +78,7 @@ export const Login = ({ onLogged }: LoginProps) => {
               placeholder="••••••"
             />
           </div>
-          {error && <p className="rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
+          {error && <p role="alert" className="rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
           <button
             type="submit"
             disabled={loading || !ra || !password}

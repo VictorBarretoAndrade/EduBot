@@ -7,7 +7,7 @@ idioma atual vem do contexto e é lembrado no localStorage. Um alternador PT/EN
 na Topbar troca em tempo real. O conteúdo dos OVAs (HTML) permanece no idioma
 original — aqui traduzimos a INTERFACE.
 */
-import { ReactNode, createContext, useCallback, useContext, useMemo, useState } from "react";
+import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type Lang = "pt" | "en";
 
@@ -32,6 +32,13 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(STORAGE_KEY, next);
     setLangState(next);
   }, []);
+
+  // AC.4 (Plano 4): mantém <html lang> em sincronia com o idioma da UI — leitores
+  // de tela trocam a pronúncia (WCAG 3.1.1/3.1.2). Roda no mount (cobre quem já
+  // carrega em EN pelo localStorage) e a cada troca.
+  useEffect(() => {
+    document.documentElement.lang = lang === "en" ? "en" : "pt-BR";
+  }, [lang]);
 
   const value = useMemo<LanguageContextValue>(
     () => ({

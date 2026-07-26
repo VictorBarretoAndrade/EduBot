@@ -131,7 +131,13 @@ export const TutorPanel = () => {
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         {/* Tabela da turma */}
         <div className="overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-          <div className="border-b border-line px-5 py-3 font-bold text-ink">{t("Alunos", "Students")}</div>
+          <div className="border-b border-line px-5 py-3">
+            <span className="font-bold text-ink">{t("Alunos", "Students")}</span>
+            {/* Plano 5 (19.4): a linha abre o detalhe do aluno. */}
+            <span className="ml-2 text-xs font-normal text-muted">
+              {t("· clique num aluno para ver o desempenho detalhado", "· click a student to see detailed performance")}
+            </span>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-muted">
@@ -144,10 +150,27 @@ export const TutorPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {alunos.map((a) => (
-                  <tr key={a.student_id} className="border-t border-line">
+                {alunos.map((a) => {
+                  // Plano 5 (19.4): navega para o detalhe via hash (#/aluno/:id),
+                  // reaproveitando o roteador por hash do App.
+                  const abrir = () => { window.location.hash = `#/aluno/${a.student_id}`; };
+                  return (
+                  <tr
+                    key={a.student_id}
+                    onClick={abrir}
+                    className="cursor-pointer border-t border-line transition hover:bg-slate-50"
+                  >
                     <td className="px-5 py-3 font-semibold text-ink">
-                      {a.nome} <span className="font-normal text-muted">· RA {a.ra}</span>
+                      {/* Botão = alvo focável por teclado (Enter/Espaço). O onClick
+                          da linha é só conveniência do mouse (mesmo destino). */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); abrir(); }}
+                        className="rounded text-left font-semibold text-brand underline-offset-2 hover:underline focus-visible:underline"
+                        aria-label={t(`Ver desempenho de ${a.nome}`, `View ${a.nome}'s performance`)}
+                      >
+                        {a.nome}
+                      </button>{" "}
+                      <span className="font-normal text-muted">· RA {a.ra}</span>
                     </td>
                     <td className="px-3 py-3">{a.consumo_percentual}%</td>
                     <td className="px-3 py-3">
@@ -170,7 +193,8 @@ export const TutorPanel = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {alunos.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-5 py-6 text-muted">

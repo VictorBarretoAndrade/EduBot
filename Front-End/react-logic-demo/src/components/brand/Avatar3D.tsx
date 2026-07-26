@@ -14,7 +14,7 @@ timing) — basta alimentar `mouthRef` com a timeline.
 Estilo: low-poly/cartoon amigável. Não é foto-realista (isso exigiria um modelo
 .glb externo); é reconhecível e nunca quebra a demo.
 */
-import { Component, MutableRefObject, ReactNode, useRef } from "react";
+import { Component, MutableRefObject, ReactNode, useEffect, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { AvatarPersona, AvatarVariant } from "./avatars";
@@ -48,11 +48,29 @@ function Character({ persona, speaking, visemeRef }: {
   const mouthOpen = useRef(0);
   const blink = useRef(0);
   const nextBlink = useRef(1.5 + Math.random() * 2.5);
+  // VI.2 (Plano 4): "reduzir movimento" desliga as animações IDLE (piscar, respirar,
+  // micro-rotação da cabeça); o lip-sync da boca continua (é conteúdo, não decoração).
+  const reducedMotion = useRef(
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  // AUDITORIA P4: o valor inicial (acima) só é lido UMA VEZ no mount — se o aluno
+  // muda a preferência do SO enquanto a persona 3D já está montada (dashboard/
+  // companheiro ficam na tela por sessões longas), a animação ficaria presa no
+  // estado antigo. O listener mantém a ref ao vivo (sem re-render: é lida dentro
+  // de useFrame, por quadro).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onChange = () => { reducedMotion.current = mq.matches; };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime;
+    const reduce = reducedMotion.current;
 
-    // --- BOCA (abre/fecha enquanto fala) ---
+    // --- BOCA (abre/fecha enquanto fala) — conteúdo, mantém mesmo com reduced-motion ---
     let target = 0;
     const viseme = visemeRef?.current;
     if (viseme != null) {
@@ -68,22 +86,30 @@ function Character({ persona, speaking, visemeRef }: {
     mouthOpen.current = THREE.MathUtils.damp(mouthOpen.current, target, 16, delta);
     if (mouthRef.current) mouthRef.current.scale.y = 0.14 + mouthOpen.current;
 
-    // --- PISCADA ---
-    nextBlink.current -= delta;
-    if (nextBlink.current <= 0) {
-      blink.current = 1;
-      nextBlink.current = 2.5 + Math.random() * 3.5;
+    // --- PISCADA (decorativa) ---
+    if (!reduce) {
+      nextBlink.current -= delta;
+      if (nextBlink.current <= 0) {
+        blink.current = 1;
+        nextBlink.current = 2.5 + Math.random() * 3.5;
+      }
+      blink.current = THREE.MathUtils.damp(blink.current, 0, 20, delta);
     }
-    blink.current = THREE.MathUtils.damp(blink.current, 0, 20, delta);
     const eyeScaleY = 1 - blink.current * 0.9;
     if (eyeLRef.current) eyeLRef.current.scale.y = eyeScaleY;
     if (eyeRRef.current) eyeRRef.current.scale.y = eyeScaleY;
 
-    // --- RESPIRAÇÃO / MICRO-MOVIMENTO ---
-    if (rootRef.current) rootRef.current.position.y = Math.sin(t * 1.6) * 0.02;
-    if (headRef.current) {
-      headRef.current.rotation.y = Math.sin(t * 0.5) * 0.12;
-      headRef.current.rotation.x = Math.sin(t * 0.8) * 0.04;
+    // --- RESPIRAÇÃO / MICRO-MOVIMENTO (decorativo) ---
+    if (reduce) {
+      // Posição neutra (centro da oscilação) — evita o salto de -0.15 se ficasse no inicial.
+      if (rootRef.current) rootRef.current.position.y = 0;
+      if (headRef.current) { headRef.current.rotation.y = 0; headRef.current.rotation.x = 0; }
+    } else {
+      if (rootRef.current) rootRef.current.position.y = Math.sin(t * 1.6) * 0.02;
+      if (headRef.current) {
+        headRef.current.rotation.y = Math.sin(t * 0.5) * 0.12;
+        headRef.current.rotation.x = Math.sin(t * 0.8) * 0.04;
+      }
     }
   });
 

@@ -8,7 +8,7 @@
 # Todas exigem token (@require_auth) E papel de tutor/admin (g.student.role).
 from flask import Blueprint, g
 from flask_cors import cross_origin
-from peewee import PeeweeException, fn
+from peewee import Case, JOIN, PeeweeException, fn
 import json
 
 from edubot.data.models.students import Students
@@ -19,6 +19,13 @@ from edubot.data.models.competencies import Competencies
 from edubot.data.models.subjects import Subjects
 from edubot.data.models.offerings import Offerings
 from edubot.data.models.student_mastery import StudentMastery
+# Plano 5 (17.4): modelos usados só no rollup do gestor (/tutor/overview).
+from edubot.data.models.answers import Answers
+from edubot.data.models.questions import Questions
+from edubot.data.models.interactions import Interactions
+from edubot.data.models.learning_events import LearningEvents
+from edubot.data.models.resource_progress import ResourceProgress
+from edubot.data.models.consents import Consents
 
 from edubot.api.auth import require_auth, is_staff
 from edubot.api.http import get_lang, get_payload
@@ -28,7 +35,9 @@ from edubot.services.proactivity import evaluate_student, active_student_ids
 # A15: inatividade vem da fonte única (multi-sinal). A cópia local antiga só
 # olhava `interactions` — um aluno que lia e respondia quiz todo dia aparecia
 # como "inativo" no painel do tutor.
-from edubot.services.student_context import _days_without_access
+# Plano 5 (17.3): build_student_profile monta o perfil detalhado de UM aluno
+# para o professor — mesmo shape de /student/me, reuso total da lógica de métrica.
+from edubot.services.student_context import _days_without_access, build_student_profile
 
 app_tutor = Blueprint("tutor", __name__)
 
@@ -545,5 +554,192 @@ def tutor_evaluate():
             if evaluate_student(student) is not None:
                 criados += 1
         return json.dumps({"alertas_criados": criados}), 200
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500
+
+
+@app_tutor.route("/tutor/student/<int:student_id>", methods=["GET"])
+@cross_origin()
+@require_auth
+def tutor_student_detail(student_id):
+    """Plano 5 (17.3) — perfil DETALHADO de um aluno, para o professor.
+
+    Reusa `build_student_profile` (mesmo contrato de /student/me), então o front
+    reaproveita os componentes de desempenho do aluno para montar o detalhe
+    (gráficos + números brutos por competência e por assunto).
+
+    Segurança: só devolve aluno com `role="aluno"` do MESMO curso do tutor. Fora
+    disso responde 404 — não vaza a existência de alunos de outras turmas. O
+    filtro é feito no SQL (não confia no front que só mostra o link para staff)."""
+    if not _is_tutor():
+        return json.dumps({"Error": "Acesso restrito a tutores."}), 403
+    try:
+        student = (Students
+                   .select()
+                   .where((Students.student_id == student_id) &
+                          (Students.course_id == g.student.course_id) &
+                          (Students.role == "aluno"))
+                   .first())
+        if student is None:
+            return json.dumps({"Error": "Aluno não encontrado nesta turma."}), 404
+        return json.dumps(build_student_profile(student, lang=get_lang()), default=str), 200
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500
+
+
+@app_tutor.route("/tutor/overview", methods=["GET"])
+@cross_origin()
+@require_auth
+def tutor_overview():
+    """Plano 5 (17.4) — rollup da turma para o painel do GESTOR.
+
+    Mostra "tudo que o sistema consegue medir" da turma: totais de quiz,
+    acertos/erros POR ASSUNTO (disciplina), consumo médio e um catálogo de quanto
+    de cada sinal já está registrado. Tudo em agregações SQL — NÃO monta
+    build_student_profile por aluno (o curso de exemplo tem 500)."""
+    if not _is_tutor():
+        return json.dumps({"Error": "Acesso restrito a tutores."}), 403
+    try:
+        course = g.student.course_id
+        course_id = course.course_id if course else None
+        sids = [s.student_id for s in _turma_students()]
+        n_alunos = len(sids)
+
+        if not sids:
+            return json.dumps({
+                "turma": {"alunos_ativos": 0, "em_risco": 0, "alertas_abertos": 0},
+                "quiz": {"acertos": 0, "erros": 0, "tentativas": 0, "taxa_erro": None},
+                "consumo": {"percentual_medio": 0},
+                "por_assunto": [],
+                "rastreamento": {},
+            }, default=str), 200
+
+        # --- Totais de quiz da turma (2 queries) -----------------------------
+        att = (Attempts
+               .select(fn.COUNT(Attempts.attempt_id).alias("tentativas"),
+                       fn.SUM(Case(None, [(Attempts.is_correct == False, 1)], 0)).alias("erros"))
+               .where(Attempts.student_id.in_(sids))
+               .dicts().get())
+        tentativas = att["tentativas"] or 0
+        erros = int(att["erros"] or 0)
+        acertos = (Answers
+                   .select(fn.COUNT(Answers.answer_id))
+                   .where(Answers.student_id.in_(sids))
+                   .scalar()) or 0
+        taxa_erro = round(erros / tentativas, 2) if tentativas else None
+
+        # --- Em risco: alerta aberto OU taxa de erro > 0.5 (igual ao painel) --
+        alertas_abertos = (Alerts
+                           .select(fn.COUNT(Alerts.alert_id))
+                           .where((Alerts.student_id.in_(sids)) & (Alerts.read == False))
+                           .scalar()) or 0
+        risco = set(row[0] for row in (Alerts
+                    .select(Alerts.student_id)
+                    .where((Alerts.student_id.in_(sids)) & (Alerts.read == False))
+                    .distinct().tuples()))
+        for sid, t, w in (Attempts
+                          .select(Attempts.student_id,
+                                  fn.COUNT(Attempts.attempt_id),
+                                  fn.SUM(Case(None, [(Attempts.is_correct == False, 1)], 0)))
+                          .where(Attempts.student_id.in_(sids))
+                          .group_by(Attempts.student_id)
+                          .tuples()):
+            if t and (int(w or 0) / t) > 0.5:
+                risco.add(sid)
+
+        # --- Por assunto (disciplina) ----------------------------------------
+        # Base: todos os assuntos do curso + total de questões (nível curso, para
+        # a cobertura aparecer mesmo em assunto sem nenhuma tentativa).
+        by_subject = {}
+        for r in (Subjects
+                  .select(Subjects.subject_id, Subjects.subject_name,
+                          fn.COUNT(Questions.question_id.distinct()).alias("total_q"))
+                  .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
+                  .switch(Subjects)
+                  .join(Competencies, JOIN.LEFT_OUTER,
+                        on=(Competencies.subject_id == Subjects.subject_id))
+                  .join(Questions, JOIN.LEFT_OUTER,
+                        on=(Questions.competency_id == Competencies.competency_id))
+                  .where(Offerings.course_id == course_id)
+                  .group_by(Subjects.subject_id)
+                  .order_by(Subjects.subject_id)
+                  .dicts()):
+            by_subject[r["subject_id"]] = {
+                "subject_id": r["subject_id"],
+                "subject_nome": r["subject_name"],
+                "acertos": 0, "erros": 0, "tentativas": 0,
+                "total_questoes": r["total_q"] or 0,
+                "taxa_erro": None, "dominio_medio": None,
+            }
+
+        # acertos por assunto (Answers é ≤1 por (aluno,questão) — sem fan-out)
+        for r in (Answers
+                  .select(Subjects.subject_id.alias("sid"),
+                          fn.COUNT(Answers.answer_id).alias("c"))
+                  .join(Questions, on=(Answers.question_id == Questions.question_id))
+                  .join(Competencies, on=(Questions.competency_id == Competencies.competency_id))
+                  .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
+                  .where(Answers.student_id.in_(sids))
+                  .group_by(Subjects.subject_id).dicts()):
+            if r["sid"] in by_subject:
+                by_subject[r["sid"]]["acertos"] = r["c"] or 0
+
+        # tentativas/erros por assunto
+        for r in (Attempts
+                  .select(Subjects.subject_id.alias("sid"),
+                          fn.COUNT(Attempts.attempt_id).alias("t"),
+                          fn.SUM(Case(None, [(Attempts.is_correct == False, 1)], 0)).alias("w"))
+                  .join(Questions, on=(Attempts.question_id == Questions.question_id))
+                  .join(Competencies, on=(Questions.competency_id == Competencies.competency_id))
+                  .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
+                  .where(Attempts.student_id.in_(sids))
+                  .group_by(Subjects.subject_id).dicts()):
+            if r["sid"] in by_subject:
+                by_subject[r["sid"]]["tentativas"] = r["t"] or 0
+                by_subject[r["sid"]]["erros"] = int(r["w"] or 0)
+
+        # domínio médio (BKT) por assunto
+        for r in (StudentMastery
+                  .select(Subjects.subject_id.alias("sid"),
+                          fn.AVG(StudentMastery.p_mastery).alias("m"))
+                  .join(Competencies, on=(StudentMastery.competency_id == Competencies.competency_id))
+                  .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
+                  .where(StudentMastery.student_id.in_(sids))
+                  .group_by(Subjects.subject_id).dicts()):
+            if r["sid"] in by_subject and r["m"] is not None:
+                by_subject[r["sid"]]["dominio_medio"] = round(r["m"], 2)
+
+        for s in by_subject.values():
+            s["taxa_erro"] = round(s["erros"] / s["tentativas"], 2) if s["tentativas"] else None
+        por_assunto = sorted(by_subject.values(), key=lambda x: x["subject_id"])
+
+        # --- Consumo médio de leitura (proxy honesto já usado no painel) ------
+        consumo = (OVAProgress
+                   .select(fn.AVG(OVAProgress.perc_scrolled))
+                   .where(OVAProgress.student_id.in_(sids))
+                   .scalar())
+        consumo_medio = int(consumo) if consumo is not None else 0
+
+        # --- Catálogo: quanto de cada sinal está registrado hoje --------------
+        def _count(model, pk):
+            return (model.select(fn.COUNT(pk)).where(model.student_id.in_(sids)).scalar()) or 0
+
+        rastreamento = {
+            "interacoes": _count(Interactions, Interactions.interaction_id),
+            "ova_progress": _count(OVAProgress, OVAProgress.progress_id),
+            "progresso_recursos": _count(ResourceProgress, ResourceProgress.resource_progress_id),
+            "tentativas_quiz": tentativas,
+            "eventos_aprendizado": _count(LearningEvents, LearningEvents.event_id),
+            "consentimentos": _count(Consents, Consents.consent_id),
+            "linhas_mastery": _count(StudentMastery, StudentMastery.student_id),
+        }
+
+        return json.dumps({
+            "turma": {"alunos_ativos": n_alunos, "em_risco": len(risco), "alertas_abertos": alertas_abertos},
+            "quiz": {"acertos": acertos, "erros": erros, "tentativas": tentativas, "taxa_erro": taxa_erro},
+            "consumo": {"percentual_medio": consumo_medio},
+            "por_assunto": por_assunto,
+            "rastreamento": rastreamento,
+        }, default=str), 200
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500

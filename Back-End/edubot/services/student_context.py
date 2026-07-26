@@ -116,13 +116,20 @@ def _competency_rows(student, course_id, lang="pt"):
     # D.2: p_mastery vem do LEFT JOIN com student_mastery. É ≤1 linha por
     # (aluno, competência); MAX evita conflito com ONLY_FULL_GROUP_BY do MySQL.
     p_mastery = fn.MAX(StudentMastery.p_mastery).alias("p_mastery")
+    # Plano 5 (17.1): assunto (disciplina) da competência. O JOIN com Subjects já
+    # existe (para o filtro por curso); só faltava expor o vínculo. subject_id é
+    # funcionalmente dependente da competência (1 assunto por competência), então
+    # MAX é seguro/determinístico e satisfaz o ONLY_FULL_GROUP_BY do MySQL.
+    subject_id = fn.MAX(Subjects.subject_id).alias("subject_id")
+    subject_nome = fn.MAX(Subjects.subject_name).alias("subject_nome")
 
     sid = _student_id(student)
     rows = (Competencies
             .select(Competencies.competency_id,
                     Competencies.competency_description,
                     Competencies.competency_description_en,
-                    total_q, acertos, tentativas, erros, p_mastery)
+                    total_q, acertos, tentativas, erros, p_mastery,
+                    subject_id, subject_nome)
             .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
             .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
             .switch(Competencies)
@@ -172,6 +179,11 @@ def _competency_rows(student, course_id, lang="pt"):
             "competency_id": row["competency_id"],
             "nome": tr(row["competency_description"],
                        row["competency_description_en"], lang),
+            # Plano 5 (17.1): assunto/disciplina — permite agrupar acertos/erros
+            # "por assunto" no front (aluno, professor e gestor). subject_name é PT
+            # (course_subjects não tem coluna _en); o nome vai direto, sem tr().
+            "subject_id": row.get("subject_id"),
+            "subject_nome": row.get("subject_nome"),
             "acertos": correct,
             "total_questoes": total,
             "status": status,

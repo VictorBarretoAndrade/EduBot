@@ -28,6 +28,9 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [feedback, setFeedback] = useState<Record<number, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
+  // QF.1 (Plano 4): resumo da correção anunciado por leitor de tela (um submit com
+  // N questões dispara N status por questão; o resumo dá o quadro geral).
+  const [summary, setSummary] = useState("");
   // U.1: quiz do módulo bloqueado até ler o conteúdo (gate do backend).
   const [lock, setLock] = useState<QuizLock | null>(null);
   // Última alternativa submetida por questão — evita reenviar a mesma resposta a
@@ -83,6 +86,9 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
     }
     setFeedback(next);
     setSubmitting(false);
+    const gradedVals = Object.values(next);
+    const acertos = gradedVals.filter(Boolean).length;
+    setSummary(t(`Correção concluída: ${acertos} de ${gradedVals.length} corretas.`, `Grading complete: ${acertos} of ${gradedVals.length} correct.`));
     if (failed) toast.error(t("Algumas respostas não puderam ser corrigidas. Verifique a conexão.", "Some answers couldn't be graded. Check your connection."));
     // Só atualiza o perfil se algo novo foi de fato submetido (A7/A9)
     if (submittedAny) {
@@ -93,8 +99,8 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
 
   if (lock) {
     return (
-      <div className="flex items-start gap-3 rounded-[8px] border border-amber-200 bg-amber-50 p-5 text-amber-800">
-        <Lock size={20} className="mt-0.5 shrink-0" />
+      <div role="status" className="flex items-start gap-3 rounded-[8px] border border-amber-200 bg-amber-50 p-5 text-amber-800">
+        <Lock size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
         <div>
           <p className="font-semibold">{t("Quiz bloqueado", "Quiz locked")}</p>
           <p className="mt-1 text-sm">
@@ -125,10 +131,14 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
               graded === undefined ? "border-line" : graded ? "border-emerald-300" : "border-rose-300"
             }`}
           >
-            <h4 className="font-bold text-ink">
+            <h4 id={`q-${question.question_id}-label`} className="font-bold text-ink">
               {index + 1}. {question.statement}
             </h4>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div
+              role="radiogroup"
+              aria-labelledby={`q-${question.question_id}-label`}
+              className="mt-3 grid gap-2 sm:grid-cols-2"
+            >
               {question.alternatives.map((option, optionIndex) => (
                 <label
                   key={option}
@@ -159,7 +169,7 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
                   graded ? "text-emerald-700" : "text-rose-700"
                 }`}
               >
-                {graded ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
+                {graded ? <CheckCircle2 size={18} aria-hidden="true" /> : <XCircle size={18} aria-hidden="true" />}
                 {graded ? t("Correta!", "Correct!") : t("Incorreta.", "Incorrect.")}
               </p>
             )}
@@ -167,13 +177,29 @@ export const OvaQuiz = ({ ovaId, studentId, onTracked, onGraded }: OvaQuizProps)
         );
       })}
 
-      <button
-        onClick={verify}
-        disabled={submitting || answeredCount < questions.length}
-        className="h-12 rounded-[8px] bg-coral px-6 font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
-      >
-        {submitting ? t("Corrigindo no servidor...", "Grading on the server...") : t("Verificar respostas", "Check answers")}
-      </button>
+      <div className="space-y-2">
+        <button
+          onClick={verify}
+          disabled={submitting || answeredCount < questions.length}
+          aria-describedby={answeredCount < questions.length ? `quiz-remaining-${ovaId}` : undefined}
+          className="h-12 rounded-[8px] bg-coral px-6 font-bold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          {submitting ? t("Corrigindo no servidor...", "Grading on the server...") : t("Verificar respostas", "Check answers")}
+        </button>
+        {/* QF.1: por que o botão está desabilitado (ajuda todo mundo, não só leitor de tela).
+            AUDITORIA P4: id escopado por ovaId — se um OVA tiver mais de uma seção com
+            quiz (hasQuiz vem do HTML-fonte), evita colisão entre instâncias na mesma página. */}
+        {answeredCount < questions.length && (
+          <p id={`quiz-remaining-${ovaId}`} className="text-sm text-muted">
+            {questions.length - answeredCount === 1
+              ? t("Falta 1 questão para poder verificar.", "1 question left before you can check.")
+              : t(`Faltam ${questions.length - answeredCount} questões para poder verificar.`, `${questions.length - answeredCount} questions left before you can check.`)}
+          </p>
+        )}
+      </div>
+
+      {/* QF.1: resumo da correção só para leitor de tela. */}
+      <p role="status" className="sr-only">{summary}</p>
     </div>
   );
 };

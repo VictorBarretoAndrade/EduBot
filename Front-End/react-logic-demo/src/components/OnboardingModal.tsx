@@ -10,8 +10,9 @@ foco volta ao documento; a fala de cada passo respeita o mesmo fallback do V.1.
 Uma flag em localStorage evita reexibir.
 */
 import { ArrowRight, Bell, BookOpen, Lock, Volume2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useSpeech } from "../hooks/useSpeech";
 import { useLanguage } from "../i18n";
 
@@ -59,17 +60,6 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
-  // Foco inicial no modal; Esc encerra o onboarding.
-  useEffect(() => {
-    dialogRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") finish();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const finish = () => {
     stop();
     localStorage.setItem(ONBOARDING_FLAG, "1");
@@ -81,6 +71,10 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
     if (isLast) finish();
     else setStep((s) => s + 1);
   };
+
+  // AC.1 (Plano 4): foco preso no diálogo (foco inicial no próprio diálogo);
+  // Esc encerra o onboarding e devolve o foco a quem o tinha.
+  useFocusTrap(dialogRef, { active: true, onEscape: finish, initialFocusRef: dialogRef });
 
   const Icon = current.icon;
 
@@ -96,11 +90,16 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <CompanionAvatar personaId={persona} size={96} speaking={speaking} visemeRef={visemeRef} />
-          <div className="flex items-center gap-2 text-brand">
-            <Icon size={20} />
-            <h1 id="onb-title" className="text-2xl font-bold text-ink">{current.title}</h1>
+          {/* AC.1: o passo atual é anunciado ao avançar (região viva atômica) —
+              o foco permanece no botão "Próximo" (bom para Enter repetido). */}
+          <div aria-live="polite" aria-atomic="true" className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2 text-brand">
+              <Icon size={20} aria-hidden="true" />
+              <h1 id="onb-title" className="text-2xl font-bold text-ink">{current.title}</h1>
+            </div>
+            <p className="max-w-md leading-relaxed text-slate-700">{current.text}</p>
+            <span className="sr-only">{t(`Passo ${step + 1} de ${steps.length}`, `Step ${step + 1} of ${steps.length}`)}</span>
           </div>
-          <p className="max-w-md leading-relaxed text-slate-700">{current.text}</p>
 
           {supported && (
             <button

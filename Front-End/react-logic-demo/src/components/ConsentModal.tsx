@@ -8,8 +8,9 @@ escolhas vão para POST /consents; uma flag em localStorage evita reexibir o mod
 O aluno pode revisar tudo depois em "Meus dados".
 */
 import { LoaderCircle, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Consent, setConsent } from "../services/api";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useT } from "../i18n";
 
 export const CONSENT_FLAG = "edubot.consent.v1";
@@ -25,10 +26,9 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
   const [saving, setSaving] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // U.7: foco inicial no diálogo (consentimento é bloqueante — sem Esc/fechar).
-  useEffect(() => {
-    dialogRef.current?.focus();
-  }, []);
+  // AC.1 (Plano 4): foco preso no diálogo. Consentimento é BLOQUEANTE — sem
+  // onEscape (Esc não fecha). Foco inicial no próprio diálogo (lê do topo).
+  useFocusTrap(dialogRef, { active: true, initialFocusRef: dialogRef });
 
   const save = async () => {
     setSaving(true);
@@ -76,7 +76,7 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
           <div className="rounded-[8px] bg-slate-50 p-4">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-ink">{t("Acompanhamento pedagógico", "Pedagogical tracking")}</span>
-              <span className="rounded-[8px] bg-brand/10 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-brand">
+              <span className="rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-bold uppercase tracking-wide text-brand">
                 {t("Necessário", "Required")}
               </span>
             </div>

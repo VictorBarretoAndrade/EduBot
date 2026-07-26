@@ -141,6 +141,11 @@ export interface OvaState {
 export interface CompetencyState {
   competency_id: number;
   nome: string;
+  // Plano 5 (17.1): assunto/disciplina da competência — permite agrupar
+  // acertos/erros "por assunto". Opcionais: backend antigo não envia (o front
+  // degrada para não mostrar a quebra por assunto).
+  subject_id?: number;
+  subject_nome?: string;
   acertos: number;
   total_questoes: number;
   status: "não iniciada" | "em desenvolvimento" | "desenvolvida";
@@ -395,6 +400,33 @@ export interface TutorAlert {
 
 export const getTurma = () => request<{ total: number; alunos: TurmaStudent[] }>("/tutor/turma");
 export const getTutorAlerts = () => request<{ alertas: TutorAlert[] }>("/tutor/alerts");
+
+// Plano 5 (19.1) — perfil detalhado de UM aluno para o professor. Mesmo shape de
+// /student/me, então o detalhe reaproveita os componentes de desempenho do aluno.
+// Respeita ?lang= (nomes de OVA/recurso/competência traduzidos).
+export const getTutorStudent = (studentId: number) =>
+  request<StudentProfile>(withLang(`/tutor/student/${studentId}`));
+
+// Plano 5 (20.1) — rollup da turma para o painel do GESTOR.
+export interface SubjectRollup {
+  subject_id: number;
+  subject_nome: string;
+  acertos: number;
+  erros: number;
+  tentativas: number;
+  total_questoes: number;
+  taxa_erro: number | null;
+  dominio_medio: number | null;
+}
+export interface TutorOverview {
+  turma: { alunos_ativos: number; em_risco: number; alertas_abertos: number };
+  quiz: { acertos: number; erros: number; tentativas: number; taxa_erro: number | null };
+  consumo: { percentual_medio: number };
+  por_assunto: SubjectRollup[];
+  // Catálogo: quanto de cada sinal está registrado hoje (chaves conhecidas do backend).
+  rastreamento: Record<string, number>;
+}
+export const getTutorOverview = () => request<TutorOverview>("/tutor/overview");
 export const evaluateTurma = () =>
   request<{ alertas_criados: number }>("/tutor/evaluate", { method: "POST" });
 
@@ -508,7 +540,9 @@ export const postEvents = (events: LearningEventInput[], opts: { keepalive?: boo
 // D.5 — consentimento (LGPD) e direitos do titular.
 // ---------------------------------------------------------------------------
 export interface Consent {
-  purpose: "tracking_pedagogico" | "ia_sobre_dados" | "imagem_voz";
+  // `ranking_turma` é criado ao entrar no ranking (gamificação) — precisa constar
+  // aqui e no MyDataPanel, senão o painel "Meus dados" quebra ao renderizá-lo.
+  purpose: "tracking_pedagogico" | "ia_sobre_dados" | "imagem_voz" | "ranking_turma";
   granted: boolean;
   opt_in: boolean;
   granted_at: string | null;

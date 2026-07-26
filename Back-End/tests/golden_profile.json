@@ -8,6 +8,8 @@
       "erros": 2,
       "nome": "Comp A",
       "status": "em desenvolvimento",
+      "subject_id": 1,
+      "subject_nome": "Assunto",
       "taxa_erro": 0.67,
       "tentativas": 3,
       "total_questoes": 2
@@ -19,6 +21,8 @@
       "erros": 0,
       "nome": "Comp B",
       "status": "desenvolvida",
+      "subject_id": 1,
+      "subject_nome": "Assunto",
       "taxa_erro": 0.0,
       "tentativas": 1,
       "total_questoes": 1

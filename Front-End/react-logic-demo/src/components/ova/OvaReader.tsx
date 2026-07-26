@@ -31,6 +31,7 @@ import { useLanguage, useT } from "../../i18n";
 import { useSpeech } from "../../hooks/useSpeech";
 import { useCompanionScript } from "../../hooks/useCompanionScript";
 import { useTutorChat } from "../../hooks/useTutorChat";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 import { Accordion } from "./Accordion";
 import { Carousel } from "./Carousel";
 import { OvaQuiz } from "./OvaQuiz";
@@ -80,6 +81,12 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   const [showTutor, setShowTutor] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches
   );
+  // AC.3 (Plano 4): em telas < lg o painel do tutor é um OVERLAY — vira diálogo
+  // modal (foco preso + Esc). Em desktop é um painel lado a lado (sem trap).
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches
+  );
+  const asideRef = useRef<HTMLElement>(null);
   const [progress, setProgress] = useState(0);
   // Elemento do artigo — o scroll de leitura é medido POR CONTEÚDO, não pela
   // janela (A6), para não confundir altura de tela com consumo do texto.
@@ -101,6 +108,18 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   );
   const hideCompanion = () => { setHidden(true); localStorage.setItem(COMPANION_HIDDEN_KEY, "1"); };
   const showCompanion = () => { setHidden(false); localStorage.removeItem(COMPANION_HIDDEN_KEY); };
+
+  // AC.3: acompanha a quebra lg (overlay ↔ painel lado a lado).
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // AC.3: no mobile (overlay) o painel do tutor é modal — foco preso + Esc fecha
+  // e devolve o foco ao botão que o abriu.
+  useFocusTrap(asideRef, { active: showTutor && !isDesktop, onEscape: () => setShowTutor(false) });
 
   // Abre o tutor com uma pergunta pré-preenchida (Explique esta seção / ajuda no
   // quiz). Reaproveita o MESMO chat — nenhum endpoint novo.
@@ -397,8 +416,16 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
           </button>
         </div>
 
-        {/* Barra de progresso de leitura */}
-        <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+        {/* Barra de progresso de leitura (QF.2: perceptível por leitor de tela —
+            é ela que destrava o quiz). */}
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-label={t("Progresso de leitura", "Reading progress")}
+          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-200"
+        >
           <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progress}%` }} />
         </div>
 
@@ -410,7 +437,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
 
         {!content && !error && (
           <div className="flex min-h-[40vh] items-center justify-center">
-            <LoaderCircle className="animate-spin text-brand" size={32} />
+            <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
+            <span className="sr-only">{t("Carregando", "Loading")}</span>
           </div>
         )}
 
@@ -583,7 +611,13 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             onClick={() => setShowTutor(false)}
             aria-hidden
           />
-          <aside className="fixed inset-y-0 right-0 z-40 w-full max-w-[420px] p-4 lg:static lg:z-auto lg:w-[380px] lg:shrink-0 lg:p-0">
+          <aside
+            ref={asideRef}
+            role={isDesktop ? undefined : "dialog"}
+            aria-modal={isDesktop ? undefined : true}
+            aria-label={isDesktop ? undefined : t("Assistente do conteúdo", "Content assistant")}
+            className="fixed inset-y-0 right-0 z-40 w-full max-w-[420px] p-4 lg:static lg:z-auto lg:w-[380px] lg:shrink-0 lg:p-0"
+          >
             <div className="h-full lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
               <TutorChat
                 ovaName={ova.ova_name}

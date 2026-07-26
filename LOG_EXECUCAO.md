@@ -1580,3 +1580,359 @@ corrigir e fixar → smoke real → documentar. Baseline: 222 testes verdes.
 **Validação final**: `pytest` 222/222 · `ova_react_build` exit 0 (tsc estrito, three.js
 lazy) · smoke MySQL real (engagement com bloco companheiro) · Playwright confirmou o
 reset por módulo (Defeito A) e o menu do companheiro.
+
+---
+
+## PLANO 4 — ETAPA 13: Fundamentos críticos de leitor de tela e teclado (2026-07-19)
+
+Foco: resolver os 4 bloqueadores de acessibilidade (A1–A4) que impediam quem usa
+leitor de tela ou só teclado. **Só frontend** (`Front-End/react-logic-demo/`); zero
+backend, zero migration, zero dependência nova. Comportamento visual preservado.
+
+### AC.1 — useFocusTrap + modais de verdade (A1)
+- **Novo** `hooks/useFocusTrap.ts`: prende Tab/Shift+Tab dentro do container, foco
+  inicial configurável, `onEscape` opcional, devolve o foco ao elemento anterior no
+  cleanup. Focáveis consultados a CADA Tab (conteúdo do diálogo muda); `onEscape` via
+  ref para não recriar o efeito a cada render (evitaria re-focar o inicial).
+- `ConsentModal`: `useFocusTrap(active, initialFocus=diálogo)` **sem** onEscape
+  (bloqueante). `OnboardingModal`: com `onEscape: finish`; título+texto agora em
+  região `aria-live="polite"` `aria-atomic` + `<span sr-only>` "Passo X de Y"; ícone
+  do passo `aria-hidden`. Os `useEffect` de foco/Esc manuais saíram.
+
+### AC.2 — Menu do companheiro por teclado (A2)
+- `StudyCompanion`: padrão Menu Button do APG. Abre por clique OU Enter/Espaço/↓;
+  foco entra no 1º item; ↑/↓ circulam, Home/End vão às pontas, Esc fecha e devolve o
+  foco ao boneco, Tab fecha. Itens `role="menuitem"` `tabIndex=-1` (foco gerenciado).
+  Botão do avatar ganhou `aria-label` (o canvas 3D não teria nome); `role="menu"` com
+  `aria-labelledby` no cabeçalho. "Ocultar" leva o foco ao botão de reabrir (nunca ao
+  body). Ícones decorativos `aria-hidden`.
+
+### AC.3 — Chat do tutor anunciado + painel móvel como diálogo (A3)
+- `TutorChat`: região viva DEDICADA (`sr-only role=status aria-live=polite`) com só a
+  última fala relevante — "pensando..." ao carregar, resposta ao chegar (NÃO no
+  container rolável, que o React re-renderiza e repetiria mensagens). Input com
+  `aria-label`; rótulo de locutor `sr-only` por mensagem; avatares (ícones) `aria-hidden`.
+- `OvaReader`: em telas < lg o painel do tutor (overlay) vira `role="dialog"`
+  `aria-modal` com `useFocusTrap` (Esc fecha e devolve o foco ao gatilho); em desktop
+  segue painel lado a lado (sem trap). Estado `isDesktop` via matchMedia reativo.
+
+### AC.4 — <html lang> dinâmico (A4)
+- `i18n.tsx` (`LanguageProvider`): `useEffect` sincroniza `document.documentElement.lang`
+  (`pt-BR`/`en`) com o idioma da UI — no mount e a cada troca (WCAG 3.1.1/3.1.2).
+
+**Validação**: `ova_react_build` exit 0 (tsc estrito, bundle inicial 61 kB gzip,
+three.js segue lazy, sem dependência nova). Smoke Playwright dirigindo o teclado:
+**16/16 asserções verdes** — modal aparece e prende o foco (8× Tab), passo avança e
+anuncia, Esc fecha; `<html lang>` pt-BR→en→pt-BR; menu do companheiro abre no ↓ com
+`aria-expanded`/`role=menu`, foco entra no menuitem, setas navegam, Esc devolve o foco
+ao boneco; live region do tutor presente e input com nome acessível. Leitor renderiza
+sem frame branco (screenshot conferido). NVDA real fica para verificação manual.
+
+---
+
+## PLANO 4 — ETAPA 14: Navegação (mobile, popovers, atalhos) (2026-07-19)
+
+Foco: app navegável de ponta a ponta em qualquer tela e sem mouse (A5–A7). Só
+frontend; zero backend/migration/dependência nova.
+
+### NA.1 — Menu de navegação no celular (A5)
+- `Sidebar.tsx`: extraído `NavList` (itens + estilo compartilhados) usado pela sidebar
+  desktop e pelo novo `MobileNav`. `<nav aria-label>` na sidebar.
+- `MobileNav`: hambúrguer (só `< lg`) que abre um drawer modal (`role="dialog"`
+  `aria-modal` + `useFocusTrap`); Esc/overlay fecham e devolvem o foco ao hambúrguer;
+  escolher um item fecha o drawer e navega. Animação de entrada com fallback
+  `prefers-reduced-motion`.
+- **Bug encontrado e corrigido (real, não do teste)**: o `backdrop-blur` do
+  `<header sticky>` cria bloco de contenção para `position: fixed` → o drawer ficava
+  preso à altura (80px) do header. Corrigido renderizando o drawer via **`createPortal`
+  para o `document.body`** (escapa do header; `fixed inset-0` volta a ser relativo à
+  viewport). Também: o chip "% consumido" agora é `hidden sm:flex` — no 375px o header
+  transbordava sobre o hambúrguer (o mesmo dado está no dashboard).
+
+### NA.2 — Busca e sino por teclado (A6)
+- Busca no padrão **combobox**: `role="combobox"` + `aria-expanded`/`aria-controls`/
+  `aria-activedescendant`; lista `role="listbox"` com opções `role="option"`
+  `aria-selected` (`tabIndex=-1`). ↑/↓ movem a opção ativa, Enter navega, Esc limpa;
+  contagem anunciada por `role="status"` `sr-only`.
+- Sino: `aria-label` com a contagem de não lidos; `aria-expanded`/`aria-controls`; Esc
+  fecha e devolve o foco ao sino; cada "Dispensar" inclui o tipo do aviso no rótulo.
+
+### NA.3 — Skip link + aria-current (A7)
+- `App.tsx`: link "Pular para o conteúdo" (1º focável) com `preventDefault` + foco
+  programático em `<main id="conteudo" tabIndex={-1}>` — **não toca no hash** (o app é
+  hash-routed). `NavList` marca a aba ativa com `aria-current="page"`.
+
+**Validação**: `ova_react_build` exit 0 (tsc estrito, bundle inicial 62 kB gzip, three.js
+lazy, sem dependência nova). Smoke Playwright dirigindo o teclado em **desktop (1440) e
+mobile (375)**: **20/20 asserções verdes** — skip link é o 1º Tab e foca o main sem mexer
+no hash; `aria-current` na aba ativa; combobox abre/destaca/navega; sino abre, Esc fecha e
+devolve o foco; hambúrguer oculto no desktop e visível no mobile; drawer abre como dialog,
+prende o foco, item navega e fecha, Esc fecha e devolve o foco. Screenshots conferidos:
+drawer sólido com os 7 itens (após a correção do portal) e desktop sem regressão.
+
+---
+
+## PLANO 4 — ETAPA 15: Quiz, formulários e mensagens de status (2026-07-19)
+
+Foco: o ciclo central (ler → destravar → responder → feedback) perceptível de ponta
+a ponta por leitor de tela (A8–A11). Só frontend; zero backend/migration/dependência.
+
+### QF.1 — Quiz com semântica completa (A8)
+- `OvaQuiz.tsx`: cada questão vira `role="radiogroup"` `aria-labelledby` apontando para
+  o `<h4 id="q-{id}-label">` do enunciado (mantém o layout exato; alternativa ao
+  fieldset/legend). Resumo da correção anunciado por `role="status"` `sr-only`
+  ("X de Y corretas"). Botão "Verificar" desabilitado agora explica o porquê
+  (`#quiz-remaining` visível + `aria-describedby`): "Faltam N questões…". Ícones de
+  feedback `aria-hidden`.
+
+### QF.2 — Progresso de leitura acessível (A9)
+- `OvaReader.tsx`: a barra de leitura vira `role="progressbar"` com
+  `aria-valuemin/max/now` + `aria-label` — é ela que destrava o quiz. O aviso de
+  "Quiz bloqueado" (`OvaQuiz.tsx`) ganhou `role="status"` (a chegada do bloqueio é
+  anunciada) e o ícone `aria-hidden`.
+
+### QF.3 — Erro do login anunciado (A10)
+- `Login.tsx`: a mensagem de RA/senha incorretos ganhou `role="alert"` — falada de
+  imediato, sem mover o foco.
+
+### QF.4 — Toasts pausáveis e i18n (A11)
+- `Toast.tsx`: timers de auto-dismiss por toast (ref `Map`), canceláveis. Pausa no
+  `mouseenter`/`focus` e reinicia a contagem no `mouseleave`/`blur` (WCAG 2.2.1);
+  erros duram 8s, os demais 4s. `aria-label` do fechar agora via `useT()`
+  ("Fechar aviso"/"Close notice") — `ToastProvider` já está dentro do
+  `LanguageProvider` (main.tsx). Ícones `aria-hidden`. Cleanup dos timers no unmount.
+
+**Validação**: `ova_react_build` exit 0 (tsc estrito, bundle inicial ~62 kB gzip, three.js
+lazy, sem dependência nova). Smoke Playwright (quiz destravado via POST /progress/ova):
+**9/9 asserções verdes**, console limpo — login mostra `role=alert` "RA ou senha
+incorretos"; barra de leitura é `progressbar` (valuemax=100, valuenow, label); as 9
+questões são `radiogroup` com o enunciado ligado por `aria-labelledby` e 4 radios cada;
+botão desabilitado com motivo (`aria-describedby`→`#quiz-remaining`); toast de sucesso
+com `role=status` + botão fechar rotulado, e **persiste >4s sob o mouse** (pausa confirmada).
+
+---
+
+## PLANO 4 — ETAPA 16: Percepção visual — foco, movimento, micro-textos (2026-07-19)
+
+Foco: ajustes de baixo risco para baixa visão, sensibilidade a movimento e telas
+ruins (A12–A14). Só frontend; zero backend/migration/dependência nova.
+
+### VI.1 — Foco visível forte (A12)
+- `styles.css`: o outline translúcido (marca a 28%) virou **anel indigo sólido 3px +
+  halo branco** (`box-shadow`), que contrasta em fundo claro E sobre os gradientes
+  escuros (header do chat, hero do OVA). Cobre button/input/textarea/select/a/
+  `[tabindex="0"]`. Regra sem `@layer` → vence os `outline-none` das utilities por
+  especificidade+cascata (confirmado ao vivo: input/botão focado mostra o anel).
+
+### VI.2 — prefers-reduced-motion global (A13)
+- `styles.css`: `@media (prefers-reduced-motion: reduce)` zera animações/transições
+  decorativas e o `scroll-behavior` de TODA a app (antes só o companheiro respeitava).
+- Spinners que ficariam mudos ao congelar ganharam `sr-only` "Carregando"
+  (`App.tsx` ViewFallback, `OvaReader` loading) + ícone `aria-hidden`.
+- `TutorChat`: o `scrollTo({behavior})` do JS não é afetado pelo CSS — passa a usar
+  `auto` sob reduced-motion.
+- `Avatar3D`: as animações IDLE (piscar, respirar, micro-rotação da cabeça) desligam
+  sob reduced-motion; o lip-sync da boca continua (é conteúdo). Posição neutra
+  explícita para não saltar.
+
+### VI.3 — Micro-textos e tooltips (A14)
+- Piso de 12px (`text-xs`) nos textos informativos das superfícies do trabalho de
+  a11y: `PerformanceCoach` (badge "por IA" 10px, tagline 11px), `StudyCompanion`
+  (cabeçalho do menu + botões do balão 11px), `TutorChat` (botão ouvir 11px),
+  `ConsentModal` (selo "Necessário" 11px).
+- `TutorChat`: os chips de fonte (seções que embasaram a resposta) deixaram de esconder
+  o trecho num `title` (invisível a teclado/touch) e viraram **botões expansíveis**
+  (`aria-expanded`; o trecho abre num bloco de texto abaixo).
+- **Decisão registrada**: os micro-textos de painéis densos de dado
+  (`EngagementPanel`, `Gamification`, `MasteryHeatmap`, `MyDataPanel`) foram mantidos
+  em 11px — são rótulos compactos sob números grandes, fora do caminho central do
+  aluno e do escopo desta etapa; bump traria risco de quebra de tile sem ganho de a11y
+  obrigatório (não há mínimo de fonte na WCAG).
+
+**Validação**: `ova_react_build` exit 0 (tsc estrito, bundle inicial ~62 kB gzip, three.js
+lazy, sem dependência nova). Smoke Playwright: **6/6 asserções verdes**, console limpo —
+foco com anel sólido `rgb(79,70,229)` 3px + halo; sob `reducedMotion: 'reduce'` a
+transição de um botão fica em 0.01ms (congelada); cabeçalho do menu do companheiro em
+12px; nenhum chip de fonte usa `title` e o chip expande (`aria-expanded=true`) mostrando
+o trecho. Screenshot conferido (chips como botões, menu legível, sem regressão).
+
+---
+
+## PLANO 4 — COMPLETO (Etapas 13–16)
+
+As 14 falhas de acessibilidade (A1–A14) foram resolvidas: modais com foco preso e
+anúncio de passo; menu do companheiro e navegação (drawer mobile, busca/sino) por
+teclado; chat do tutor anunciado; `<html lang>` dinâmico; skip link + aria-current;
+quiz semântico + progressbar; alerta de login; toasts pausáveis; foco visível forte;
+reduced-motion global; micro-textos ≥ 12px + fontes expansíveis. Tudo só frontend,
+sem dependência nova, com build tsc estrito exit 0 e smokes Playwright verdes por etapa.
+**Pendente**: auditoria de consistência do Plano 4 (mesmo método dos Planos 1–3) e
+verificação manual com leitor de tela real (NVDA), fora do CI.
+
+---
+
+## AUDITORIA DE CONSISTÊNCIA 4 (Etapas 13–16) — 2026-07-19
+
+Mesmo método dos Planos 1–3: releitura crítica de cada arquivo tocado → verificação
+AO VIVO dos suspeitos → correção → smoke de regressão → documentar. **5 defeitos**
+encontrados e corrigidos (2 confirmados ao vivo como bug real; 3 latentes).
+
+### Defeito A — useFocusTrap puxava o foco em "falso fechamento" (confirmado ao vivo) 🔴
+- `hooks/useFocusTrap.ts`: o cleanup restaurava o foco sempre que `active` virava
+  `false`. Mas `active` pode cair SEM o diálogo fechar — o painel do tutor do
+  `OvaReader` desativa o trap ao cruzar o breakpoint para desktop (`isDesktop=true`)
+  com o painel ainda aberto (lado a lado). Resultado: ao redimensionar/girar a tela
+  com o chat focado, o foco era arrancado do campo de digitação de volta ao botão que
+  abriu o painel.
+- **Prova ao vivo (Playwright)**: mobile 500px → foco no input do tutor → resize para
+  1280px → foco ia para `BUTTON` (bug). Corrigido → foco permanece no `INPUT`.
+- **Fix**: só restaura o foco se o container REALMENTE sumiu
+  (`!container.isConnected || getClientRects().length === 0`).
+
+### Defeito B — ArrowUp inicial da busca ia para o penúltimo item (confirmado ao vivo) 🔴
+- `Sidebar.tsx` (combobox): `setActiveIdx((i) => (i - 1 + n) % n)` com `i = -1`
+  (nenhuma seleção) resultava em `n-2`, não no último (`n-1`).
+- **Prova ao vivo**: busca "a" (8 resultados) → 1º ArrowUp selecionava idx 6 em vez de
+  7 (bug). Corrigido → idx 7.
+- **Fix**: `(i) => (i <= 0 ? n - 1 : i - 1)`.
+
+### Defeito C — Avatar3D só lia reduced-motion no mount (latente) 🟡
+- `Avatar3D.tsx`: `reducedMotion` era capturado uma vez. Personas 3D ficam montadas
+  por sessões longas (dashboard/companheiro); mudar a preferência do SO não teria
+  efeito. **Fix**: listener `matchMedia('change')` mantém a ref ao vivo (sem re-render;
+  lida por quadro no `useFrame`).
+
+### Defeito D — activeIdx do menu do companheiro podia apontar fora do array (latente) 🟡
+- `StudyCompanion.tsx`: `actions` encolhe se a "dica atual" some (balão dispensado por
+  fora do menu) enquanto o teclado navegava adiante — `activeIdx` ficava fora do
+  intervalo e o efeito de foco virava no-op (foco escaparia ao body com o menu aberto).
+  **Fix**: `useEffect` grampeia `activeIdx` a `actions.length - 1` com o menu aberto.
+
+### Defeito E — id `quiz-remaining` estático (latente) 🟡
+- `OvaQuiz.tsx`: `aria-describedby="quiz-remaining"` era fixo. Se um OVA tiver >1 seção
+  com quiz (`hasQuiz` vem do HTML-fonte), dois elementos com o mesmo id colidiriam.
+  **Fix**: id escopado por `ovaId` (`quiz-remaining-${ovaId}`).
+
+### Verificado e OK (sem defeito)
+- Focus trap: aprisionamento do Tab (Shift+Tab do primeiro→último, Tab do último→
+  primeiro, wrap a partir do container) intacto — só o cleanup mudou.
+- `<html lang>` dinâmico; skip link sem tocar no hash; combobox aria-activedescendant;
+  sino com Esc/foco; drawer via portal (backdrop-blur); quiz radiogroup+labelledby;
+  progressbar; toasts pausáveis; foco visível forte; reduced-motion global; chips
+  expansíveis. Sem imports órfãos nos 5 arquivos alterados.
+
+**Validação final**: `ova_react_build` exit 0 (tsc estrito). Verificação ao vivo: os 2
+bugs confirmados viraram OK; smoke de regressão dos 4 usos do useFocusTrap
+(onboarding/drawer/painel-tutor/menu-companheiro) **8/8 verde**, console limpo — nenhum
+fechamento real regrediu.
+
+---
+
+# PLANO 5 — Visibilidade de Métricas (Aluno · Professor · Gestor)
+
+Objetivo: (1) aluno vê acertos/erros **por assunto** além de por competência;
+(2) professor **escolhe um aluno** (clicando na linha da turma) e vê o desempenho
+detalhado (gráficos + números brutos por competência e assunto); (3) **dashboard do
+gestor** com tudo que o sistema rastreia. Decisões travadas com o usuário
+(AskUserQuestion): plano .MD + implementar, backend liberado, seleção por clique na
+linha, dashboard novo de gestor. Ver `PLANO_EXECUCAO_5.md`.
+
+## ETAPA 17 — Backend (assunto no perfil + endpoints)
+
+- **17.1** `services/student_context.py::_competency_rows`: o JOIN com `Subjects` já
+  existia (filtro por curso); passamos a **expor** `subject_id`/`subject_nome` na saída
+  (via `fn.MAX`, por causa do `ONLY_FULL_GROUP_BY` — subject é funcionalmente dependente
+  da competência). **0 query nova**; contrato ganhou 2 campos opcionais.
+- **17.2** `tests/test_profile_contract.py` (golden): regenerado; `git diff` confirmou
+  que **só** `subject_id`/`subject_nome` foram adicionados às competências. **222 testes
+  verdes**.
+- **17.3** `GET /tutor/student/<id>` (novo, `tutorRoute.py`): reusa
+  `build_student_profile` (mesmo shape de `/student/me`), então o front reaproveita os
+  componentes do aluno. **Segurança no SQL**: só aluno (`role="aluno"`) do **mesmo curso**
+  do tutor; fora disso 404 (não vaza existência).
+- **17.4** `GET /tutor/overview` (novo): rollup da turma em **agregações SQL** (sem
+  montar perfil por aluno — o curso tem 500): quiz total, **acertos/erros por assunto**
+  (+ domínio médio BKT), consumo médio, em-risco, e um **catálogo** de quantos registros
+  de cada sinal existem (interações, ova_progress, tentativas, eventos, consentimentos,
+  mastery).
+- Teste novo `tests/test_tutor_student_overview.py`: escopo (403 aluno / 404 fora de
+  escopo) + agregação por assunto — **5/5 verde**. Suíte total: **227 testes verdes**.
+
+## ETAPA 18 — Frontend Aluno (por assunto)
+
+- `services/api.ts`: `CompetencyState` ganhou `subject_id?`/`subject_nome?` (opcionais).
+- **`SubjectScores.tsx`** (novo): agrupa as competências por assunto e soma
+  acertos/erros/tentativas; barra proporcional (`aria-hidden`), % de aproveitamento,
+  cobertura e domínio médio. Estado vazio honesto por assunto. **Degrada para `null`** se
+  o backend não enviar assunto. Prop `perspective` ("self"/"other") troca a voz.
+- `Evolution.tsx`: `<SubjectScores>` renderizado acima do `<CompetencyScores>` (macro→micro).
+
+## ETAPA 19 — Frontend Professor (escolher aluno → detalhe)
+
+- **`PerformanceCharts.tsx`** (novo): os 3 gráficos (teia, leitura por OVA, consumo por
+  tipo, competências) **extraídos do `Evolution`** para reuso sem duplicar Recharts;
+  `radarExtra` é slot da "Tendência (7 dias)" (só do aluno logado) → visual do aluno
+  intacto.
+- **`TutorStudentDetail.tsx`** (novo): busca `GET /tutor/student/<id>`, mostra KPIs
+  (sem acesso, consumo, taxa de erro, pendências) + `SubjectScores`/`CompetencyScores`
+  (perspective="other") + `PerformanceCharts`. Botão "Voltar para a turma"; foco vai ao
+  título ao carregar.
+- `TutorPanel.tsx` (19.4): linha da turma **clicável** → `#/aluno/:id`; nome vira `<button>`
+  focável por teclado (`aria-label="Ver desempenho de …"`) + `onClick` na linha (mouse);
+  hint "clique num aluno…".
+- `App.tsx` (19.2): rota `#/aluno/:id` (espelha `#/modulo/:id`); estado `tutorStudentId`;
+  precedência no `renderView` **guardada por papel** (`isStaff`).
+
+## ETAPA 20 — Frontend Gestor (dashboard)
+
+- `services/api.ts`: `getTutorStudent`, `getTutorOverview` + tipos `TutorOverview`/`SubjectRollup`.
+- `Sidebar.tsx` (20.2): item **"Visão do Gestor"** (`gestorItem`, ícone LayoutDashboard)
+  só para tutor/admin; `App.tsx` inclui `"gestor"` em `KNOWN_VIEWS`.
+- **`ManagerDashboard.tsx`** (novo): KPIs da turma, quiz da turma (número cru),
+  **acertos×erros por assunto** (gráfico + tabela com domínio médio), reuso de
+  `MasteryHeatmap` e `EngagementPanel`, e o **catálogo "O que o sistema rastreia"** com
+  contagens reais + seção "Ainda não rastreado" (transparência).
+
+## Validação (smoke)
+
+- **Backend (curl)**: `/student/me` traz `subject_nome` (9 competências × 3 assuntos);
+  `/tutor/overview` agrega por assunto + catálogo; `/tutor/student/3` devolve o detalhe;
+  segurança: aluno→**403**, próprio-id/inexistente→**404**. Testes: **227 verdes**.
+- **Frontend (Playwright, `.claude/skills/run/p5.mjs`)**: gestor, detalhe do aluno
+  (clique na linha → `#/aluno/3`) e Meu Desempenho — **console limpo nas 3**, todos os
+  blocos presentes; screenshots conferidos (sem frame branco). `tsc` estrito exit 0;
+  `ova_react_build` exit 0.
+
+## Correção (bug pré-existente, encontrado no teste do Plano 5)
+
+- **Sintoma:** clicar em **"Professor Mediador"** (`#/report`) derrubava a interface
+  ("Algo deu errado") para aluno E tutor. Erro: `TypeError: Cannot read properties of
+  undefined (reading 'pt')` no `MyDataPanel` (renderizado dentro do Report).
+- **Causa:** `/consents` devolve **4** finalidades — incluindo `ranking_turma` (criada ao
+  entrar no ranking, `gamificationRoute`) — mas o `MyDataPanel.PURPOSE_LABEL` só mapeava
+  3. `PURPOSE_LABEL["ranking_turma"]` era `undefined` → `label.pt` quebrava. O tipo
+  `Consent["purpose"]` (3-union) escondia o caso do TypeScript. **Não é regressão do
+  Plano 5** — só apareceu porque a aluna de teste (Yasmin) participou do ranking.
+- **Fix (2 camadas):** (1) `ranking_turma` adicionado ao tipo `Consent["purpose"]` (api.ts)
+  e ao `PURPOSE_LABEL` com rótulo/descrição PT-EN; (2) fallback defensivo `labelFor()` —
+  finalidade não mapeada cai num rótulo genérico (a chave) em vez de derrubar o painel.
+- **Validação:** `#/report` carrega para tutor e aluno com **console limpo**; o painel
+  "Meus dados" lista o consentimento "Ranking da turma" (toggle revogável). `tsc` exit 0.
+
+## Ajuste de UX — menu do staff focado em gestão
+
+- **Motivo (feedback do usuário):** a conta de staff herdava TODAS as abas de aluno
+  (Dashboard, Atividades, Quiz, Reforço, Meu Desempenho, Professor Mediador), que são
+  ferramentas de aprendizado e apareciam vazias para um gestor. Decisão (AskUserQuestion):
+  **"Gestão + Conteúdos"**.
+- **Sidebar.tsx:** `itemsFor(staff)` agora devolve **[Conteúdos, Turma, Visão do Gestor]**
+  (antes: `[...navItems, tutor, gestor]`). Exportado `STAFF_VIEWS = ["contents","tutor","gestor"]`.
+  A busca do Topbar passou a sugerir só seções do papel (`itemsFor(role)`) e a esconder o
+  atalho competência→"Meu Desempenho" para staff.
+- **App.tsx:** efeito de guarda por papel — staff que caia em view de aluno (default de
+  login ou URL digitada) é mandado para **Turma**; aluno que tente `#/tutor`/`#/gestor` vai
+  para **Dashboard**. Detalhe de aluno (`#/aluno/:id`) e leitor de OVA têm precedência.
+- **Validação (Playwright, in-page hash):** tutor→#/quiz⇒#/tutor, tutor→#/gestor⇒#/gestor,
+  tutor→#/contents⇒#/contents; aluno→#/gestor⇒#/dashboard, aluno→#/tutor⇒#/dashboard,
+  aluno→#/quiz⇒#/quiz. Menu do tutor = [Conteúdos, Turma, Visão do Gestor]; login do tutor
+  cai na Turma. **Console limpo**, `tsc` exit 0, `ova_react_build` exit 0.

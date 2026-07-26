@@ -130,7 +130,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
           </div>
 
           {selected.persona && (
-            <span className="max-w-[160px] text-center text-[11px] text-muted">
+            <span className="max-w-[160px] text-center text-xs text-muted">
               {personaTagline(selected.persona, lang)}
             </span>
           )}
@@ -140,7 +140,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
           <div className="flex items-center gap-2 text-sm font-bold text-brand">
             <Sparkles size={16} /> {t("EduBot fala com você", "EduBot speaks to you")}
             {fromAi && (
-              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700">
+              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-indigo-700">
                 {t("por IA", "by AI")}
               </span>
             )}

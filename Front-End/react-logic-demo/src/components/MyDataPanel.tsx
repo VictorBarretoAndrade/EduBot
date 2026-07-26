@@ -32,8 +32,19 @@ const PURPOSE_LABEL: Record<Consent["purpose"], { pt: string; en: string; desc_p
     en: "Image and voice",
     desc_pt: "Permitir a virtualização de personagem com a sua imagem/voz. Opcional e revogável.",
     desc_en: "Allow character virtualization with your image/voice. Optional and revocable."
+  },
+  ranking_turma: {
+    pt: "Ranking da turma",
+    en: "Class ranking",
+    desc_pt: "Aparecer no ranking da turma com o seu apelido. Opcional e revogável.",
+    desc_en: "Appear in the class ranking with your nickname. Optional and revocable."
   }
 };
+
+// Defesa: uma finalidade nova no backend não pode derrubar o painel inteiro.
+// Sem rótulo mapeado, cai num rótulo genérico (a própria chave) em vez de crashar.
+const labelFor = (purpose: string) =>
+  PURPOSE_LABEL[purpose as Consent["purpose"]] ?? { pt: purpose, en: purpose, desc_pt: "", desc_en: "" };
 
 export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
   const t = useT();
@@ -87,7 +98,7 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
 
       <div className="mt-4 space-y-3">
         {(consents ?? []).map((c) => {
-          const label = PURPOSE_LABEL[c.purpose];
+          const label = labelFor(c.purpose);
           return (
             <div key={c.purpose} className="rounded-[8px] border border-line p-4">
               <div className="flex items-start justify-between gap-3">
