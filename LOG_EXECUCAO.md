@@ -1936,3 +1936,25 @@ linha, dashboard novo de gestor. Ver `PLANO_EXECUCAO_5.md`.
   tutor→#/contents⇒#/contents; aluno→#/gestor⇒#/dashboard, aluno→#/tutor⇒#/dashboard,
   aluno→#/quiz⇒#/quiz. Menu do tutor = [Conteúdos, Turma, Visão do Gestor]; login do tutor
   cai na Turma. **Console limpo**, `tsc` exit 0, `ova_react_build` exit 0.
+
+## Ajustes pós-demo (revisão interativa + competências por assunto)
+
+- **"Em risco" corrigido (bug real):** o KPI contava *qualquer* alerta aberto, mas um
+  alerta pode ser positivo (ex.: "aprofundamento") — marcava até o aluno bom como em
+  risco. Agora **em risco = taxa de erro no quiz > 50%** (dificuldade real), no
+  `/tutor/overview` e no `TutorPanel`. Alertas têm KPI próprio.
+- **Botão "Revisar" (revisão interativa):** `reviewRoute` passou a expor `ova_id` por
+  revisão (menor OVA com questões da competência). O `ReviewsPanel` ganhou um botão
+  **"Revisar"** que guarda o OVA (`sessionStorage`) e abre o **Quiz** já naquele OVA
+  (o `Quiz` lê e limpa a chave no mount). Antes a seção era só leitura.
+- **Competências agrupadas por ASSUNTO** (pedido: "competências jogadas"):
+  - `CompetencyScores` agora agrupa os cards por disciplina, com cabeçalho por assunto
+    ("área Cálculo → competências"). Usado no aluno (Meu Desempenho) e no professor
+    (detalhe do aluno). Degrada para lista única se o backend não mandar assunto.
+  - `MasteryHeatmap` (Visão do Gestor): `/tutor/mastery` passou a devolver
+    `subject_id/subject_nome` nas colunas (ordenadas por assunto); o heatmap ganhou uma
+    linha de cabeçalho que **spania as colunas por disciplina**.
+- **Validação:** reviews trazem `ova_id` (Quântica→OVA1, Cálculo→OVA2); clicar "Revisar"
+  leva ao Quiz na OVA certa; competências agrupadas em 3 seções (aluno) e colunas do
+  heatmap agrupadas em 3 disciplinas (gestor). 15 testes backend (tutor+mastery+reviews)
+  verdes; `tsc` exit 0; `ova_react_build` exit 0; console limpo.

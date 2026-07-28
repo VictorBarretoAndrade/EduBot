@@ -31,6 +31,17 @@ export const MasteryHeatmap = () => {
       .catch(() => setCols([]));
   }, []);
 
+  // Plano 5: agrupa as colunas por ASSUNTO (as competências vêm ordenadas por
+  // disciplina do backend). Vira uma linha de cabeçalho que spania as colunas.
+  const hasSubjects = !!cols?.some((c) => c.subject_nome);
+  const subjectGroups: { key: string; nome: string; count: number }[] = [];
+  for (const c of cols ?? []) {
+    const nome = c.subject_nome ?? "";
+    const last = subjectGroups[subjectGroups.length - 1];
+    if (last && last.nome === nome) last.count += 1;
+    else subjectGroups.push({ key: `${c.subject_id ?? "x"}-${subjectGroups.length}`, nome, count: 1 });
+  }
+
   return (
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
       <div className="flex items-center gap-2">
@@ -52,8 +63,24 @@ export const MasteryHeatmap = () => {
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-1 text-sm">
             <thead>
+              {/* Linha de ASSUNTOS: cada disciplina spania as colunas das suas
+                  competências (agrupa o que antes ficava "jogado"). */}
+              {hasSubjects && (
+                <tr>
+                  <th className="sticky left-0 bg-white" aria-hidden="true" />
+                  {subjectGroups.map((sg) => (
+                    <th
+                      key={sg.key}
+                      colSpan={sg.count}
+                      className="border-b-2 border-line px-1 pb-1 text-center text-xs font-bold text-ink"
+                    >
+                      {sg.nome}
+                    </th>
+                  ))}
+                </tr>
+              )}
               <tr>
-                <th className="sticky left-0 bg-white px-2 py-1 text-left font-semibold text-muted">
+                <th className="sticky left-0 bg-white px-2 py-1 text-left align-bottom font-semibold text-muted">
                   {t("Aluno", "Student")}
                 </th>
                 {cols.map((c) => (

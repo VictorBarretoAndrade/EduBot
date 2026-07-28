@@ -35,9 +35,22 @@ interface QuizResult {
   achievements: string[];     // conquistas novas desbloqueadas
 }
 
+// Chave escrita pelo ReviewsPanel ("Revisar") — o OVA a abrir ao chegar no Quiz.
+const REVIEW_OVA_KEY = "edubot.reviewOva";
+
 export const Quiz = ({ profile, onTracked }: QuizProps) => {
   const t = useT();
-  const [activeOvaId, setActiveOvaId] = useState(profile.ovas[0]?.ova_id ?? 0);
+  // Se o aluno clicou em "Revisar" no painel de revisões, abre já no OVA daquela
+  // competência (lê e limpa a chave uma única vez).
+  const [activeOvaId, setActiveOvaId] = useState(() => {
+    const target = sessionStorage.getItem(REVIEW_OVA_KEY);
+    if (target) {
+      sessionStorage.removeItem(REVIEW_OVA_KEY);
+      const id = Number(target);
+      if (profile.ovas.some((o) => o.ova_id === id)) return id;
+    }
+    return profile.ovas[0]?.ova_id ?? 0;
+  });
   const [questions, setQuestions] = useState<OvaQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [feedback, setFeedback] = useState<Record<number, boolean>>({});

@@ -439,6 +439,9 @@ export const ackTutorAlert = (alertId: number) =>
 export interface MasteryColumn {
   competency_id: number;
   nome: string;
+  // Assunto/disciplina (Plano 5) — para agrupar as colunas do heatmap por matéria.
+  subject_id?: number;
+  subject_nome?: string;
   n: number;
   media: number | null;
   distribuicao: { fragil: number; em_desenvolvimento: number; desenvolvida: number };
@@ -567,6 +570,8 @@ export interface ReviewItem {
   review_id: number;
   competency_id: number;
   competencia: string | null;
+  // OVA a revisar (o quiz que cobre a competência) — alimenta o botão "Revisar".
+  ova_id: number | null;
   due_date: string;
   status: string;
   vencida: boolean;

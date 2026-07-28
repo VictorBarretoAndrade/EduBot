@@ -19,7 +19,7 @@ A11y (padrão do Plano 4): nada depende só de cor — cada número vem com íco
 e a palavra "acertos"/"erros"; a barra é decorativa (`aria-hidden`) porque repete
 números que já estão em texto; textos ≥ 12px.
 */
-import { CheckCircle2, Target, XCircle } from "lucide-react";
+import { CheckCircle2, Layers, Target, XCircle } from "lucide-react";
 import { CompetencyState } from "../services/api";
 import { useT } from "../i18n";
 
@@ -50,6 +50,20 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
   const totalErros = competencias.reduce((sum, c) => sum + (c.erros || 0), 0);
   const totalRespostas = totalAcertos + totalErros;
   const aproveitamento = totalRespostas ? Math.round((100 * totalAcertos) / totalRespostas) : null;
+
+  // Plano 5: agrupa as competências por ASSUNTO ("área Cálculo" e, dentro dela,
+  // as competências). Preserva a ordem; sem assunto (backend antigo) cai num
+  // grupo único sem cabeçalho, mantendo o comportamento anterior.
+  const grupos: { key: string; nome: string; itens: CompetencyState[] }[] = [];
+  const idx: Record<string, number> = {};
+  for (const c of competencias) {
+    const key = c.subject_id != null ? `s${c.subject_id}` : "_";
+    if (idx[key] === undefined) {
+      idx[key] = grupos.length;
+      grupos.push({ key, nome: c.subject_nome ?? "", itens: [] });
+    }
+    grupos[idx[key]].itens.push(c);
+  }
 
   return (
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
@@ -98,15 +112,29 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
           {t("Nenhuma competência cadastrada para o seu curso.", "No competencies registered for your course.")}
         </p>
       ) : (
-        <ul className="mt-5 space-y-4">
-          {competencias.map((c) => {
-            const acertos = c.acertos || 0;
-            const erros = c.erros || 0;
-            const respostas = acertos + erros; // === tentativas (ver cabeçalho)
-            const perc = respostas ? Math.round((100 * acertos) / respostas) : null;
-            const semTentativas = respostas === 0;
+        <div className="mt-5 space-y-6">
+          {grupos.map((g) => (
+            <div key={g.key}>
+              {/* Cabeçalho do assunto — a "área Cálculo" que agrupa as competências */}
+              {g.nome && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-2">
+                  <Layers size={16} className="text-brand" aria-hidden="true" />
+                  <h3 className="text-base font-bold text-ink">{g.nome}</h3>
+                  <span className="text-xs text-muted">
+                    {g.itens.length}{" "}
+                    {g.itens.length === 1 ? t("competência", "competency") : t("competências", "competencies")}
+                  </span>
+                </div>
+              )}
+              <ul className="space-y-4">
+                {g.itens.map((c) => {
+                  const acertos = c.acertos || 0;
+                  const erros = c.erros || 0;
+                  const respostas = acertos + erros; // === tentativas (ver cabeçalho)
+                  const perc = respostas ? Math.round((100 * acertos) / respostas) : null;
+                  const semTentativas = respostas === 0;
 
-            return (
+                  return (
               <li key={c.competency_id} className="rounded-[8px] border border-line p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-ink">{c.nome}</span>
@@ -163,9 +191,12 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                   )}
                 </p>
               </li>
-            );
-          })}
-        </ul>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -111,7 +111,9 @@ export const TutorPanel = () => {
         <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
           <div className="flex items-center gap-2 text-muted"><AlertTriangle size={18} /> {t("Em risco", "At risk")}</div>
           <div className="mt-2 text-3xl font-bold text-amber-600">
-            {alunos.filter((a) => a.alertas_abertos > 0 || (a.taxa_erro ?? 0) > 0.5).length}
+            {/* Em risco = taxa de erro no quiz > 50% (dificuldade real). Um alerta
+                aberto pode ser positivo (ex.: aprofundamento), então não conta aqui. */}
+            {alunos.filter((a) => (a.taxa_erro ?? 0) > 0.5).length}
           </div>
         </div>
       </div>

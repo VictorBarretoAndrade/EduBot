@@ -184,17 +184,24 @@ def tutor_mastery():
         lang = get_lang()
         course_id = g.student.course_id
 
-        # Competências do curso (colunas do heatmap).
+        # Competências do curso (colunas do heatmap), ordenadas POR ASSUNTO para o
+        # front conseguir agrupar as colunas por disciplina (Plano 5).
         comps = list(Competencies
                      .select(Competencies.competency_id,
                              Competencies.competency_description,
-                             Competencies.competency_description_en)
+                             Competencies.competency_description_en,
+                             Subjects.subject_id.alias("subject_id"),
+                             Subjects.subject_name.alias("subject_nome"))
                      .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
                      .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
                      .where(Offerings.course_id == course_id)
-                     .distinct())
-        comp_meta = [{"competency_id": c.competency_id,
-                      "nome": tr(c.competency_description, c.competency_description_en, lang)}
+                     .order_by(Subjects.subject_id, Competencies.competency_id)
+                     .distinct()
+                     .dicts())
+        comp_meta = [{"competency_id": c["competency_id"],
+                      "subject_id": c["subject_id"],
+                      "subject_nome": c["subject_nome"],
+                      "nome": tr(c["competency_description"], c["competency_description_en"], lang)}
                      for c in comps]
 
         # Mastery da turma (1 query): student_mastery ∩ alunos do curso.
@@ -628,15 +635,14 @@ def tutor_overview():
                    .scalar()) or 0
         taxa_erro = round(erros / tentativas, 2) if tentativas else None
 
-        # --- Em risco: alerta aberto OU taxa de erro > 0.5 (igual ao painel) --
+        # --- Em risco: taxa de erro no quiz > 50% (sinal real de dificuldade).
+        # Ter um alerta aberto NÃO conta como risco — um alerta pode ser positivo
+        # (ex.: "aprofundamento" para quem já domina). Alertas têm KPI próprio.
         alertas_abertos = (Alerts
                            .select(fn.COUNT(Alerts.alert_id))
                            .where((Alerts.student_id.in_(sids)) & (Alerts.read == False))
                            .scalar()) or 0
-        risco = set(row[0] for row in (Alerts
-                    .select(Alerts.student_id)
-                    .where((Alerts.student_id.in_(sids)) & (Alerts.read == False))
-                    .distinct().tuples()))
+        risco = set()
         for sid, t, w in (Attempts
                           .select(Attempts.student_id,
                                   fn.COUNT(Attempts.attempt_id),
