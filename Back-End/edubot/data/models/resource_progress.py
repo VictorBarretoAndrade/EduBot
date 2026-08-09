@@ -19,6 +19,17 @@ class ResourceProgress(BaseModel):
     completed = BooleanField(default=False)
     last_access = DateTimeField(default=datetime.datetime.now)
 
+    # Fase 1 do Plano de Rastreabilidade (migration_019) — consumo REAL de vídeo.
+    # `perc_consumed` acima é posição máxima (legado, mantido); o que mede
+    # aprendizado de fato é a dupla watched_seconds (tempo assistido) +
+    # coverage_perc (quanto da linha do tempo foi realmente percorrida).
+    watched_seconds = IntegerField(default=0)          # segundos tocando, aba visível
+    coverage_bitmap = CharField(max_length=100, null=True)  # 100 baldes '0'/'1'
+    coverage_perc = IntegerField(default=0)            # baldes marcados (0..100)
+    last_position_seconds = IntegerField(null=True)    # onde parou (abandono)
+    max_position_seconds = IntegerField(null=True)     # ponto mais avançado
+    playback_rate_last = FloatField(null=True)         # última velocidade
+
     class Meta:
         # Nome explícito: o default do Peewee seria "resourceprogress", mas o
         # DDL (ddl_extra.sql) cria "resource_progress"

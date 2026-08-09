@@ -16,6 +16,28 @@ import { LearningEventInput, postEvents, getToken } from "./api";
 const FLUSH_INTERVAL_MS = 15_000;
 const MAX_QUEUE = 50; // igual ao limite do backend por requisição
 
+// Plano de Rastreabilidade (§2.1) — identidade da SESSÃO (aba). Vai no contexto
+// de todo evento para separar sessões simultâneas do mesmo aluno (duas abas) e
+// reconstruir a linha do tempo de uma sessão de estudo. Fica em sessionStorage
+// (morre com a aba, que é exatamente o escopo de "sessão") e não identifica a
+// pessoa — o aluno já vem do token no backend.
+const SESSION_ID_KEY = "edubot.sessionId";
+
+const newId = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+export function sessionId(): string {
+  if (typeof sessionStorage === "undefined") return "no-session";
+  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  if (!id) {
+    id = newId();
+    sessionStorage.setItem(SESSION_ID_KEY, id);
+  }
+  return id;
+}
+
 let queue: LearningEventInput[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 let listenersBound = false;
@@ -46,7 +68,8 @@ export function track(
     verb,
     object_type: objectType,
     object_id: objectId ?? null,
-    context: context ?? null,
+    // §2.1: o session_id acompanha TODO evento — quem chama não precisa lembrar.
+    context: { ...(context ?? {}), session_id: sessionId() },
     occurred_at: new Date().toISOString()
   });
   ensureRunning();

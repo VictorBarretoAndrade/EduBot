@@ -14,7 +14,7 @@
 # payload), e o acesso a uma OVA personalizada é restrito ao seu dono.
 
 
-from flask import Blueprint, g
+from flask import Blueprint, g, request
 from flask_cors import cross_origin
 from peewee import PeeweeException
 import json
@@ -47,8 +47,28 @@ def create_personalized_ova():
         # 1. Perfil completo do aluno logado (mesma entrada do EduBot 4.3)
         profile = build_student_profile(g.student)
 
+        # Fase 4 — alvo explícito (opcional): o CTA de uma intervenção de reforço
+        # manda a competência que o aluno acabou de errar, para a trilha ser
+        # sobre o que ele estudou agora e não sobre a pior competência global.
+        # Só aceitamos competência do PRÓPRIO perfil do aluno (escopo do curso).
+        #
+        # Lido direto (não por get_payload) porque aqui o CORPO É OPCIONAL: a
+        # chamada histórica não manda nada, e get_payload aborta com 400 nesse caso.
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            payload = {}
+        target_competency_id = payload.get("competency_id")
+        if target_competency_id is not None:
+            try:
+                target_competency_id = int(target_competency_id)
+            except (TypeError, ValueError):
+                return json.dumps({"Error": "competency_id inválido"}), 400
+            do_curso = {c["competency_id"] for c in profile.get("competencias", [])}
+            if target_competency_id not in do_curso:
+                return json.dumps({"Error": "Competência fora do curso do aluno"}), 400
+
         # 2. Agente de tool-use: diagnostica, busca conteúdo e monta a OVA
-        result = run_personalized_ova_agent(g.student, profile)
+        result = run_personalized_ova_agent(g.student, profile, target_competency_id)
 
         if not result.get("personalized_ova_id"):
             return json.dumps({

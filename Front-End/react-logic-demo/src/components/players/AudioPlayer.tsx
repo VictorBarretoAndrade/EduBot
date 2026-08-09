@@ -10,6 +10,7 @@ import { Headphones } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { MediaProgress } from "./VideoPlayer";
+import { track } from "../../services/events";
 
 const COMPLETED_PERC = 90;
 const REPORT_EVERY_S = 10;
@@ -19,10 +20,17 @@ interface AudioPlayerProps {
   title: string;
   durationSeconds: number | null;
   initialSeconds: number;
+  // Fase 0 (E0.3): id do recurso para as transições (play/pause/fim) virarem
+  // eventos xAPI-lite, como no vídeo.
+  resourceId?: number;
   onProgress: (progress: MediaProgress) => void;
 }
 
-export const AudioPlayer = ({ url, title, durationSeconds, initialSeconds, onProgress }: AudioPlayerProps) => {
+// NOTA (Plano de Rastreabilidade §3.1): diferente do vídeo, o áudio NÃO tem gate
+// de visibilidade — ouvir podcast com a aba em segundo plano é escuta legítima.
+// O tempo aqui já era medido corretamente (1s por segundo tocando); a Fase 1 só
+// acrescentou as transições como eventos.
+export const AudioPlayer = ({ url, title, durationSeconds, initialSeconds, resourceId, onProgress }: AudioPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const listenedRef = useRef(initialSeconds);
   const lastReportedRef = useRef(initialSeconds);
@@ -58,7 +66,10 @@ export const AudioPlayer = ({ url, title, durationSeconds, initialSeconds, onPro
       }
     };
 
+    const position = () => Math.round(audio.currentTime || 0);
+
     const onPlay = () => {
+      track("played", "resource", resourceId, { position_s: position() });
       if (tickerRef.current) return;
       tickerRef.current = window.setInterval(() => {
         listenedRef.current += 1;
@@ -66,20 +77,33 @@ export const AudioPlayer = ({ url, title, durationSeconds, initialSeconds, onPro
         if (listenedRef.current - lastReportedRef.current >= REPORT_EVERY_S) report();
       }, 1000);
     };
-    const onPause = () => { stopTicker(); report(); };
-    const onEnded = () => { stopTicker(); report(true); };
+    const onPause = () => {
+      stopTicker();
+      track("paused", "resource", resourceId, { position_s: position() });
+      report();
+    };
+    const onEnded = () => {
+      stopTicker();
+      track("completed", "resource", resourceId, { position_s: position() });
+      report(true);
+    };
+    const onRateChange = () => {
+      track("rate_changed", "resource", resourceId, { rate: audio.playbackRate });
+    };
 
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("ratechange", onRateChange);
     return () => {
       stopTicker();
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("ratechange", onRateChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, durationSeconds]);
+  }, [url, durationSeconds, resourceId]);
 
   const minutes = Math.floor(listened / 60);
   const seconds = Math.round(listened % 60);

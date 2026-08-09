@@ -87,6 +87,18 @@ def on_attempt(student_id, competency_id, is_correct, p_mastery, today=None):
         if applied is not None:
             from edubot.services.gamification import award
             award(student_id, "revisao_em_dia", "competency", competency_id, today=today)
+            # Fase 4 (Plano de Rastreabilidade) — gatilho 3 do reforço: errar a
+            # revisão é o sinal mais forte de que o conteúdo não consolidou. O
+            # `ease` já caiu no register_result; quando ele chega ao piso, o
+            # aluno vem errando de forma reincidente e merece uma trilha nova.
+            if not is_correct and applied.ease <= EASE_MIN:
+                from edubot.data.models.competencies import Competencies
+                from edubot.services.reinforcement import suggest_reinforcement
+                comp = Competencies.get_or_none(Competencies.competency_id == competency_id)
+                suggest_reinforcement(
+                    student_id, competency_id,
+                    comp.competency_description if comp else None,
+                    p_mastery, today=today)
         if (p_mastery is not None and p_mastery >= MASTERY_REVIEW_THRESHOLD
                 and _active(student_id, competency_id) is None):
             schedule(student_id, competency_id, REVIEW_FIRST_DAYS,

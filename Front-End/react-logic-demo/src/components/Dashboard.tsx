@@ -12,6 +12,7 @@ import { GamificationMe, StudentProfile, UnreadIntervention, getGamificationMe, 
 import { useLanguage, useT } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
+import { REFORCO_COMP_KEY, competencyFromDescription, stripCompetencyMarker } from "../services/reinforcementTarget";
 import { WeeklyGoalsCard } from "./Gamification";
 
 // G.6 — chip de gamificação no topo do dashboard: sequência, nível e XP da
@@ -113,7 +114,11 @@ const EduBotInbox = ({ onOpenReforco, persona }: { onOpenReforco: () => void; pe
                 </div>
                 <div className="min-w-0">
                   <span className="text-xs font-bold uppercase tracking-wide text-muted">{item.tipo}</span>
-                  {item.descricao && <p className="mt-1 text-sm text-slate-700">{item.descricao}</p>}
+                  {item.descricao && (
+                    // O marcador [comp:N] é interno (roteia o CTA) e não deve
+                    // aparecer para o aluno.
+                    <p className="mt-1 text-sm text-slate-700">{stripCompetencyMarker(item.descricao)}</p>
+                  )}
                 </div>
               </div>
               <button
@@ -127,12 +132,18 @@ const EduBotInbox = ({ onOpenReforco, persona }: { onOpenReforco: () => void; pe
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => {
+                  // Fase 4: quando o convite traz a competência, a trilha nasce
+                  // apontada para o assunto que o aluno acabou de errar.
+                  const alvo = competencyFromDescription(item.descricao);
+                  if (alvo != null) sessionStorage.setItem(REFORCO_COMP_KEY, String(alvo));
                   dismiss(item.intervention_id);
                   onOpenReforco();
                 }}
                 className="h-10 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-indigo-600"
               >
-                {t("Gerar minha trilha de reforço", "Generate my reinforcement track")}
+                {competencyFromDescription(item.descricao) != null
+                  ? t("Praticar esse assunto agora", "Practice this topic now")
+                  : t("Gerar minha trilha de reforço", "Generate my reinforcement track")}
               </button>
               {supported && (
                 <button

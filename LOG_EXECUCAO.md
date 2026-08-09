@@ -1958,3 +1958,118 @@ linha, dashboard novo de gestor. Ver `PLANO_EXECUCAO_5.md`.
   leva ao Quiz na OVA certa; competências agrupadas em 3 seções (aluno) e colunas do
   heatmap agrupadas em 3 disciplinas (gestor). 15 testes backend (tutor+mastery+reviews)
   verdes; `tsc` exit 0; `ova_react_build` exit 0; console limpo.
+
+## Plano de Rastreabilidade — Fases 0 a 4 (implementação)
+
+Execução do [PLANO_RASTREABILIDADE.md](PLANO_RASTREABILIDADE.md), que auditou o
+rastreamento e listou 12 problemas. As fases abaixo saíram na ordem recomendada
+(0 primeiro, por ser pequena e destravar as demais).
+
+### Fase 0 — "parar de mentir" (corrige P1, P3, P8)
+
+- **P1 (grave) — telemetria descartada em silêncio:** o front emitia
+  `companion_spoke/listened/dismissed/explain` e o object_type `ova_section`, mas
+  nenhum deles constava dos enums de `services/events.py`: `emit_batch` os contava
+  como erro e **não gravava**. Como o painel de engajamento do professor consulta
+  exatamente esses verbos, o bloco "Companheiro de estudo" exibia **zero para
+  sempre**. Enums ampliados (+ `rate_changed`, `idle_start/end`,
+  `section_enter/exit`, object_type `ova_section`).
+- **P3 — `response_ms` inflado:** o `Quiz` standalone mandava o MESMO tempo (o do
+  quiz inteiro) para todas as questões do lote; o `OvaQuiz` já rebaseava por
+  questão. Unificado no padrão correto.
+- **P8 — consentimento com fonte dividida:** a UI acreditava na flag do
+  `localStorage`; o backend podia não ter registro (navegador novo, POST que
+  falhou). Agora o **backend é a fonte de verdade** (`hasRecordedConsent`) e a
+  flag local é só cache.
+- `session_id` (UUID por aba, em `sessionStorage`) passou a acompanhar todo evento.
+
+### Fase 1 — vídeo com consumo REAL (corrige P2)
+
+- **O bug central:** "% assistido" era a **posição máxima** do player em
+  checkpoints de 10% — um *seek* para o fim marcava 100% sem o aluno ver nada — e
+  `seconds_consumed` recebia a posição, não o tempo assistido.
+- Passam a existir três medidas independentes (migration_019):
+  `watched_seconds` (segundos com o vídeo tocando **e** a aba visível),
+  `coverage_bitmap`/`coverage_perc` (100 baldes de 1%; um balde só acende com
+  reprodução passando por ele, então **seek não preenche**) e
+  `last/max_position_seconds` (retomada e ponto de abandono).
+- O cliente envia o bitmap **acumulado** da sessão e o servidor faz OR — auto-heal
+  quando um sync se perde. `watched_seconds` soma no banco (`COALESCE + delta`),
+  como o `read_time`.
+- Players passaram a emitir `played/paused/seeked/completed/rate_changed`. O áudio
+  **não** tem gate de visibilidade (ouvir podcast em segundo plano é escuta
+  legítima) — decisão registrada no código.
+
+### Fase 2 — leitura por SEÇÃO do OVA (corrige P5, a lacuna central)
+
+- O rastreio era do OVA inteiro: o professor via *quanto* o aluno leu, nunca
+  *onde* travou. Nova tabela `ova_section_progress` (migration_020) com
+  `active_seconds`, `max_scroll_perc` e `visits` por (aluno, OVA, seção).
+- `useSectionTracking` usa IntersectionObserver (50% visível por ≥1 s) e **não cria
+  um segundo cronômetro**: o ticker existente do leitor — que já filtra aba oculta
+  e ociosidade — chama `creditSecond()`. Com duas seções visíveis o segundo é
+  **dividido**, preservando a invariante `Σ seções ≤ read_time do OVA`.
+- Novo `POST /progress/ova-section` (lote, deltas somados no banco). Eventos
+  `section_enter/exit` e `idle_start/end` alimentam a linha do tempo.
+
+### Fase 4 — o ciclo do reforço fecha (corrige §6.1/§6.3)
+
+- **A lacuna:** a OVA de reforço só nascia de um clique voluntário na aba
+  "Reforço" — justamente o que o aluno em dificuldade não faz. E o alvo era a
+  competência mais fraca **global**: terminar mal o OVA de Cálculo podia gerar
+  reforço de Nuvem.
+- `POST /edubot/personalized-ova` aceita `competency_id` (opcional; corpo continua
+  opcional — degradação segura) e o agente honra o alvo.
+- Três gatilhos criam o convite (`services/reinforcement.py`, dedup de 7 dias por
+  competência): pós-quiz com domínio < 0.4; **pós-conclusão de OVA avaliando só as
+  competências daquele OVA**; e segunda falha em revisão vencida (`ease` no piso).
+  O convite carrega a competência em `[comp:N]` — marcador interno, removido antes
+  de o texto chegar ao aluno; o CTA vira "Praticar esse assunto agora".
+- A geração continua **no clique** (rodar o agente por gatilho teria custo com LLM
+  real, sem garantia de uso). `services/coverage.py` expõe as **lacunas de
+  conteúdo** (< 3 questões ou < 2 formatos) no painel do gestor — é trabalho
+  editorial, e o software aponta em vez de fingir que atende.
+- **Regressão introduzida e corrigida no mesmo ciclo:** a intervenção de reforço
+  criada *antes* de `trigger_evaluation` disparava o guard "já notificado hoje" e
+  **silenciava o agente proativo** (5 testes vermelhos). O gatilho foi movido para
+  depois — o agente mantém prioridade.
+
+### Fase 3 — risco composto (corrige P9)
+
+- "Em risco" era `taxa_erro > 0.5`: não via o aluno que **sumiu** (quem não tenta
+  não erra) nem o que está **esquecendo**. `services/risk.py` combina cinco sinais
+  (erro, inatividade, domínio caindo, revisões vencidas, consumo baixo) com pesos
+  em constantes nomeadas e devolve os **componentes**, não só o total — o professor
+  precisa saber se o caso é ausência ou dificuldade, porque a ação é outra.
+- **Regra de calibração registrada no código:** o score não pode deixar de ver quem
+  a regra antiga já via. A primeira calibração (limiar 60) reprovava esse teste e
+  foi ajustada (limiar 40, saturações revistas, `dominio_caindo` com peso maior por
+  ser o sinal mais direto de perda de aprendizado).
+- `/tutor/turma` e `/tutor/overview` usam a MESMA função (duas definições de risco
+  seriam piores que uma imperfeita). O painel ganhou coluna **Risco** com o motivo
+  principal ("sumiu", "errando", "esquecendo") e o detalhe no tooltip.
+
+### Validação
+
+- **Backend: 256 testes passam** (31 novos: `test_tracking_fases_0_1_2.py`,
+  `test_reforco_fase4.py`, `test_risco_fase3.py`). Duas falhas em
+  `tests/test_outcomes.py` (`agent-kpi`) são **pré-existentes** — confirmado
+  rodando a suíte no código sem estas mudanças.
+- `tsc --noEmit` exit 0; `ova_react_build` exit 0; **console do navegador limpo**.
+- Ponta a ponta na stack real (migrations 019/020 aplicadas no volume existente):
+  um POST com posição 99% e bitmap de 3 baldes gravou `posicao_max=100` e
+  `cobertura_real=3` — **a prova de que a métrica parou de mentir**. Seções
+  gravaram `visits=3` (releitura). Painel do gestor mostra vídeo real, "onde a
+  turma trava" e lacunas; painel do professor mostra `Manuel 60·errando`,
+  `Thiago 44·sumiu` (invisível para a regra antiga, com 44% de erro) e `Pedro 0`.
+- Catálogo do gestor atualizado: "% de vídeo efetivamente assistido" **saiu** de
+  "ainda não rastreado" (agora é medido) e entrou "leitura por seção do OVA".
+
+### Decisões em aberto que permanecem (do §9 do plano)
+
+Continuam **não resolvidas por código** e precisam de decisão do usuário: retenção
+de `learning_events` (§3.4), tratamento de seções renomeadas (§4.1), modelo do item
+de reforço para medir uso (§5.3), **calibração pedagógica dos pesos do risco**
+(§5.4 — implementado com defaults documentados), produção editorial das questões
+das competências 7–9 (§6.2), auto-geração de reforço com LLM real (§6.3, atrás de
+decisão de custo) e promoção de `session_id` a coluna (§7.5, adiado de propósito).

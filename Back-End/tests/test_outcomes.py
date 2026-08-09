@@ -90,9 +90,9 @@ def test_historico_intervencoes_tool(seeded_db):
 
 
 def test_agent_kpi_route(client, auth, seeded_db):
-    _decision(days_ago=3, digest={"tipo": "trilha_minima"}, outcome="aceita")
-    _decision(days_ago=4, digest={"tipo": "trilha_minima"}, outcome="dispensada")
-    _decision(days_ago=5, digest={"tipo": "trilha_minima"}, outcome="melhorou")
+    _recent_decision(days_ago=3, digest={"tipo": "trilha_minima"}, outcome="aceita")
+    _recent_decision(days_ago=4, digest={"tipo": "trilha_minima"}, outcome="dispensada")
+    _recent_decision(days_ago=5, digest={"tipo": "trilha_minima"}, outcome="melhorou")
     resp = client.get("/tutor/agent-kpi", headers=auth(9))  # tutor
     assert resp.status_code == 200
     kpi = [k for k in json.loads(resp.data)["kpis"] if k["tipo"] == "trilha_minima"][0]
@@ -103,9 +103,9 @@ def test_agent_kpi_route(client, auth, seeded_db):
 
 def test_agent_kpi_by_format(client, auth, seeded_db):
     # P.3 — recorte por formato SUGERIDO: vídeo aceito, texto dispensado.
-    _decision(days_ago=3, digest={"formato_sugerido": "video"}, outcome="aceita")
-    _decision(days_ago=4, digest={"formato_sugerido": "video"}, outcome="melhorou")
-    _decision(days_ago=5, digest={"formato_sugerido": "texto"}, outcome="dispensada")
+    _recent_decision(days_ago=3, digest={"formato_sugerido": "video"}, outcome="aceita")
+    _recent_decision(days_ago=4, digest={"formato_sugerido": "video"}, outcome="melhorou")
+    _recent_decision(days_ago=5, digest={"formato_sugerido": "texto"}, outcome="dispensada")
     resp = client.get("/tutor/agent-kpi", headers=auth(9))
     por_formato = {k["formato"]: k for k in json.loads(resp.data)["kpis_por_formato"]}
     assert por_formato["video"]["taxa_aceitacao"] == 1.0

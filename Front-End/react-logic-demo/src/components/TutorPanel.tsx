@@ -7,7 +7,7 @@ alunos em risco — o beat "o EduBot envia o plano de retomada e alerta o tutor"
 */
 import { AlertTriangle, Bell, Check, GraduationCap, LoaderCircle, RefreshCw, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts } from "../services/api";
+import { StudentRisk, TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts } from "../services/api";
 import { useToast } from "./ui/Toast";
 import { MasteryHeatmap } from "./MasteryHeatmap";
 import { ApprovalQueue } from "./ApprovalQueue";
@@ -19,6 +19,29 @@ const severityStyle: Record<string, string> = {
   alta: "border-rose-200 bg-rose-50 text-rose-800",
   media: "border-amber-200 bg-amber-50 text-amber-800",
   baixa: "border-line bg-slate-50 text-slate-700"
+};
+
+type Translate = (pt: string, en: string) => string;
+
+// Fase 3 — nomes dos componentes do risco. Cada um pede uma ação diferente do
+// professor: "sumiu" se resolve com contato, "errando" com reforço.
+export const motivoLabel = (motivo: string, t: Translate): string => {
+  if (motivo === "inatividade") return t("sumiu", "absent");
+  if (motivo === "erro_quiz") return t("errando", "erring");
+  if (motivo === "dominio_caindo") return t("esquecendo", "forgetting");
+  if (motivo === "revisoes_vencidas") return t("revisões", "reviews");
+  if (motivo === "consumo_baixo") return t("pouco estudo", "low study");
+  return motivo;
+};
+
+/** Texto do tooltip: a composição inteira do score, para o professor auditar. */
+export const riscoDetalhe = (risco: StudentRisk, t: Translate): string => {
+  const partes = Object.entries(risco.componentes)
+    .sort(([, a], [, b]) => b - a)
+    .map(([motivo, peso]) => `${motivoLabel(motivo, t)}: ${peso}`);
+  return partes.length
+    ? `${t("Risco", "Risk")} ${risco.score}/100 — ${partes.join(" · ")}`
+    : t("Sem sinais de risco", "No risk signals");
 };
 
 export const TutorPanel = () => {
@@ -111,9 +134,11 @@ export const TutorPanel = () => {
         <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
           <div className="flex items-center gap-2 text-muted"><AlertTriangle size={18} /> {t("Em risco", "At risk")}</div>
           <div className="mt-2 text-3xl font-bold text-amber-600">
-            {/* Em risco = taxa de erro no quiz > 50% (dificuldade real). Um alerta
-                aberto pode ser positivo (ex.: aprofundamento), então não conta aqui. */}
-            {alunos.filter((a) => (a.taxa_erro ?? 0) > 0.5).length}
+            {/* Fase 3: risco COMPOSTO, calculado no backend (erro + ausência +
+                esquecimento + revisões + consumo). A regra antiga (taxa_erro >
+                50%) não via o aluno que sumiu — quem não tenta, não erra.
+                Fallback para a regra antiga se o backend for anterior à Fase 3. */}
+            {alunos.filter((a) => a.risco?.em_risco ?? (a.taxa_erro ?? 0) > 0.5).length}
           </div>
         </div>
       </div>
@@ -148,6 +173,7 @@ export const TutorPanel = () => {
                   <th className="px-3 py-3 font-semibold">{t("Consumo", "Consumption")}</th>
                   <th className="px-3 py-3 font-semibold">{t("Erro quiz", "Quiz error")}</th>
                   <th className="px-3 py-3 font-semibold">{t("Sem acesso", "No access")}</th>
+                  <th className="px-3 py-3 font-semibold">{t("Risco", "Risk")}</th>
                   <th className="px-3 py-3 font-semibold">{t("Alertas", "Alerts")}</th>
                 </tr>
               </thead>
@@ -185,6 +211,30 @@ export const TutorPanel = () => {
                       )}
                     </td>
                     <td className="px-3 py-3">{a.dias_sem_acesso != null ? `${a.dias_sem_acesso}d` : "—"}</td>
+                    <td className="px-3 py-3">
+                      {a.risco ? (
+                        <span
+                          className={
+                            "rounded-full px-2.5 py-1 text-xs font-bold " +
+                            (a.risco.em_risco
+                              ? "bg-rose-100 text-rose-700"
+                              : a.risco.score > 0
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-700")
+                          }
+                          // O motivo principal é o que diz ao professor COMO
+                          // agir: sumiu, está esquecendo ou está errando.
+                          title={riscoDetalhe(a.risco, t)}
+                        >
+                          {a.risco.score}
+                          {a.risco.principal && (
+                            <span className="ml-1 font-semibold">· {motivoLabel(a.risco.principal, t)}</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3">
                       {a.alertas_abertos > 0 ? (
                         <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700">

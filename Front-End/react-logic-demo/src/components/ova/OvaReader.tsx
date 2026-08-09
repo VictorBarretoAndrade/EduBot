@@ -24,6 +24,7 @@ import {
 } from "../../services/api";
 import { OvaContent, OvaSection, fetchOvaContent, ovaContextText } from "../../services/ovaContent";
 import { track } from "../../services/events";
+import { saveMediaProgress } from "../../services/mediaProgress";
 import { AudioPlayer } from "../players/AudioPlayer";
 import { MediaProgress, VideoPlayer } from "../players/VideoPlayer";
 import { useToast } from "../ui/Toast";
@@ -32,6 +33,7 @@ import { useSpeech } from "../../hooks/useSpeech";
 import { useCompanionScript } from "../../hooks/useCompanionScript";
 import { useTutorChat } from "../../hooks/useTutorChat";
 import { useFocusTrap } from "../../hooks/useFocusTrap";
+import { useSectionTracking } from "../../hooks/useSectionTracking";
 import { Accordion } from "./Accordion";
 import { Carousel } from "./Carousel";
 import { OvaQuiz } from "./OvaQuiz";
@@ -91,6 +93,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   // Elemento do artigo — o scroll de leitura é medido POR CONTEÚDO, não pela
   // janela (A6), para não confundir altura de tela com consumo do texto.
   const contentRef = useRef<HTMLDivElement>(null);
+  // Fase 2 — leitura por seção. O hook não tem cronômetro próprio: o ticker
+  // abaixo (que já filtra aba oculta/ociosidade) é quem credita os segundos.
+  const { observeSection, creditSecond, flushSections } = useSectionTracking(ova.ova_id);
   const toast = useToast();
   const t = useT();
   const { lang } = useLanguage();
@@ -224,7 +229,20 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
     // A.5: marca a última atividade do aluno (agora); o ticker só conta se a
     // permanência foi recente e a aba está visível.
     const lastActivityRef = { current: Date.now() };
-    const markActivity = () => { lastActivityRef.current = Date.now(); };
+    // Fase 2 (§2.3): janelas de ociosidade viram eventos, para o professor
+    // distinguir "ficou 40 min na página" de "leu 40 min".
+    const idleRef = { current: false };
+    const markActivity = () => {
+      // Voltou a interagir depois de um período ocioso: fecha a janela de idle.
+      if (idleRef.current) {
+        idleRef.current = false;
+        track("idle_end", "session", null, {
+          ova_id: ova.ova_id,
+          idle_seconds: Math.round((Date.now() - lastActivityRef.current) / 1000)
+        });
+      }
+      lastActivityRef.current = Date.now();
+    };
 
     const contentScrollable = () => {
       const el = contentRef.current;
@@ -254,6 +272,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
         : sessionSecondsRef.current >= SHORT_PAGE_MIN_SECONDS;
 
     const persist = (refreshProfile: boolean, keepalive = false) => {
+      // Fase 2: as seções viajam no MESMO momento de sync do OVA (mesma janela
+      // de 15 s / pagehide) — nenhum canal ou cadência nova.
+      flushSections(keepalive);
       const delta = unsyncedRef.current;
       unsyncedRef.current = 0;
       saveOVAProgress(
@@ -282,9 +303,15 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
       // recentemente (não conta aba em background nem ausência prolongada).
       const hidden = document.visibilityState === "hidden";
       const idle = (Date.now() - lastActivityRef.current) / 1000 > IDLE_LIMIT_SECONDS;
+      if (idle && !idleRef.current) {
+        idleRef.current = true;
+        track("idle_start", "session", null, { ova_id: ova.ova_id });
+      }
       if (hidden || idle) return;
       sessionSecondsRef.current += 1;
       unsyncedRef.current += 1;
+      // Fase 2: o MESMO segundo (já filtrado) é creditado à seção visível.
+      creditSecond();
       // Em página curta o progresso é por tempo (não há scroll a medir)
       if (!contentScrollable()) {
         bumpProgress(Math.min(100, Math.round((sessionSecondsRef.current / SHORT_PAGE_MIN_SECONDS) * 100)));
@@ -314,7 +341,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
       activityEvents.forEach((ev) => window.removeEventListener(ev, markActivity));
       persist(true, true);
     };
-  }, [ova.ova_id, onTracked]);
+  }, [ova.ova_id, onTracked, creditSecond, flushSections]);
 
   // CP.2 — saudação ao abrir o módulo (retomada se já havia progresso salvo).
   useEffect(() => {
@@ -353,12 +380,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   };
 
   const trackMedia = (resource: OvaResource) => (state: MediaProgress) => {
-    saveResourceProgress({
-      resource_id: resource.resource_id,
-      perc_consumed: state.perc,
-      seconds_consumed: state.seconds,
-      completed: state.completed
-    })
+    saveMediaProgress(resource.resource_id, state)
       .then(onTracked)
       .catch(() => toast.error(t("Não foi possível salvar seu progresso na mídia.", "Couldn't save your media progress.")));
   };
@@ -457,8 +479,14 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             )}
 
             {/* Seções do conteúdo */}
-            {content.sections.map((section) => (
-              <section key={section.id} className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
+            {content.sections.map((section, sectionIndex) => (
+              <section
+                key={section.id}
+                // Fase 2: o observer usa este nó para saber quando a seção está
+                // sendo lida de fato (metade visível por pelo menos 1 s).
+                ref={observeSection(section.id, sectionIndex)}
+                className="rounded-[8px] border border-line bg-white p-7 shadow-soft"
+              >
                 {(section.heading || companionEnabled) && (
                   <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
                     {section.heading
@@ -540,7 +568,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
                       url={resource.resource_url}
                       mediaType={resource.media_type}
                       title={resource.resource_title}
-                      initialPerc={resource.perc_consumed}
+                      resourceId={resource.resource_id}
+                      initialCoverageBitmap={resource.coverage_bitmap}
+                      initialCoveragePerc={resource.coverage_perc}
                       onProgress={trackMedia(resource)}
                     />
                   ))}
@@ -551,6 +581,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
                       title={resource.resource_title}
                       durationSeconds={resource.duration_seconds}
                       initialSeconds={resource.seconds_consumed}
+                      resourceId={resource.resource_id}
                       onProgress={trackMedia(resource)}
                     />
                   ))}

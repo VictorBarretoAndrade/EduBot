@@ -18,6 +18,7 @@ import {
   getOVAResources,
   saveResourceProgress
 } from "../services/api";
+import { saveMediaProgress } from "../services/mediaProgress";
 import { useToast } from "./ui/Toast";
 import { VideoPlayer, MediaProgress } from "./players/VideoPlayer";
 import { AudioPlayer } from "./players/AudioPlayer";
@@ -56,12 +57,7 @@ export const Contents = ({ profile, onTracked, onOpenOva }: ContentsProps) => {
   }, [activeOvaId]);
 
   const trackMedia = (resource: OvaResource) => (progress: MediaProgress) => {
-    saveResourceProgress({
-      resource_id: resource.resource_id,
-      perc_consumed: progress.perc,
-      seconds_consumed: progress.seconds,
-      completed: progress.completed
-    })
+    saveMediaProgress(resource.resource_id, progress)
       .then(onTracked)
       .catch(() => toast.error(t("Não foi possível salvar seu progresso. Verifique a conexão.", "Couldn't save your progress. Check your connection.")));
   };
@@ -166,7 +162,9 @@ export const Contents = ({ profile, onTracked, onOpenOva }: ContentsProps) => {
               url={resource.resource_url}
               mediaType={resource.media_type}
               title={resource.resource_title}
-              initialPerc={resource.perc_consumed}
+              resourceId={resource.resource_id}
+              initialCoverageBitmap={resource.coverage_bitmap}
+              initialCoveragePerc={resource.coverage_perc}
               onProgress={trackMedia(resource)}
             />
           ))}
@@ -180,6 +178,7 @@ export const Contents = ({ profile, onTracked, onOpenOva }: ContentsProps) => {
               title={resource.resource_title}
               durationSeconds={resource.duration_seconds}
               initialSeconds={resource.seconds_consumed}
+              resourceId={resource.resource_id}
               onProgress={trackMedia(resource)}
             />
           ))}

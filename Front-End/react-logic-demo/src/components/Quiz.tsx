@@ -120,6 +120,12 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
         newFeedback[question.question_id] = graded.is_correct;
         submittedRef.current[question.question_id] = selectedIndex;
         submittedAny = true;
+        // Fase 0 (E0.2) do Plano de Rastreabilidade: base individual do esforço.
+        // Sem reiniciar aqui, TODAS as questões do lote recebiam o mesmo
+        // `Date.now() - loadedAt` (o tempo do quiz inteiro), inflando o esforço
+        // médio e divergindo da semântica do OvaQuiz. Agora as duas telas medem
+        // a mesma coisa: o tempo desta questão.
+        loadedAtRef.current = Date.now();
         // G.6 — acumula o XP de esforço e as conquistas devolvidas pelo backend
         if (graded.gamification) {
           xpGained += graded.gamification.xp_awarded;

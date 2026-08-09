@@ -108,6 +108,24 @@ def _collect_results(messages):
     return results
 
 
+def _pick_target(comps, profile, forced_competency_id):
+    """Competência que a trilha vai remediar.
+
+    Sem alvo explícito, mantém o comportamento histórico (a primeira da lista de
+    fracas, que já vem ordenada). Com alvo explícito, usa-o — buscando o nome no
+    perfil quando a competência não estiver entre as "fracas" (é o caso de um
+    gatilho pós-quiz numa competência que só agora começou a cair)."""
+    if forced_competency_id is None:
+        return comps[0] if comps else None
+    for comp in comps:
+        if comp.get("competency_id") == forced_competency_id:
+            return comp
+    for comp in profile.get("competencias", []):
+        if comp.get("competency_id") == forced_competency_id:
+            return comp
+    return comps[0] if comps else None
+
+
 # ---------------------------------------------------------------------------
 # Cliente mockado: simula o Claude escolhendo as tools, de forma determinística.
 # ---------------------------------------------------------------------------
@@ -120,7 +138,12 @@ class _MockAgentClient:
             return _tool_use_envelope("listar_competencias_fracas", {})
 
         comps = (done.get("listar_competencias_fracas") or {}).get("competencias", [])
-        target = comps[0] if comps else None
+        # Fase 4 do Plano de Rastreabilidade: quando o gatilho já sabe QUAL
+        # competência remediar (o aluno acabou de errar aquele assunto), o alvo
+        # vem explícito e o diagnóstico não escolhe por conta própria. Sem isso,
+        # concluir o OVA X com dificuldade podia gerar reforço do OVA Y — a
+        # competência mais fraca GLOBAL —, o que confunde o aluno.
+        target = _pick_target(comps, profile, ctx.get("target_competency_id"))
         comp_id = target["competency_id"] if target else None
 
         if "listar_recursos_remediacao" not in done:
@@ -169,11 +192,13 @@ class _MockAgentClient:
 # por outros fluxos do agente). Aqui só permanece o que é ESPECÍFICO da OVA
 # personalizada: o system prompt, o mock determinístico e o mapeamento do
 # resultado. O comportamento (e o teste de regressão) é idêntico.
-def run_personalized_ova_agent(student, profile):
+def run_personalized_ova_agent(student, profile, target_competency_id=None):
     """Roda o agente de tool-use e devolve o resultado da geração.
 
     student: linha Students (g.student) — usada pelas tools como contexto seguro.
     profile: dict de build_student_profile (entrada do agente).
+    target_competency_id: competência a remediar (Fase 4). None mantém o
+        diagnóstico automático (a mais fraca), que é o comportamento histórico.
     """
     from .loop import run_agent
 
@@ -184,11 +209,13 @@ def run_personalized_ova_agent(student, profile):
         "competencia_alvo": (min(fracas, key=lambda c: c.get("dominio_estimado")
                                  if c.get("dominio_estimado") is not None else 1.0)
                              ["nome"] if fracas else None),
+        "competencia_forcada": target_competency_id,
     }
 
     result = run_agent(
         SYSTEM_PROMPT, _build_user_prompt(profile), TOOLS_SCHEMA,
-        ctx={"student": student, "profile": profile},
+        ctx={"student": student, "profile": profile,
+             "target_competency_id": target_competency_id},
         model=None, max_iterations=MAX_ITERATIONS,
         trigger_type="personalized_ova",
         mock_client=_MockAgentClient(),

@@ -25,12 +25,19 @@ from edubot.data.models.questions import Questions
 from edubot.data.models.interactions import Interactions
 from edubot.data.models.learning_events import LearningEvents
 from edubot.data.models.resource_progress import ResourceProgress
+from edubot.data.models.ova_section_progress import OVASectionProgress
+from edubot.data.models.resources import Resources
+from edubot.data.models.ovas import OVAs
 from edubot.data.models.consents import Consents
 
 from edubot.api.auth import require_auth, is_staff
 from edubot.api.http import get_lang, get_payload
 from edubot.i18n import tr
-from edubot.services.mastery import status_from_mastery, DEVELOPING_THRESHOLD, DEVELOPED_THRESHOLD
+from edubot.data.models.review_schedule import ReviewSchedule
+from edubot.services.coverage import coverage_gaps
+from edubot.services.risk import compute_risk
+from edubot.services.mastery import (status_from_mastery, mastery_trend,
+                                     DEVELOPING_THRESHOLD, DEVELOPED_THRESHOLD)
 from edubot.services.proactivity import evaluate_student, active_student_ids
 # A15: inatividade vem da fonte única (multi-sinal). A cópia local antiga só
 # olhava `interactions` — um aluno que lia e respondia quiz todo dia aparecia
@@ -78,14 +85,36 @@ def _student_summary(student):
                .select()
                .where((Alerts.student_id == student) & (Alerts.read == False))
                .count())
+
+    dias = _days_without_access(student)
+    consumo_perc = int(consumo) if consumo is not None else 0
+    taxa_erro = round(wrong / total, 2) if total else None
+
+    # Fase 3 — risco COMPOSTO. O critério anterior (taxa_erro > 0.5) não via o
+    # aluno que sumiu (quem não tenta não erra) nem o que está esquecendo.
+    vencidas = (ReviewSchedule
+                .select()
+                .where((ReviewSchedule.student_id == student) &
+                       (ReviewSchedule.status == "vencida"))
+                .count())
+    caindo = sum(1 for t in mastery_trend(student.student_id).values()
+                 if t["direcao"] == "down")
+    risco = compute_risk(taxa_erro=taxa_erro, dias_sem_acesso=dias,
+                         revisoes_vencidas=vencidas, consumo_perc=consumo_perc,
+                         tendencia_queda=caindo)
+
     return {
         "student_id": student.student_id,
         "nome": student.student_name,
         "ra": student.ra,
-        "dias_sem_acesso": _days_without_access(student),
-        "consumo_percentual": int(consumo) if consumo is not None else 0,
-        "taxa_erro": round(wrong / total, 2) if total else None,
+        "dias_sem_acesso": dias,
+        "consumo_percentual": consumo_perc,
+        "taxa_erro": taxa_erro,
         "alertas_abertos": abertos,
+        "revisoes_vencidas": vencidas,
+        # `componentes`/`principal` explicam POR QUE o aluno está em risco — sem
+        # isso o professor recebe um número e nenhuma pista de como agir.
+        "risco": risco,
     }
 
 
@@ -594,6 +623,70 @@ def tutor_student_detail(student_id):
         return json.dumps({"Error": f"{err}"}), 500
 
 
+# Quantas seções "mais difíceis" o painel mostra. O professor age sobre poucas;
+# uma lista longa vira ruído.
+HARD_SECTIONS_LIMIT = 8
+
+
+def _hard_sections(sids):
+    """Fase 2 — "onde a turma trava": seções com maior tempo médio de leitura e
+    releitura. Uma agregação SQL sobre ova_section_progress (sem N+1).
+
+    O sinal é o par (tempo médio, releituras): uma seção onde muita gente volta
+    e demora é uma seção que não está ensinando bem — exatamente o que o
+    rastreio do OVA inteiro não conseguia apontar."""
+    rows = (OVASectionProgress
+            .select(OVASectionProgress.ova_id,
+                    OVASectionProgress.section_id,
+                    OVASectionProgress.section_index,
+                    OVAs.ova_name.alias("ova_nome"),
+                    fn.COUNT(OVASectionProgress.section_progress_id).alias("alunos"),
+                    fn.AVG(OVASectionProgress.active_seconds).alias("segundos_medios"),
+                    fn.SUM(OVASectionProgress.visits).alias("visitas"))
+            .join(OVAs, on=(OVASectionProgress.ova_id == OVAs.ova_id))
+            .where(OVASectionProgress.student_id.in_(sids))
+            .group_by(OVASectionProgress.ova_id, OVASectionProgress.section_id,
+                      OVASectionProgress.section_index, OVAs.ova_name)
+            .dicts())
+
+    secoes = []
+    for r in rows:
+        alunos = r["alunos"] or 0
+        visitas = int(r["visitas"] or 0)
+        secoes.append({
+            "ova_id": r["ova_id"],
+            "ova_nome": r["ova_nome"],
+            "section_id": r["section_id"],
+            "section_index": r["section_index"],
+            "alunos": alunos,
+            "segundos_medios": int(r["segundos_medios"] or 0),
+            # > 1 significa que, em média, os alunos voltaram à seção.
+            "releituras_por_aluno": round(visitas / alunos, 2) if alunos else 0,
+        })
+    secoes.sort(key=lambda s: (s["segundos_medios"], s["releituras_por_aluno"]), reverse=True)
+    return secoes[:HARD_SECTIONS_LIMIT]
+
+
+def _video_stats(sids):
+    """Fase 1 — consumo REAL de vídeo da turma.
+
+    `cobertura_media` é a fração da linha do tempo efetivamente percorrida (não a
+    posição alcançada) e `ponto_abandono_medio` diz onde a turma larga o vídeo."""
+    row = (ResourceProgress
+           .select(fn.AVG(ResourceProgress.coverage_perc).alias("cobertura"),
+                   fn.SUM(ResourceProgress.watched_seconds).alias("segundos"),
+                   fn.AVG(ResourceProgress.last_position_seconds).alias("abandono"))
+           .join(Resources, on=(ResourceProgress.resource_id == Resources.resource_id))
+           .where((ResourceProgress.student_id.in_(sids)) &
+                  (Resources.resource_type == "video"))
+           .dicts().get())
+    return {
+        "cobertura_media": int(row["cobertura"] or 0),
+        "segundos_assistidos": int(row["segundos"] or 0),
+        "ponto_abandono_medio": int(row["abandono"]) if row["abandono"] is not None else None,
+    }
+
+
 @app_tutor.route("/tutor/overview", methods=["GET"])
 @cross_origin()
 @require_auth
@@ -635,23 +728,17 @@ def tutor_overview():
                    .scalar()) or 0
         taxa_erro = round(erros / tentativas, 2) if tentativas else None
 
-        # --- Em risco: taxa de erro no quiz > 50% (sinal real de dificuldade).
-        # Ter um alerta aberto NÃO conta como risco — um alerta pode ser positivo
-        # (ex.: "aprofundamento" para quem já domina). Alertas têm KPI próprio.
+        # --- Em risco: score COMPOSTO (Fase 3), a MESMA regra do painel do
+        # professor — duas definições de "risco" na mesma plataforma seria pior
+        # do que uma definição imperfeita. Ter um alerta aberto NÃO conta como
+        # risco (um alerta pode ser positivo, ex.: "aprofundamento"); alertas têm
+        # KPI próprio.
         alertas_abertos = (Alerts
                            .select(fn.COUNT(Alerts.alert_id))
                            .where((Alerts.student_id.in_(sids)) & (Alerts.read == False))
                            .scalar()) or 0
-        risco = set()
-        for sid, t, w in (Attempts
-                          .select(Attempts.student_id,
-                                  fn.COUNT(Attempts.attempt_id),
-                                  fn.SUM(Case(None, [(Attempts.is_correct == False, 1)], 0)))
-                          .where(Attempts.student_id.in_(sids))
-                          .group_by(Attempts.student_id)
-                          .tuples()):
-            if t and (int(w or 0) / t) > 0.5:
-                risco.add(sid)
+        risco = {s.student_id for s in _turma_students()
+                 if _student_summary(s)["risco"]["em_risco"]}
 
         # --- Por assunto (disciplina) ----------------------------------------
         # Base: todos os assuntos do curso + total de questões (nível curso, para
@@ -738,6 +825,8 @@ def tutor_overview():
             "eventos_aprendizado": _count(LearningEvents, LearningEvents.event_id),
             "consentimentos": _count(Consents, Consents.consent_id),
             "linhas_mastery": _count(StudentMastery, StudentMastery.student_id),
+            # Fase 2 — leitura por seção do OVA (o "onde travou").
+            "leitura_por_secao": _count(OVASectionProgress, OVASectionProgress.section_progress_id),
         }
 
         return json.dumps({
@@ -745,6 +834,12 @@ def tutor_overview():
             "quiz": {"acertos": acertos, "erros": erros, "tentativas": tentativas, "taxa_erro": taxa_erro},
             "consumo": {"percentual_medio": consumo_medio},
             "por_assunto": por_assunto,
+            "secoes_dificeis": _hard_sections(sids),
+            "video": _video_stats(sids),
+            # Fase 4 (§6.2): competências que o reforço NÃO consegue atender bem
+            # (poucas questões ou formato único). É lacuna de conteúdo, e o
+            # gestor é quem pode resolvê-la.
+            "lacunas_conteudo": coverage_gaps(course_id),
             "rastreamento": rastreamento,
         }, default=str), 200
     except PeeweeException as err:

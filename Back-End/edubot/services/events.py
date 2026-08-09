@@ -20,11 +20,28 @@ logger = logging.getLogger("edubot.events")
 
 # Verbos aceitos (xAPI-lite). Mantidos como conjunto para validar o lote do
 # front e o uso interno com a MESMA fonte da verdade.
+#
+# Fase 0 do Plano de Rastreabilidade (P1) — o front JÁ emitia os verbos do
+# companheiro de estudo e o object_type `ova_section`, mas eles não estavam
+# aqui: `emit_batch` os contava como erro e DESCARTAVA em silêncio. Como o
+# painel de engajamento do professor (tutorRoute.consulta `companion_*` e
+# `played`/`ova_section`) lê exatamente esses sinais, aquele bloco exibia zero
+# para sempre — um painel que afirmava medir algo que o pipeline nunca gravou.
+# Registrar os verbos aqui é o que torna a métrica verdadeira.
 VERBS = {
     "logged_in", "opened", "read", "played", "paused", "seeked", "completed",
     "answered", "asked_tutor", "received_intervention", "dismissed",
+    # Companheiro de estudo (Plano 3) — emitidos por useCompanionScript/OvaReader.
+    "companion_spoke", "companion_listened", "companion_dismissed", "companion_explain",
+    # Mídia: velocidade de reprodução (Fase 1 — vídeo real).
+    "rate_changed",
+    # Presença/atenção: janelas de ociosidade da sessão de leitura (Fase 2).
+    "idle_start", "idle_end",
+    # Leitura por seção do OVA (Fase 2) — a linha do tempo que mostra ONDE o
+    # aluno travou. O volume por sessão é baixo (transições, não amostragem).
+    "section_enter", "section_exit",
 }
-OBJECT_TYPES = {"ova", "resource", "question", "intervention", "session"}
+OBJECT_TYPES = {"ova", "ova_section", "resource", "question", "intervention", "session"}
 
 # Verbos cujo `context.text` é dado pessoal sensível (conteúdo livre do aluno):
 # só persistem o texto com consentimento explícito de IA sobre os dados (D.5).

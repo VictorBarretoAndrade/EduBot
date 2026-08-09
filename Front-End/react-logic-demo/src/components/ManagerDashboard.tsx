@@ -32,12 +32,15 @@ const CATALOGO: { key: string; pt: string; en: string }[] = [
   { key: "tentativas_quiz", pt: "Tentativas de quiz (certas e erradas)", en: "Quiz attempts (right and wrong)" },
   { key: "eventos_aprendizado", pt: "Eventos de aprendizado (login, tutor, mídia)", en: "Learning events (login, tutor, media)" },
   { key: "linhas_mastery", pt: "Domínio estimado por competência (BKT)", en: "Estimated mastery per competency (BKT)" },
+  // Fase 2 do Plano de Rastreabilidade — leitura por seção do OVA.
+  { key: "leitura_por_secao", pt: "Leitura por seção do OVA (onde o aluno travou)", en: "Reading per OVA section (where the student got stuck)" },
   { key: "consentimentos", pt: "Consentimentos LGPD", en: "GDPR/LGPD consents" }
 ];
 
 // O que ainda NÃO é rastreado (honestidade com o gestor — ver PROJETO.md).
+// "% de vídeo efetivamente assistido" SAIU desta lista na Fase 1: passou a ser
+// medido de verdade (tempo assistido + cobertura da linha do tempo).
 const NAO_RASTREADO: { pt: string; en: string }[] = [
-  { pt: "% de vídeo efetivamente assistido", en: "% of video actually watched" },
   { pt: "Submissão e correção de atividades práticas", en: "Practical activity submission and grading" }
 ];
 
@@ -194,6 +197,111 @@ export const ManagerDashboard = () => {
       {/* Reuso: domínio da turma (heatmap BKT) + engajamento */}
       <MasteryHeatmap />
       <EngagementPanel />
+
+      {/* Fase 1 — consumo REAL de vídeo. A métrica anterior era a posição
+          máxima do player: um seek para o fim marcava 100% sem assistir nada. */}
+      {data.video && data.video.segundos_assistidos > 0 && (
+        <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
+          <h2 className="text-xl font-bold text-ink">{t("Vídeo — consumo real", "Video — real consumption")}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {t("Cobertura é o trecho do vídeo efetivamente percorrido (pular à frente não conta).",
+               "Coverage is the portion of the video actually played through (skipping ahead doesn't count).")}
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div>
+              <div className="text-2xl font-bold text-ink">{data.video.cobertura_media}%</div>
+              <div className="text-sm text-muted">{t("cobertura média", "average coverage")}</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-ink">
+                {Math.round(data.video.segundos_assistidos / 60)} min
+              </div>
+              <div className="text-sm text-muted">{t("assistidos pela turma", "watched by the class")}</div>
+            </div>
+            {data.video.ponto_abandono_medio != null && (
+              <div>
+                <div className="text-2xl font-bold text-ink">
+                  {Math.floor(data.video.ponto_abandono_medio / 60)}m
+                  {String(data.video.ponto_abandono_medio % 60).padStart(2, "0")}s
+                </div>
+                <div className="text-sm text-muted">{t("ponto médio de abandono", "average drop-off point")}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Fase 2 — onde a turma trava. Só aparece quando já há leitura por seção. */}
+      {data.secoes_dificeis && data.secoes_dificeis.length > 0 && (
+        <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
+          <h2 className="text-xl font-bold text-ink">{t("Onde a turma trava", "Where the class gets stuck")}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {t("Seções com maior tempo de leitura e mais releituras — candidatas a revisão do conteúdo.",
+               "Sections with the longest reading time and most re-reads — candidates for content revision.")}
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-muted">
+                <tr>
+                  <th className="px-4 py-2 font-semibold">{t("Seção", "Section")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("OVA", "OVA")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("Alunos", "Students")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("Tempo médio", "Avg. time")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("Releituras", "Re-reads")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.secoes_dificeis.map((s) => (
+                  <tr key={`${s.ova_id}-${s.section_id}`} className="border-t border-line">
+                    <td className="px-4 py-2 font-semibold text-ink">{s.section_id}</td>
+                    <td className="px-3 py-2 text-muted">{s.ova_nome}</td>
+                    <td className="px-3 py-2">{s.alunos}</td>
+                    <td className="px-3 py-2">
+                      {Math.floor(s.segundos_medios / 60)}m{String(s.segundos_medios % 60).padStart(2, "0")}s
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={s.releituras_por_aluno > 1 ? "font-bold text-amber-700" : "text-slate-700"}>
+                        {s.releituras_por_aluno}×
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Fase 4 (§6.2) — lacunas de conteúdo: competências que o reforço não
+          consegue atender. É informação acionável para o GESTOR (trabalho
+          editorial), não um erro de software. */}
+      {data.lacunas_conteudo && data.lacunas_conteudo.length > 0 && (
+        <div className="rounded-[8px] border border-amber-200 bg-amber-50 p-6 shadow-soft">
+          <h2 className="flex items-center gap-2 text-xl font-bold text-ink">
+            <XCircle size={20} className="text-amber-600" aria-hidden="true" />
+            {t("Lacunas de conteúdo para o reforço", "Content gaps for reinforcement")}
+          </h2>
+          <p className="mt-1 text-sm text-amber-900">
+            {t("Estas competências não têm material suficiente para o EduBot montar um reforço eficaz: são necessárias ao menos 3 questões e 2 formatos de material.",
+               "These competencies lack enough material for EduBot to build effective reinforcement: at least 3 questions and 2 material formats are required.")}
+          </p>
+          <ul className="mt-4 space-y-2">
+            {data.lacunas_conteudo.map((c) => (
+              <li key={c.competency_id} className="rounded-[8px] border border-amber-200 bg-white p-3 text-sm">
+                <span className="font-semibold text-ink">{c.nome}</span>
+                <span className="text-muted"> · {c.assunto}</span>
+                <div className="mt-1 text-muted">
+                  {c.questoes} {c.questoes === 1 ? t("questão", "question") : t("questões", "questions")}
+                  {" · "}
+                  {c.formatos.length > 0
+                    ? `${t("formatos", "formats")}: ${c.formatos.join(", ")}`
+                    : t("nenhum material de reforço", "no reinforcement material")}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Catálogo de rastreamento — transparência com o gestor */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">

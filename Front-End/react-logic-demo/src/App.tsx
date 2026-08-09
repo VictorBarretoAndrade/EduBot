@@ -11,7 +11,7 @@ import { Login } from "./components/Login";
 import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
 import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
 import { LoaderCircle } from "lucide-react";
-import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken } from "./services/api";
+import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken, hasRecordedConsent } from "./services/api";
 import { syncPersonaFromProfile } from "./services/persona";
 import { useLanguage, useT } from "./i18n";
 
@@ -113,6 +113,27 @@ const App = () => {
   useEffect(() => {
     if (session) refreshProfile();
   }, [session, refreshProfile, lang]);
+
+  // Fase 0 (E0.5) do Plano de Rastreabilidade: a flag local é só cache — quem
+  // manda é o backend. Ao autenticar, conferimos se existe consentimento
+  // GRAVADO: se não existe (navegador novo, POST que falhou), o modal volta;
+  // se existe, gravamos o cache para não piscar o modal nas próximas visitas.
+  // Best-effort: se a consulta falhar, mantém o comportamento do cache.
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    hasRecordedConsent()
+      .then((recorded) => {
+        if (!active) return;
+        if (recorded) localStorage.setItem(CONSENT_FLAG, "1");
+        else localStorage.removeItem(CONSENT_FLAG);
+        setNeedsConsent(!recorded);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [session]);
 
   const logout = () => {
     clearSession();

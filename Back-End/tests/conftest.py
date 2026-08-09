@@ -27,6 +27,7 @@ from edubot.data.models.answers import Answers
 from edubot.data.models.attempts import Attempts
 from edubot.data.models.interactions import Interactions
 from edubot.data.models.ova_progress import OVAProgress
+from edubot.data.models.ova_section_progress import OVASectionProgress
 from edubot.data.models.resource_progress import ResourceProgress
 from edubot.data.models.resources import Resources
 from edubot.data.models.interventions import Interventions
@@ -50,7 +51,7 @@ ALL_MODELS = [
     Interventions, PersonalizedOVA, PersonalizedOVAItem, Alerts, AgentDecisions,
     LearningEvents, Consents, StudentMastery, ReviewSchedule, StudentDifficulty,
     StudentMasteryHistory, XpEvents, StudentStreak, StudentAchievements,
-    WeeklyGoals,
+    WeeklyGoals, OVASectionProgress,
 ]
 
 

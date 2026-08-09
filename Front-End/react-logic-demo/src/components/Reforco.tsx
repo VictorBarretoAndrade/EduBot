@@ -25,9 +25,10 @@ import {
   getExternalResources,
   getPersonalizedOVA,
   getSession,
-  listPersonalizedOVAs,
-  saveResourceProgress
+  listPersonalizedOVAs
 } from "../services/api";
+import { saveMediaProgress } from "../services/mediaProgress";
+import { REFORCO_COMP_KEY } from "../services/reinforcementTarget";
 import { AudioPlayer } from "./players/AudioPlayer";
 import { MediaProgress, VideoPlayer } from "./players/VideoPlayer";
 import { useToast } from "./ui/Toast";
@@ -77,7 +78,11 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
     setError(null);
     setFeedback(t("O EduBot está diagnosticando e montando sua trilha de reforço...", "EduBot is diagnosing and building your reinforcement track..."));
     try {
-      const created = await createPersonalizedOVA();
+      // Se o aluno chegou pelo convite de reforço, a competência já foi decidida
+      // pelo gatilho (é a que ele acabou de errar). Consome a chave uma vez.
+      const alvo = sessionStorage.getItem(REFORCO_COMP_KEY);
+      sessionStorage.removeItem(REFORCO_COMP_KEY);
+      const created = await createPersonalizedOVA(alvo ? Number(alvo) : undefined);
       setFeedback(created.mensagem_aluno || t("OVA de reforço criada!", "Reinforcement OVA created!"));
       await refreshList();
       await open(created.personalized_ova_id);
@@ -108,12 +113,9 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
   };
 
   const saveProgress = (resource: OvaResource, state: Partial<MediaProgress>) =>
-    saveResourceProgress({
-      resource_id: resource.resource_id,
-      perc_consumed: state.perc ?? 0,
-      seconds_consumed: state.seconds ?? 0,
-      completed: state.completed ?? false
-    }).catch(() => toast.error(t("Não foi possível salvar seu progresso. Verifique a conexão.", "Couldn't save your progress. Check your connection.")));
+    saveMediaProgress(resource.resource_id, state).catch(() =>
+      toast.error(t("Não foi possível salvar seu progresso. Verifique a conexão.", "Couldn't save your progress. Check your connection."))
+    );
 
   // ----- Visualização de uma OVA de reforço aberta -------------------------
   if (active) {
@@ -174,7 +176,9 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
                     url={resource.resource_url}
                     mediaType={resource.media_type}
                     title={resource.resource_title}
-                    initialPerc={resource.perc_consumed}
+                    resourceId={resource.resource_id}
+                    initialCoverageBitmap={resource.coverage_bitmap}
+                    initialCoveragePerc={resource.coverage_perc}
                     onProgress={(state) => saveProgress(resource, state)}
                   />
                 );
@@ -187,6 +191,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
                     title={resource.resource_title}
                     durationSeconds={resource.duration_seconds}
                     initialSeconds={resource.seconds_consumed}
+                    resourceId={resource.resource_id}
                     onProgress={(state) => saveProgress(resource, state)}
                   />
                 );

@@ -213,6 +213,11 @@ export interface OvaResource {
   perc_consumed: number;
   seconds_consumed: number;
   completed: boolean;
+  // Fase 1: consumo real de vídeo (opcionais — backend antigo não os envia).
+  watched_seconds?: number;
+  coverage_perc?: number;
+  coverage_bitmap?: string | null;
+  last_position_seconds?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -307,9 +312,15 @@ export interface CreatedPersonalizedOVA {
   formato_preferido: string | null;
 }
 
-// Dispara o agente: diagnostica o assunto fraco, seleciona conteúdo e persiste
-export const createPersonalizedOVA = () =>
-  request<CreatedPersonalizedOVA>("/edubot/personalized-ova", { method: "POST" });
+// Dispara o agente: diagnostica o assunto fraco, seleciona conteúdo e persiste.
+// Fase 4 do Plano de Rastreabilidade: `competencyId` vem do convite de reforço
+// (o aluno acabou de errar AQUELA competência), para a trilha ser sobre o que
+// ele estudou agora — sem ele, o agente escolhe a mais fraca do curso inteiro.
+export const createPersonalizedOVA = (competencyId?: number) =>
+  request<CreatedPersonalizedOVA>("/edubot/personalized-ova", {
+    method: "POST",
+    body: competencyId != null ? { competency_id: competencyId } : {}
+  });
 
 // Materiais externos (artigos científicos) recomendados por competência
 export interface ExternalResource {
@@ -333,12 +344,23 @@ export const getPersonalizedOVA = (id: number) =>
 export const getOVAResources = (ovaId: number) =>
   request<OvaResource[]>(withLang(`/ova/${ovaId}/resources`));
 
-export const saveResourceProgress = (data: {
-  resource_id: number;
-  perc_consumed?: number;
-  seconds_consumed?: number;
-  completed?: boolean;
-}) => request<string>("/progress/resource", { method: "POST", body: data });
+// Fase 1 do Plano de Rastreabilidade: além dos campos legados, o player de vídeo
+// manda o consumo REAL — `watched_seconds_delta` (o servidor SOMA) e o
+// `coverage_bitmap` acumulado da sessão (o servidor faz OR). Todos opcionais:
+// áudio e atividade seguem usando só os campos antigos.
+export const saveResourceProgress = (
+  data: {
+    resource_id: number;
+    perc_consumed?: number;
+    seconds_consumed?: number;
+    completed?: boolean;
+    watched_seconds_delta?: number;
+    coverage_bitmap?: string;
+    last_position_s?: number;
+    playback_rate?: number;
+  },
+  opts: { keepalive?: boolean } = {}
+) => request<string>("/progress/resource", { method: "POST", body: data, keepalive: opts.keepalive });
 
 // Contrato novo (A1): o tempo de leitura vai como `seconds_delta` (segundos
 // desde o último sync) e o servidor ACUMULA. `keepalive` é usado no flush final
@@ -352,6 +374,28 @@ export const saveOVAProgress = (
   },
   opts: { keepalive?: boolean } = {}
 ) => request<string>(withLang("/progress/ova"), { method: "POST", body: data, keepalive: opts.keepalive });
+
+// Fase 2 do Plano de Rastreabilidade: tempo de leitura POR SEÇÃO do OVA (o que
+// responde "onde o aluno travou"). Vai em lote, com a mesma semântica de delta
+// do /progress/ova — o servidor SOMA.
+export interface SectionProgressInput {
+  section_id: string;
+  section_index: number;
+  seconds_delta: number;
+  max_scroll_perc: number;
+  visits_delta: number;
+}
+
+export const saveSectionProgress = (
+  ovaId: number,
+  sections: SectionProgressInput[],
+  opts: { keepalive?: boolean } = {}
+) =>
+  request<{ saved: number }>("/progress/ova-section", {
+    method: "POST",
+    body: { ova_id: ovaId, sections },
+    keepalive: opts.keepalive
+  });
 
 // A.6: o aluno é resolvido pelo token no backend (g.student). Não enviamos mais
 // student_id no corpo — o backend já o ignorava, mas o contrato mentia.
@@ -385,6 +429,18 @@ export interface TurmaStudent {
   consumo_percentual: number;
   taxa_erro: number | null;
   alertas_abertos: number;
+  // Fase 3 do Plano de Rastreabilidade — risco COMPOSTO. `componentes` diz por
+  // que o aluno está em risco (ausência? erro? esquecimento?), o que muda a
+  // intervenção do professor. Opcional: backend antigo não envia.
+  revisoes_vencidas?: number;
+  risco?: StudentRisk;
+}
+
+export interface StudentRisk {
+  score: number;
+  em_risco: boolean;
+  componentes: Record<string, number>;
+  principal: string | null;
 }
 
 export interface TutorAlert {
@@ -425,6 +481,31 @@ export interface TutorOverview {
   por_assunto: SubjectRollup[];
   // Catálogo: quanto de cada sinal está registrado hoje (chaves conhecidas do backend).
   rastreamento: Record<string, number>;
+  // Fase 2 — onde a turma trava (maior tempo médio + releitura por seção).
+  secoes_dificeis?: HardSection[];
+  // Fase 1 — consumo REAL de vídeo (cobertura, não posição alcançada).
+  video?: { cobertura_media: number; segundos_assistidos: number; ponto_abandono_medio: number | null };
+  // Fase 4 — competências que o reforço não consegue atender (lacuna editorial).
+  lacunas_conteudo?: ContentGap[];
+}
+
+export interface HardSection {
+  ova_id: number;
+  ova_nome: string;
+  section_id: string;
+  section_index: number;
+  alunos: number;
+  segundos_medios: number;
+  releituras_por_aluno: number;
+}
+
+export interface ContentGap {
+  competency_id: number;
+  nome: string;
+  assunto: string;
+  questoes: number;
+  formatos: string[];
+  ok: boolean;
 }
 export const getTutorOverview = () => request<TutorOverview>("/tutor/overview");
 export const evaluateTurma = () =>
@@ -553,6 +634,17 @@ export interface Consent {
 }
 
 export const getConsents = () => request<{ consents: Consent[] }>("/consents");
+
+// Fase 0 (E0.5) do Plano de Rastreabilidade: o BACKEND é a fonte de verdade do
+// consentimento; a flag em localStorage é só cache para não piscar o modal.
+// Sem isto, trocar de navegador (ou um POST que falhou depois de a flag ter sido
+// gravada) deixava o aluno sem consentimento registrado e o modal nunca voltava.
+// `granted_at` de tracking_pedagogico só existe se houve gravação real — é o
+// sinal de que o aluno de fato respondeu o modal (os defaults vêm sem data).
+export const hasRecordedConsent = async (): Promise<boolean> => {
+  const { consents } = await getConsents();
+  return consents.some((c) => c.purpose === "tracking_pedagogico" && c.granted_at !== null);
+};
 
 export const setConsent = (purpose: Consent["purpose"], granted: boolean) =>
   request<{ consents: Consent[] }>("/consents", {

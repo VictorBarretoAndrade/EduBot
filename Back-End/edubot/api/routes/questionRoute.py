@@ -23,6 +23,7 @@ from edubot.services.quiz import (alternatives_list as _alternatives_list, quiz_
 from edubot.services.events import emit as emit_event
 from edubot.services.mastery import update_on_attempt, mastery_map
 from edubot.services.reviews import on_attempt as review_on_attempt
+from edubot.services.reinforcement import suggest_reinforcement
 
 # Create a route blueprint as a reusable component
 app_question = Blueprint("question", __name__)
@@ -227,6 +228,7 @@ def answer_question():
             # da questão ao submit) e mandado no payload; é o sinal de esforço que
             # o `interactions` não capturava. Só registra tentativas NOVAS (idem-
             # potência A7 acima).
+            mastery_after = None
             if not (is_correct and already_correct is not None):
                 emit_event(student, "answered", "question", question.question_id,
                            correct=is_correct,
@@ -236,10 +238,10 @@ def answer_question():
                 # (1 upsert). Best-effort: nunca quebra a correção do quiz.
                 try:
                     cid = question.competency_id.competency_id
-                    p_mastery = update_on_attempt(student.student_id, cid, is_correct)
+                    mastery_after = update_on_attempt(student.student_id, cid, is_correct)
                     # D.3 — revisão espaçada: aplica o resultado a uma revisão
                     # vencida e agenda a 1ª revisão ao dominar a competência.
-                    review_on_attempt(student.student_id, cid, is_correct, p_mastery)
+                    review_on_attempt(student.student_id, cid, is_correct, mastery_after)
                 except Exception:
                     pass
 
@@ -250,6 +252,17 @@ def answer_question():
             # quebra a correção do quiz.
             if not is_correct:
                 trigger_evaluation(student, lang=get_lang(), trigger_type="quiz_failed")
+                # Fase 4 (Plano de Rastreabilidade) — gatilho 1 do reforço: se o
+                # domínio DESTA competência ficou abaixo do limiar, o aluno é
+                # chamado para uma trilha focada nela (antes, o reforço só nascia
+                # se ele fosse por conta própria à aba "Reforço").
+                #
+                # DEPOIS do trigger_evaluation de propósito: aquele guard pula a
+                # avaliação quando já existe intervenção pendente do dia, então
+                # criar a nossa antes silenciaria o agente proativo.
+                suggest_reinforcement(
+                    student.student_id, question.competency_id.competency_id,
+                    question.competency_id.competency_description, mastery_after)
 
             # G.1 (Plano 2) — XP de ESFORÇO (best-effort, flag-guarded): responder
             # já é "dia de estudo"; completar TODAS as questões do módulo dá o XP
