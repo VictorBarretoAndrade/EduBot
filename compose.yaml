@@ -89,6 +89,17 @@ services:
       # Etapa 11 (Plano 3) — companheiro de estudo no leitor de OVA. "off" faz o
       # leitor não montar o widget (idêntico ao atual). Exposto em /student/me.
       EDUBOT_COMPANION: ${EDUBOT_COMPANION:-on}
+      # INTEGRACAO EXTERNA (migration_021) - API publica /api/v1 para parceiros.
+      # O salt pseudonimiza o aluno para quem consome de fora: o parceiro recebe
+      # um subject_id estavel e opaco no lugar do student_id. SEM valor definido
+      # o pseudonimo ainda e' estavel, mas qualquer um que conheca o esquema o
+      # deriva - defina em producao, como o EDUBOT_SECRET. Trocar o salt rotaciona
+      # todos os pseudonimos de uma vez.
+      EDUBOT_PSEUDONYM_SALT: ${EDUBOT_PSEUDONYM_SALT:-}
+      # Teto por chave de parceiro (nao e' anti-DDoS; e' o freio que impede um
+      # parceiro com loop errado de varrer a base inteira sem parar).
+      EDUBOT_APIKEY_RATE_LIMIT: ${EDUBOT_APIKEY_RATE_LIMIT:-120}
+      EDUBOT_APIKEY_RATE_WINDOW: ${EDUBOT_APIKEY_RATE_WINDOW:-60}
     ports:
       - 5010:8090
     volumes:

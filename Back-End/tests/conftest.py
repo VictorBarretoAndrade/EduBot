@@ -44,6 +44,7 @@ from edubot.data.models.xp_events import XpEvents
 from edubot.data.models.student_streak import StudentStreak
 from edubot.data.models.student_achievements import StudentAchievements
 from edubot.data.models.weekly_goals import WeeklyGoals
+from edubot.data.models.api_keys import ApiKeys
 
 ALL_MODELS = [
     Courses, Subjects, Offerings, Competencies, OVAs, Students, Questions,
@@ -51,7 +52,7 @@ ALL_MODELS = [
     Interventions, PersonalizedOVA, PersonalizedOVAItem, Alerts, AgentDecisions,
     LearningEvents, Consents, StudentMastery, ReviewSchedule, StudentDifficulty,
     StudentMasteryHistory, XpEvents, StudentStreak, StudentAchievements,
-    WeeklyGoals, OVASectionProgress,
+    WeeklyGoals, OVASectionProgress, ApiKeys,
 ]
 
 
@@ -102,6 +103,35 @@ def auth():
             "Content-Type": "application/json",
         }
     return _headers
+
+
+@pytest.fixture()
+def api_key():
+    """Emite uma chave de API com os escopos pedidos e devolve os headers.
+
+    Uso: `client.get("/api/v1/ping", headers=api_key("catalog:read"))`.
+    Sem argumento, a chave e' valida mas nao tem escopo nenhum - util para
+    testar o 403."""
+    import datetime
+
+    from edubot.api.apikey import generate_key
+    from edubot.data.models.api_keys import ApiKeys as _ApiKeys
+
+    def _headers(*scopes, active=True, expires_at=None):
+        raw, prefix, key_hash = generate_key()
+        _ApiKeys.create(name="Parceiro de Teste", key_prefix=prefix,
+                        key_hash=key_hash, scopes=",".join(scopes), active=active,
+                        created_at=datetime.datetime.now(), expires_at=expires_at)
+        return {"X-API-Key": raw, "Content-Type": "application/json"}
+    return _headers
+
+
+@pytest.fixture(autouse=True)
+def _reset_api_key_rate_limit():
+    """O rate-limit por chave e' estado de modulo (in-process), como o do login."""
+    from edubot.api.apikey import reset_rate_limit
+    reset_rate_limit()
+    yield
 
 
 @pytest.fixture(autouse=True)

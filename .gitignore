@@ -48,3 +48,9 @@ Front-End/react-logic-demo/.env.local
 
 # OVAs gerados (nunca semeados; fonte de conteúdo fora do runtime) (A11)
 /ovas-generation/
+
+# Integração externa (PHP): segredos do parceiro e estado de sincronização.
+# O config.php versionado é só o MODELO; a chave de API e a senha do usuário
+# somente-leitura vivem no config.local.php, que NUNCA é comitado.
+integracoes/php/config.local.php
+integracoes/php/.cursor_eventos
