@@ -15,6 +15,9 @@ Convenções da API: o corpo das requisições é o objeto JSON puro (o envelope
 */
 
 import { API_BASE_URL as BASE_URL } from "./config";
+// Storage encapsulado: dentro de um iframe de terceiro o acesso direto pode
+// lancar SecurityError e derrubar TODA requisicao (getToken roda em todas).
+import { safeGet, safeSet, safeRemove } from "./storage";
 
 // Chaves de sessão do app. `token` era compartilhada com o front clássico
 // (aposentado na Fase 5 — A17); mantida por ser o Bearer que o backend espera.
@@ -27,9 +30,9 @@ export interface Session {
   is_admin: boolean;
 }
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
+export const getToken = () => safeGet("local", TOKEN_KEY);
 export const getSession = (): Session | null => {
-  const raw = localStorage.getItem(SESSION_KEY);
+  const raw = safeGet("local", SESSION_KEY);
   try {
     return raw ? (JSON.parse(raw) as Session) : null;
   } catch {
@@ -42,9 +45,9 @@ export const getSession = (): Session | null => {
 const LEGACY_KEYS = ["logged", "is_admin", "course_id", "student_id"];
 
 export const clearSession = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(SESSION_KEY);
-  LEGACY_KEYS.forEach((k) => localStorage.removeItem(k));
+  safeRemove("local", TOKEN_KEY);
+  safeRemove("local", SESSION_KEY);
+  LEGACY_KEYS.forEach((k) => safeRemove("local", k));
 };
 
 async function request<T>(
@@ -108,7 +111,7 @@ export function quizLockFromError(err: unknown): QuizLock | null {
 // recebem ?lang= e o backend serve as traduções do banco com fallback PT —
 // o dicionário manual contentDict.ts foi aposentado.
 const LANG_KEY = "edubot.lang";
-const currentLang = () => (localStorage.getItem(LANG_KEY) === "en" ? "en" : "pt");
+const currentLang = () => (safeGet("local", LANG_KEY) === "en" ? "en" : "pt");
 const withLang = (path: string) =>
   `${path}${path.includes("?") ? "&" : "?"}lang=${currentLang()}`;
 
@@ -234,8 +237,8 @@ export async function login(ra: string, password: string): Promise<Session> {
     course_id: data.ids.course_id,
     is_admin: data.is_admin
   };
-  localStorage.setItem(TOKEN_KEY, data.token);
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  safeSet("local", TOKEN_KEY, data.token);
+  safeSet("local", SESSION_KEY, JSON.stringify(session));
   // (Fase 5 — A17) As chaves de compatibilidade com o front clássico deixaram
   // de ser gravadas: o app React é único e resolve tudo via SESSION_KEY/token.
   return session;

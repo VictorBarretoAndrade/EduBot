@@ -19,6 +19,7 @@ import {
 } from "../services/api";
 import { useToast } from "./ui/Toast";
 import { useT } from "../i18n";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 interface QuizProps {
   profile: StudentProfile;
@@ -43,9 +44,9 @@ export const Quiz = ({ profile, onTracked }: QuizProps) => {
   // Se o aluno clicou em "Revisar" no painel de revisões, abre já no OVA daquela
   // competência (lê e limpa a chave uma única vez).
   const [activeOvaId, setActiveOvaId] = useState(() => {
-    const target = sessionStorage.getItem(REVIEW_OVA_KEY);
+    const target = safeGet("session", REVIEW_OVA_KEY);
     if (target) {
-      sessionStorage.removeItem(REVIEW_OVA_KEY);
+      safeRemove("session", REVIEW_OVA_KEY);
       const id = Number(target);
       if (profile.ovas.some((o) => o.ova_id === id)) return id;
     }

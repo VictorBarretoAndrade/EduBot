@@ -39,6 +39,7 @@ import { Carousel } from "./Carousel";
 import { OvaQuiz } from "./OvaQuiz";
 import { TutorChat } from "./TutorChat";
 import { StudyCompanion } from "./StudyCompanion";
+import { safeGet, safeSet, safeRemove } from "../../services/storage";
 
 const COMPLETED_PERC = 90;
 const SYNC_INTERVAL_MS = 15000;
@@ -109,10 +110,10 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   const chat = useTutorChat(ova.ova_id, ova.ova_name, tutorContext, persona);
   const [muted, setMuted] = useState(false);
   const [hidden, setHidden] = useState<boolean>(
-    () => typeof window !== "undefined" && localStorage.getItem(COMPANION_HIDDEN_KEY) === "1"
+    () => typeof window !== "undefined" && safeGet("local", COMPANION_HIDDEN_KEY) === "1"
   );
-  const hideCompanion = () => { setHidden(true); localStorage.setItem(COMPANION_HIDDEN_KEY, "1"); };
-  const showCompanion = () => { setHidden(false); localStorage.removeItem(COMPANION_HIDDEN_KEY); };
+  const hideCompanion = () => { setHidden(true); safeSet("local", COMPANION_HIDDEN_KEY, "1"); };
+  const showCompanion = () => { setHidden(false); safeRemove("local", COMPANION_HIDDEN_KEY); };
 
   // AC.3: acompanha a quebra lg (overlay ↔ painel lado a lado).
   useEffect(() => {

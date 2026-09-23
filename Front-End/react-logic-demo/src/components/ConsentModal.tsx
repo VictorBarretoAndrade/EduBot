@@ -12,6 +12,7 @@ import { useRef, useState } from "react";
 import { Consent, setConsent } from "../services/api";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useT } from "../i18n";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 export const CONSENT_FLAG = "edubot.consent.v1";
 
@@ -45,7 +46,7 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
     } catch {
       /* best-effort: mesmo se falhar a gravação, não travamos o aluno na porta */
     } finally {
-      localStorage.setItem(CONSENT_FLAG, "1");
+      safeSet("local", CONSENT_FLAG, "1");
       setSaving(false);
       onDone();
     }

@@ -8,6 +8,7 @@ na Topbar troca em tempo real. O conteúdo dos OVAs (HTML) permanece no idioma
 original — aqui traduzimos a INTERFACE.
 */
 import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { safeGet, safeSet } from "./services/storage";
 
 export type Lang = "pt" | "en";
 
@@ -24,12 +25,12 @@ const STORAGE_KEY = "edubot.lang";
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = safeGet("local", STORAGE_KEY);
     return saved === "en" || saved === "pt" ? saved : "pt";
   });
 
   const setLang = useCallback((next: Lang) => {
-    localStorage.setItem(STORAGE_KEY, next);
+    safeSet("local", STORAGE_KEY, next);
     setLangState(next);
   }, []);
 

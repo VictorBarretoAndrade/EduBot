@@ -7,6 +7,7 @@ import { CalendarClock, LoaderCircle, PlayCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewItem, getReviews } from "../services/api";
 import { useT } from "../i18n";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 // Chave lida pelo Quiz ao montar: qual OVA pré-selecionar ao vir de "Revisar".
 export const REVIEW_OVA_KEY = "edubot.reviewOva";
@@ -22,7 +23,7 @@ export const ReviewsPanel = () => {
   // "Revisar": guarda o OVA da competência e abre o Quiz (o Quiz lê a chave e já
   // abre naquele OVA). Revisar = responder de novo as questões da competência.
   const revisar = (ovaId: number) => {
-    sessionStorage.setItem(REVIEW_OVA_KEY, String(ovaId));
+    safeSet("session", REVIEW_OVA_KEY, String(ovaId));
     window.location.hash = "#/quiz";
   };
 

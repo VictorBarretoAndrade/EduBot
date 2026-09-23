@@ -15,6 +15,7 @@ import { CompanionAvatar } from "./brand/CompanionAvatar";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { useSpeech } from "../hooks/useSpeech";
 import { useLanguage } from "../i18n";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 export const ONBOARDING_FLAG = "edubot.onboarding.v1";
 
@@ -62,7 +63,7 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
 
   const finish = () => {
     stop();
-    localStorage.setItem(ONBOARDING_FLAG, "1");
+    safeSet("local", ONBOARDING_FLAG, "1");
     onDone();
   };
 

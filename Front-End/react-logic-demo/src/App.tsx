@@ -14,6 +14,7 @@ import { LoaderCircle } from "lucide-react";
 import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken, hasRecordedConsent } from "./services/api";
 import { syncPersonaFromProfile } from "./services/persona";
 import { useLanguage, useT } from "./i18n";
+import { safeGet, safeSet, safeRemove } from "./services/storage";
 
 // MELHORIA — cada tela vira um chunk separado (React.lazy), então o app só baixa
 // o código da aba que o aluno abrir, em vez de tudo (inclusive os gráficos
@@ -77,11 +78,11 @@ const App = () => {
   const [moduleId, setModuleId] = useState<number | null>(initialHash.ovaId ?? null);
   // D.5: modal de consentimento no primeiro login (flag em localStorage).
   const [needsConsent, setNeedsConsent] = useState<boolean>(
-    () => localStorage.getItem(CONSENT_FLAG) !== "1"
+    () => safeGet("local", CONSENT_FLAG) !== "1"
   );
   // U.5: onboarding logo após o consentimento (outra flag em localStorage).
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(
-    () => localStorage.getItem(ONBOARDING_FLAG) !== "1"
+    () => safeGet("local", ONBOARDING_FLAG) !== "1"
   );
   const t = useT();
   const { lang } = useLanguage();
@@ -125,8 +126,8 @@ const App = () => {
     hasRecordedConsent()
       .then((recorded) => {
         if (!active) return;
-        if (recorded) localStorage.setItem(CONSENT_FLAG, "1");
-        else localStorage.removeItem(CONSENT_FLAG);
+        if (recorded) safeSet("local", CONSENT_FLAG, "1");
+        else safeRemove("local", CONSENT_FLAG);
         setNeedsConsent(!recorded);
       })
       .catch(() => undefined);

@@ -14,6 +14,7 @@ import { useSpeech } from "../hooks/useSpeech";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
 import { REFORCO_COMP_KEY, competencyFromDescription, stripCompetencyMarker } from "../services/reinforcementTarget";
 import { WeeklyGoalsCard } from "./Gamification";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 // G.6 — chip de gamificação no topo do dashboard: sequência, nível e XP da
 // semana. Some quando a gamificação está desligada (enabled:false).
@@ -135,7 +136,7 @@ const EduBotInbox = ({ onOpenReforco, persona }: { onOpenReforco: () => void; pe
                   // Fase 4: quando o convite traz a competência, a trilha nasce
                   // apontada para o assunto que o aluno acabou de errar.
                   const alvo = competencyFromDescription(item.descricao);
-                  if (alvo != null) sessionStorage.setItem(REFORCO_COMP_KEY, String(alvo));
+                  if (alvo != null) safeSet("session", REFORCO_COMP_KEY, String(alvo));
                   dismiss(item.intervention_id);
                   onOpenReforco();
                 }}

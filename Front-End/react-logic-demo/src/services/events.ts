@@ -12,6 +12,7 @@ Uso:
   track("answered", "question", questionId, { correct, response_ms });
 */
 import { LearningEventInput, postEvents, getToken } from "./api";
+import { safeGet, safeSet } from "./storage";
 
 const FLUSH_INTERVAL_MS = 15_000;
 const MAX_QUEUE = 50; // igual ao limite do backend por requisição
@@ -29,11 +30,13 @@ const newId = (): string =>
     : `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 export function sessionId(): string {
-  if (typeof sessionStorage === "undefined") return "no-session";
-  let id = sessionStorage.getItem(SESSION_ID_KEY);
+  // O `typeof sessionStorage === "undefined"` que existia aqui NAO protegia o
+  // caso real do iframe: o objeto existe, o acesso e que e negado. safeGet
+  // cobre os dois (ver services/storage.ts).
+  let id = safeGet("session", SESSION_ID_KEY);
   if (!id) {
     id = newId();
-    sessionStorage.setItem(SESSION_ID_KEY, id);
+    safeSet("session", SESSION_ID_KEY, id);
   }
   return id;
 }

@@ -35,6 +35,7 @@ import { useToast } from "./ui/Toast";
 import { useLanguage, useT } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
+import { safeGet, safeSet, safeRemove } from "../services/storage";
 
 interface ReforcoProps {
   profile: StudentProfile;
@@ -80,8 +81,8 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
     try {
       // Se o aluno chegou pelo convite de reforço, a competência já foi decidida
       // pelo gatilho (é a que ele acabou de errar). Consome a chave uma vez.
-      const alvo = sessionStorage.getItem(REFORCO_COMP_KEY);
-      sessionStorage.removeItem(REFORCO_COMP_KEY);
+      const alvo = safeGet("session", REFORCO_COMP_KEY);
+      safeRemove("session", REFORCO_COMP_KEY);
       const created = await createPersonalizedOVA(alvo ? Number(alvo) : undefined);
       setFeedback(created.mensagem_aluno || t("OVA de reforço criada!", "Reinforcement OVA created!"));
       await refreshList();
