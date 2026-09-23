@@ -100,6 +100,11 @@ services:
       # parceiro com loop errado de varrer a base inteira sem parar).
       EDUBOT_APIKEY_RATE_LIMIT: ${EDUBOT_APIKEY_RATE_LIMIT:-120}
       EDUBOT_APIKEY_RATE_WINDOW: ${EDUBOT_APIKEY_RATE_WINDOW:-60}
+      # Coleta do edubot-tracker.js (POST /api/v1/collect). Origens liberadas no
+      # CORS ("*" = qualquer site, inclusive file://) e teto por chave de coleta
+      # - maior que o de leitura: um material aberto pela turma toda usa UMA chave.
+      EDUBOT_COLLECT_ORIGINS: ${EDUBOT_COLLECT_ORIGINS:-*}
+      EDUBOT_COLLECT_RATE_LIMIT: ${EDUBOT_COLLECT_RATE_LIMIT:-600}
     ports:
       - 5010:8090
     volumes:

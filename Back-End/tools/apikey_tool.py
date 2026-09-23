@@ -20,6 +20,10 @@ Uso (com a stack de pé):
 
     # escopos disponíveis
     docker exec -it ova_back_end python -m tools.apikey_tool escopos
+
+    # chave de coleta para o edubot-tracker.js (só grava; sozinha, sem leitura)
+    docker exec -it ova_back_end python -m tools.apikey_tool criar \\
+        --nome "Material de teste Lucas" --escopos events:write --dias 30
 """
 import argparse
 import datetime
@@ -39,6 +43,13 @@ def _parse_scopes(raw):
         sys.exit(1)
     if not pedidos:
         print("ERRO: informe ao menos um escopo (--escopos).", file=sys.stderr)
+        sys.exit(1)
+    from edubot.api.apikey import READ_SCOPES
+    if "events:write" in pedidos and READ_SCOPES.intersection(pedidos):
+        print("ERRO: events:write não pode ser combinado com escopos de leitura.",
+              file=sys.stderr)
+        print("A chave de coleta fica no HTML do material, visível para qualquer "
+              "visitante. Emita uma chave separada para ler.", file=sys.stderr)
         sys.exit(1)
     return pedidos
 
@@ -69,6 +80,10 @@ def criar(args):
         print()
         print("  ATENÇÃO: esta chave libera NOME e RA de aluno (dado pessoal).")
         print("  Registre a base legal e o contrato/termo com o parceiro.")
+    if "events:write" in escopos:
+        print()
+        print("  Chave de COLETA: vai no HTML do material (data-key do")
+        print("  edubot-tracker.js). É pública por desenho — só grava eventos.")
     print()
 
 

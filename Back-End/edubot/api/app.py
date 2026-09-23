@@ -35,6 +35,8 @@ from edubot.api.routes.gamificationRoute import app_gamification
 from edubot.api.routes.goalsRoute import app_goals
 # INTEGRACAO EXTERNA: API publica /api/v1 para sistemas parceiros (chave + escopo)
 from edubot.api.routes.publicApiRoute import app_public_api
+# INTEGRACAO EXTERNA: coleta de eventos do edubot-tracker.js (/api/v1/collect)
+from edubot.api.routes.collectRoute import app_collect
 
 # Create the Flask app and configure CORS
 # A.3: CORS restrito à(s) origem(ns) do frontend por env (antes liberava
@@ -46,6 +48,10 @@ from edubot.api.routes.publicApiRoute import app_public_api
 # permitisse chamar /api/v1 de um front de terceiro, a chave teria de viajar no
 # JavaScript do navegador - ou seja, ficaria publica. A integracao do parceiro e'
 # servidor-a-servidor (o PHP dele chama o Flask); CORS nao se aplica.
+#
+# A unica excecao e' POST /api/v1/collect (collectRoute), que existe justamente
+# para ser chamado do navegador: ele abre CORS na propria rota, e a chave dele
+# (escopo events:write) e' publica por desenho - so' grava, nunca le.
 app = Flask(__name__)
 _cors_origins = os.environ.get("EDUBOT_CORS_ORIGINS", "http://localhost:8010")
 cors = CORS(app, origins=[o.strip() for o in _cors_origins.split(",") if o.strip()])
@@ -90,6 +96,7 @@ app.register_blueprint(app_mastery)
 app.register_blueprint(app_gamification)
 app.register_blueprint(app_goals)
 app.register_blueprint(app_public_api)
+app.register_blueprint(app_collect)
 
 # Start the application
 if __name__ == "__main__":

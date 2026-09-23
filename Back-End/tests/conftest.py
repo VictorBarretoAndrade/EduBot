@@ -45,6 +45,7 @@ from edubot.data.models.student_streak import StudentStreak
 from edubot.data.models.student_achievements import StudentAchievements
 from edubot.data.models.weekly_goals import WeeklyGoals
 from edubot.data.models.api_keys import ApiKeys
+from edubot.data.models.collected_events import CollectedEvents
 
 ALL_MODELS = [
     Courses, Subjects, Offerings, Competencies, OVAs, Students, Questions,
@@ -52,7 +53,7 @@ ALL_MODELS = [
     Interventions, PersonalizedOVA, PersonalizedOVAItem, Alerts, AgentDecisions,
     LearningEvents, Consents, StudentMastery, ReviewSchedule, StudentDifficulty,
     StudentMasteryHistory, XpEvents, StudentStreak, StudentAchievements,
-    WeeklyGoals, OVASectionProgress, ApiKeys,
+    WeeklyGoals, OVASectionProgress, ApiKeys, CollectedEvents,
 ]
 
 

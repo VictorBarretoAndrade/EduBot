@@ -68,6 +68,12 @@ Uma chave só lê o que o escopo dela declara. Conceder um não concede os outro
 | `metrics:read` | Domínio por competência, cobertura, engajamento, item-analysis | Não (agregado) |
 | `students:read` | Lista de alunos (pseudônimo, curso, papel) | Pseudonimizado |
 | `students:pii` | **Nome e RA do aluno** | **Sim — exige base legal** |
+| `events:write` | **Gravar** eventos pelo `edubot-tracker.js` (não lê nada) | Não se aplica |
+
+`events:write` é o único escopo de escrita e o único cuja chave fica no
+navegador (no HTML do material). Por isso o `apikey_tool` recusa combiná-lo com
+qualquer escopo de leitura: emita uma chave só para coletar e outra para ler.
+Ver [§11](#11-coleta-pelo-navegador-edubot-trackerjs).
 
 Sobre a **pseudonimização**: o parceiro recebe `subject_id`, um hash estável de
 16 caracteres. Estável porque ele precisa correlacionar os eventos do mesmo aluno
@@ -471,7 +477,7 @@ quase sempre a causa é `limit` pequeno demais, não volume de dados.
 
 ## 8. Endpoints
 
-Todos são `GET`, sob `/api/v1/`, e exigem `X-API-Key`.
+Todos exigem chave e ficam sob `/api/v1/`. Todos são `GET`, exceto o `POST /collect` do tracker ([§11](#11-coleta-pelo-navegador-edubot-trackerjs)).
 
 | Caminho A (Flask) | Caminho B (PHP) | Escopo | Retorna |
 |---|---|---|---|
@@ -489,6 +495,8 @@ Todos são `GET`, sob `/api/v1/`, e exigem `X-API-Key`.
 | `/metrics/coverage` | — | `metrics:read` | Cobertura de conteúdo |
 | `/metrics/engagement` | `?recurso=engajamento` | `metrics:read` | Eventos por verbo |
 | `/students` | `?recurso=alunos` | `students:read` | Alunos (`?course_id=`) |
+| `/collect/events` | — | `tracking:read` | Eventos do tracker (`?type=`, `?visitor_id=`, `?key_id=`) |
+| `POST /collect` | — | `events:write` | Grava um lote do tracker (chave pode ir no corpo) |
 
 **Paginação:** `?limit=` (máx. 500) + `?after_id=`.
 **Datas:** `?since=` / `?until=` em ISO-8601 (`2026-09-01` ou `2026-09-01T14:30:00`).
@@ -546,11 +554,75 @@ Com o cliente pronto, `php exemplo.php` exercita a integração inteira e imprim
 o resultado de cada bloco — serve como teste de fumaça do outro lado.
 
 
+---
+
+## 11. Coleta pelo navegador (`edubot-tracker.js`)
+
+O caminho inverso das seções anteriores: em vez de um parceiro **ler** do
+EduBot, um material HTML de fora (um OVA de parceiro, uma página de teste, e
+depois o Canvas) **envia** interações para o EduBot.
+
+```
+material.html + edubot-tracker.js  --POST /api/v1/collect-->  Flask  -->  collected_events
+     (clique, page_view, tempo)          chave events:write
+```
+
+**Preparar (uma vez):**
+
+```bash
+# tabela collected_events
+docker exec -i ova_db mysql -ueduardo -pPassword-1 ova_db < Database/sql/migration_022_collected_events.sql
+
+# chave de coleta (só grava)
+docker exec -it ova_back_end python -m tools.apikey_tool criar     --nome "Material de teste Lucas" --escopos events:write --dias 30
+```
+
+**Entregar** ao autor do material: `integracoes/js/edubot-tracker.js`,
+`exemplo.html` e o [LEIA-ME](integracoes/js/LEIA-ME.md) (como incluir, como
+marcar botões e o formato do envio), mais a URL e a chave de coleta.
+
+**Conferir no banco:**
+
+```sql
+SELECT event_id, event_type, target, visitor_id, context, origin, occurred_at
+FROM collected_events ORDER BY event_id DESC LIMIT 20;
+```
+
+ou pela API, com uma chave `tracking:read`:
+`GET /api/v1/collect/events?type=click&visitor_id=...` (mesmo cursor
+`after_id` das outras rotas).
+
+**Por que uma tabela separada de `learning_events`:** aquela exige um aluno do
+EduBot e um verbo do enum fechado, e alimenta o domínio por competência, o
+painel do tutor e o agente. O material externo não tem login, e o autor escolhe
+o nome dos eventos. Misturar os dois poluiria as métricas pedagógicas com
+eventos de teste. Quando houver identidade real (LTI no Canvas), `user_ref` é a
+ponte para promover esses eventos a `learning_events`.
+
+**Diferenças em relação ao resto da `/api/v1`:**
+
+- **CORS aberto** (`EDUBOT_COLLECT_ORIGINS`, padrão `*`, inclusive `file://`).
+- **A chave pode ir no corpo.** O `sendBeacon`, usado ao fechar a página, não
+  manda header.
+- **Teto próprio:** `EDUBOT_COLLECT_RATE_LIMIT`, padrão 600/min por chave,
+  porque a turma inteira compartilha a mesma chave.
+
+**Limitações conhecidas:**
+
+- O visitante é anônimo (`visitor_id` no `localStorage`). Num iframe com
+  storage bloqueado, esse id muda a cada carregamento.
+- Como a chave é pública, qualquer pessoa que a copie pode gravar eventos falsos
+  nessa chave. Isso não é problema para teste. Em produção, restrinja
+  `EDUBOT_COLLECT_ORIGINS` ao domínio do material e revogue a chave ao fim do
+  piloto.
+
 ## Notas de segurança
 
-**A chave só existe em servidor.** Nunca a coloque em JavaScript de navegador —
-seria o mesmo que publicá-la. É por isso que o CORS do Flask não inclui
-`/api/v1`: a integração é servidor-a-servidor. Se o parceiro precisa exibir os
+**A chave de leitura só existe em servidor.** Nunca a coloque em JavaScript de
+navegador — seria o mesmo que publicá-la. É por isso que o CORS do Flask não
+inclui `/api/v1`: a integração de leitura é servidor-a-servidor. A única exceção
+é a chave `events:write` do tracker, pública por desenho: ela só grava em
+`collected_events` e não lê nenhuma tabela. Se o parceiro precisa exibir os
 dados num front, o backend dele chama a API e repassa o que for necessário.
 
 **HTTPS em produção.** A chave viaja no header; em HTTP puro, qualquer ponto do
@@ -585,3 +657,10 @@ removido sem `students:pii`.
 | `integracoes/php/edubot_client.php` | Cliente PHP (Caminho A) |
 | `integracoes/php/api.php` | API PHP autônoma (Caminho B) |
 | `integracoes/php/exemplo.php` | Demonstração executável |
+| `Database/sql/migration_022_collected_events.sql` | Tabela `collected_events` (coleta) |
+| `Back-End/edubot/data/models/collected_events.py` | Model Peewee da coleta |
+| `Back-End/edubot/api/routes/collectRoute.py` | `POST /api/v1/collect` e `GET /api/v1/collect/events` |
+| `Back-End/tests/test_collect.py` | 27 testes (chave, escopo, CORS, sendBeacon, lote) |
+| `integracoes/js/edubot-tracker.js` | Script de coleta para incluir no material |
+| `integracoes/js/exemplo.html` | Página de teste com botões marcados e log de envio |
+| `integracoes/js/LEIA-ME.md` | Guia para quem vai incluir o script |

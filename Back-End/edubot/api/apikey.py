@@ -47,7 +47,14 @@ SCOPES = {
     "metrics:read":  "Métricas agregadas por turma/competência (sem indivíduo)",
     "students:read": "Lista de alunos pseudonimizada (subject_id, curso, papel)",
     "students:pii":  "DADO PESSOAL: nome e RA do aluno. Exige base legal — LGPD",
+    "events:write":  "GRAVAR eventos pelo edubot-tracker.js (chave PÚBLICA: vai no HTML)",
 }
+
+# Escopos que só fazem sentido numa chave que fica no SERVIDOR do parceiro. Uma
+# chave `events:write` é embutida no HTML do material e qualquer visitante a lê
+# no código-fonte — se ela também lesse, o rastreio da turma inteira ficaria
+# público. O apikey_tool recusa a mistura.
+READ_SCOPES = {s for s in SCOPES if s != "events:write"}
 
 # Teto por chave. Não é proteção contra DDoS (isso é camada de rede); é o freio
 # que impede um parceiro com loop errado de varrer a base inteira sem parar.
@@ -97,17 +104,32 @@ def _extract_key():
     return ""
 
 
-def _rate_limited(key_id):
-    """True se a chave já estourou RATE_LIMIT na janela. Registra o hit quando
-    ainda dentro do teto (mesma mecânica do login_throttled do auth.py)."""
+def rate_limited(key_id, limit=None, bucket=""):
+    """True se a chave já estourou `limit` na janela. Registra o hit quando
+    ainda dentro do teto (mesma mecânica do login_throttled do auth.py).
+
+    `bucket` separa contadores da mesma chave com tetos diferentes — a coleta do
+    tracker (um material com a turma inteira aberta) precisa de um teto maior
+    que a leitura de um parceiro."""
+    limit = RATE_LIMIT if limit is None else limit
     now = time.time()
-    hits = _hits[key_id]
+    hits = _hits[(bucket, key_id)]
     while hits and now - hits[0] > RATE_WINDOW:
         hits.popleft()
-    if len(hits) >= RATE_LIMIT:
+    if len(hits) >= limit:
         return True
     hits.append(now)
     return False
+
+
+def touch_usage(key):
+    """Contabiliza o uso da chave. UPDATE direto (não .save()) para não reescrever
+    as demais colunas e não competir com uma edição concorrente da chave."""
+    (ApiKeys
+     .update(last_used_at=datetime.datetime.now(),
+             request_count=ApiKeys.request_count + 1)
+     .where(ApiKeys.key_id == key.key_id)
+     .execute())
 
 
 def reset_rate_limit():
@@ -150,7 +172,7 @@ def require_api_key(*required_scopes):
             key = resolve_key(_extract_key())
             if key is None:
                 return _error("Chave de API ausente, inválida ou revogada.", 401)
-            if _rate_limited(key.key_id):
+            if rate_limited(key.key_id):
                 return _error(
                     f"Limite de {RATE_LIMIT} requisições por {RATE_WINDOW}s excedido.", 429)
             granted = key.scope_list()
@@ -159,13 +181,7 @@ def require_api_key(*required_scopes):
                 return _error(
                     f"Chave sem permissão. Escopo(s) necessário(s): {', '.join(faltando)}.", 403)
             g.api_key = key
-            # Uso observado. UPDATE direto (não .save()) para não reescrever as
-            # demais colunas e não competir com uma edição concorrente da chave.
-            (ApiKeys
-             .update(last_used_at=datetime.datetime.now(),
-                     request_count=ApiKeys.request_count + 1)
-             .where(ApiKeys.key_id == key.key_id)
-             .execute())
+            touch_usage(key)
             return view(*args, **kwargs)
         return wrapper
     return deco
