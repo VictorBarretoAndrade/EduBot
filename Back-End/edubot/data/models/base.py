@@ -36,6 +36,7 @@ else:
         password=os.environ.get("DB_PASSWORD", "Password-1"),
         host=os.environ.get("DB_HOST", "ova_mysql"),
         port=int(os.environ.get("DB_PORT", "3306")),
+        charset="utf8mb4",
     )
 
 

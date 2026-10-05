@@ -10,6 +10,24 @@ docker compose up --build
 - **Interface nova (React/Lovable, recomendada):** http://localhost:8010/app/
 - Interface clássica: http://localhost:8010/html/login.html
 
+## Perfis de Demonstração e Login
+
+A plataforma possui perfis calibrados para validação pedagógica e acompanhamento no dashboard:
+
+### 🎓 Alunos (Turma de Engenharia de Computação)
+| Perfil | Aluno | RA (Usuário) | Senha | Métricas / Comportamento |
+|---|---|:---:|:---:|---|
+| **Perfil Zerado (Primeiro Acesso)** | Thiago | `6` | `6` | **0% de consumo**, sem tentativas de quiz ou histórico prévio. Ideal para testar a jornada do aluno do zero ao vivo. |
+| **Bom Desempenho** | Eduardo | `1` | `1` | **96% de consumo**, taxa de erro de **4%** (0.04), score de risco **0/100**, streak ativo de 5 dias, nível 5 e medalhas conquistadas. |
+| **Médio Desempenho** | Yasmin | `3` | `3` | **55% de consumo**, taxa de erro de **46%** (0.46), score de risco **22/100** e **OVA de reforço já gerada** pelo agente de IA para dúvidas em Computação Quântica. |
+| **Baixo Desempenho / Risco de Evasão** | Pedro | `5` | `5` | **Inativo há 14 dias**, abandono de leitura (15%), taxa de erro de **83%** (0.83), score de risco **78/100** (**Crítico/Alto**) e **alerta preventivo aberto** para o tutor. |
+
+### 👨‍🏫 Gestão e Tutoria (Visualização dos Dashboards)
+| Papel | Nome | RA (Usuário) | Senha | O que visualiza |
+|---|---|:---:|:---:|---|
+| **Coordenador / Admin** | Sanval | `4` | `4` | Acesso ao **Painel do Tutor** (visão da turma, alertas e riscos dos alunos) e ao **Painel do Gestor** (gráficos consolidados de acertos/erros e métricas globais). |
+| **Tutor da Turma** | Gabriel | `2` | `2` | Acesso ao **Painel do Tutor** (fila de aprovação, heatmap de domínio e alertas preventivos). |
+
 > O frontend React é compilado automaticamente por um container Node durante o
 > `docker compose up` (serviço `ova_react_build`) — **não é preciso ter Node
 > instalado na máquina**. Para desenvolvê-lo com hot-reload, aí sim use Node:
