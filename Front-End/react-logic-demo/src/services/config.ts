@@ -8,9 +8,15 @@ comportamento atual — em desenvolvimento local (Docker) nada precisa ser
 configurado. Veja .env.example.
 */
 const host = window.location.hostname || "localhost";
+const isHttps = window.location.protocol === "https:";
 
 // URL base da API Flask (perfil, progresso, quiz, EduBot).
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? `http://${host}:5010`;
+// Em HTTPS (produção/Azure), usa o mesmo domínio seguro sem portas extras.
+// Em HTTP (dev local), mantém o fallback na porta 5010.
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ?? (isHttps ? "" : `http://${host}:5010`);
 
 // URL base do Apache que serve o leitor clássico de OVAs (iframe.html).
-export const CLASSIC_BASE_URL = import.meta.env.VITE_CLASSIC_URL ?? `http://${host}:8010`;
+export const CLASSIC_BASE_URL =
+  import.meta.env.VITE_CLASSIC_URL ?? (isHttps ? "" : `http://${host}:8010`);
+
