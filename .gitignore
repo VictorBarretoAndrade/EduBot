@@ -46,6 +46,15 @@ Front-End/react-logic-demo/.env.local
 /platform_flowchart_en.png
 /modelo-EER.png
 
+# Materiais internos do Hackathon (não subir no git: viabilidade, roteiros de demo e gravações)
+VIABILIDADE_ECONOMICA_DECK.md
+ROTEIRO_DEMO_8MIN_EN.md
+ROTEIRO_GRAVACAO_DEMO_RESERVA_2A3MIN.md
+demo/
+*.mp4
+*.webm
+*.mov
+
 # OVAs gerados (nunca semeados; fonte de conteúdo fora do runtime) (A11)
 /ovas-generation/
 

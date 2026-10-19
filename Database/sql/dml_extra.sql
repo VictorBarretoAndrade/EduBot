@@ -91,7 +91,19 @@ insert into questions (question_id, statement, alternatives, answer, ova_id, com
 (31, "Qual modelo econômico caracteriza a computação na nuvem?",
 '{ "alternatives": ["Licença perpétua", "Pagamento pelo uso (pay-as-you-go)", "Compra de servidores físicos", "Assinatura vitalícia obrigatória"] }', "b", 4, 9),
 (32, "No modelo de responsabilidade compartilhada, quem configura acessos e criptografa os dados?",
-'{ "alternatives": ["Somente o provedor de nuvem", "O cliente", "O fornecedor de internet", "Ninguém"] }', "b", 4, 9);
+'{ "alternatives": ["Somente o provedor de nuvem", "O cliente", "O fornecedor de internet", "Ninguém"] }', "b", 4, 9),
+(33, "Um desenvolvedor precisa criar e implantar uma aplicação web rapidamente, focando exclusivamente no código-fonte e na lógica de negócios, sem gerenciar servidores, patches de sistema operacional ou balanceadores de carga. Qual modelo de serviço em nuvem atende a essa necessidade?",
+'{ "alternatives": ["IaaS (Infraestrutura como Serviço)", "PaaS (Plataforma como Serviço)", "SaaS (Software como Serviço)", "DaaS (Desktop como Serviço)"] }', "b", 4, 7),
+(34, "Ao comparar os três modelos de serviço em nuvem (IaaS, PaaS e SaaS), em qual deles o cliente retém o MAIOR nível de controle sobre a configuração de rede, sistema operacional e instalação de bibliotecas?",
+'{ "alternatives": ["SaaS", "PaaS", "IaaS", "O controle do cliente é idêntico nos três modelos"] }', "c", 4, 7),
+(35, "Um hospital público armazena prontuários médicos altamente sensíveis e é obrigado por normas rígidas de soberania e proteção de dados a manter isolamento físico completo e controle exclusivo sobre o hardware. Qual modelo de implantação de nuvem é o mais indicado?",
+'{ "alternatives": ["Nuvem Pública multilocatária (multi-tenant)", "Nuvem Privada (dedicada on-premise ou hospedada)", "Nuvem Comunitária aberta", "Nuvem de borda pública não gerenciada"] }', "b", 4, 8),
+(36, "Uma instituição de ensino mantém seus bancos de dados e cadastros confidenciais em data center interno próprio, mas, durante a semana de matrículas e vestibulares (quando o tráfego multiplica por 20), expande temporariamente os servidores de aplicação para a nuvem pública. Como se chama essa estratégia?",
+'{ "alternatives": ["Nuvem Privada Estática", "Nuvem Híbrida com expansão sob demanda (cloud bursting)", "Hospedagem Compartilhada Legada", "Nuvem Pública Monolítica"] }', "b", 4, 8),
+(37, "Do ponto de vista contábil e de planejamento financeiro, qual é a principal vantagem da migração de infraestrutura física local para a computação em nuvem?",
+'{ "alternatives": ["Substituição de grandes investimentos iniciais em bens de capital (CapEx) por custos operacionais contínuos sob demanda (OpEx)", "Garantia de que a fatura mensal será imutável e fixa, independentemente do consumo real", "Transferência compulsória de 100% da responsabilidade legal dos dados para o provedor", "Eliminação total da necessidade de profissionais especializados em TI"] }', "a", 4, 9),
+(38, "Incidentes de segurança na nuvem (como vazamentos de credenciais e acessos indevidos) ocorrem com frequência devido a falhas de governança do cliente. Para mitigar esses riscos e proteger dados de estudantes sob leis como LGPD/GDPR, qual é a prática recomendada?",
+'{ "alternatives": ["Utilizar a conta raiz (root/admin) para todas as tarefas cotidianas da equipe", "Aplicar o princípio do menor privilégio (PoLP) e autenticação multifator (MFA) obrigatória", "Manter chaves permanentes de API gravadas diretamente no código-fonte", "Desativar a criptografia em repouso para acelerar requisições"] }', "b", 4, 9);
 
 -- Recursos do OVA 4 (consumo rastreado pelos players)
 insert into resources
