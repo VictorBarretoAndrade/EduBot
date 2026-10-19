@@ -10,6 +10,9 @@
 -- ===========================================================================
 USE ova_db;
 
+-- Garante que a coluna statement suporte enunciados longos (assim como statement_en TEXT)
+ALTER TABLE questions MODIFY COLUMN statement TEXT;
+
 -- ---------------------------------------------------------------------------
 -- Questões 33 e 34 (Competência 7: Modelos de Serviço)
 -- ---------------------------------------------------------------------------
