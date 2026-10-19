@@ -32,18 +32,26 @@ def login():
 
             # A.3: rate-limit por (RA, IP). Bloqueia força bruta antes de tocar o
             # banco. 429 com Retry-After.
-            ra = str(login_data.get("ra", ""))
+            ra = str(login_data.get("ra", "")).strip()
+            if not ra:
+                return "Wrong RA or Password", 401
+
             if login_throttled(ra, request.remote_addr or "?"):
                 return json.dumps({"Error": "Muitas tentativas. Tente novamente em instantes."}), 429, {"Retry-After": "60"}
 
-            # Retrieve the student trying to log in
-            student = Students.select().where(Students.ra == login_data["ra"]).first()
+            # Retrieve the student trying to log in (aceita RA ou nome de usuário)
+            from peewee import fn
+            student = (Students
+                       .select()
+                       .where((fn.LOWER(Students.ra) == ra.lower()) |
+                              (fn.LOWER(Students.student_name) == ra.lower()))
+                       .first())
 
             # Fase 4d (A5): a comparação em texto plano virou verificação por
             # hash. Senhas legadas do seed (texto plano) ainda são aceitas UMA
             # vez e imediatamente reescritas como hash (upgrade-on-login).
             password = login_data.get("password") or ""
-            if (not student or login_data["ra"] == "") or not verify_password(password, student.student_password):
+            if not student or not verify_password(password, student.student_password):
                 return "Wrong RA or Password", 401
 
             if not is_hashed(student.student_password):

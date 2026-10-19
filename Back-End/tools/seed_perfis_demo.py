@@ -55,7 +55,7 @@ def seed():
         Students.update(student_name="Eduardo", student_password="1", role="aluno", title="Mestre").where(Students.student_id == 1).execute()
         Students.update(student_name="Gabriel", student_password="2", role="tutor").where(Students.student_id == 2).execute()
         Students.update(student_name="Yasmin", student_password="3", role="aluno", title=None).where(Students.student_id == 3).execute()
-        Students.update(student_name="Sanval", student_password="4", role="admin", is_admin=True).where(Students.student_id == 4).execute()
+        Students.update(ra="Sanval", student_name="Sanval", student_password="Cimatec123", role="aluno", is_admin=False).where(Students.student_id == 4).execute()
         Students.update(student_name="Pedro", student_password="5", role="aluno", title=None).where(Students.student_id == 5).execute()
         Students.update(student_name="Thiago", student_password="6", role="aluno", title=None).where(Students.student_id == 6).execute()
 

@@ -20,7 +20,7 @@ values
 (1, "1", "1", "Eduardo", 1, false),
 (2, "2", "2", "Gabriel", 1, false),
 (3, "3", "3", "Yasmin", 1, false),
-(4, "4", "4", "Sanval", 1, true),
+(4, "Sanval", "Cimatec123", "Sanval", 1, false),
 (5, "5", "5", "Pedro", 1, false),
 (6, "6", "6", "Thiago", 1, false),
 (7, "7", "7", "Manuel", 1, false),
