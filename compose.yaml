@@ -61,6 +61,10 @@ services:
       # Bedrock API key (bearer token) — o SDK anthropic a lê como api_key.
       AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Azure AI Foundry / OpenAI
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
       # Coach (fala do EduBot): usa a MESMA camada de provider (llm.py) dos
       # outros agentes — Fase 3d unificou o caminho, sem boto3 paralelo. Só muda
       # o modelo (mais barato) via override. Sem provider real => texto local.
