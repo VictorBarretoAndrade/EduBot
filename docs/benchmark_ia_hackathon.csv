@@ -1,0 +1,6 @@
+Capacidade do Agente,Trigger Type,Amostras (N),Modelo Real (Azure Foundry),Latencia Media (s),Desvio Padrao (s),Mediana P50 (s),P90 (s),P95 (s),Min-Max (s),Tokens Entrada (Media +- DP),Tokens Saida (Media +- DP),Custo Medio / Chamada (USD),Custo P95 / Chamada (USD),Custo por 1.000 Chamadas (USD)
+Coach Motivacional (Avatar / Voz),coach,100,gpt-5-mini-2025-08-07,3.62,0.72,3.45,4.41,4.93,2.34 - 6.53,197.0 +- 0.0,220.0 +- 73.1,$0.000489,$0.000692,$0.49
+Redator Proativo de Intervencoes,redactor,100,gpt-5-mini-2025-08-07,4.13,0.75,3.94,5.10,5.46,2.68 - 6.22,322.2 +- 10.0,313.8 +- 89.0,$0.000708,$0.001025,$0.71
+Chat Tutor Socratico (Contextual),chat,100,gpt-5-mini-2025-08-07,4.91,0.89,4.82,6.10,6.39,2.68 - 7.67,186.8 +- 17.8,442.4 +- 103.8,$0.000931,$0.001265,$0.93
+Recomendacao Pedagogica (JSON),on_demand,100,gpt-5-mini-2025-08-07,7.01,1.02,6.85,8.38,8.67,5.27 - 11.12,6244.4 +- 151.2,661.6 +- 91.2,$0.002884,$0.003247,$2.88
+Agente Autonomo de OVA (Loop Tool-Use 4 tools),personalized_ova,100,gpt-5-mini-2025-08-07,11.98,1.41,11.78,13.02,14.10,10.03 - 21.46,35937.8 +- 829.5,348.0 +- 63.2,$0.009680,$0.009929,$9.68

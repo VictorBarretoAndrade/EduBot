@@ -43,7 +43,7 @@ _SYSTEM = (
 )
 
 
-def redigir_intervencao(digest, rec, lang="pt"):
+def redigir_intervencao(digest, rec, lang="pt", student=None):
     """Devolve o texto redigido pela LLM, ou None (usar o template rec['mensagem_aluno']).
 
     `digest` já vem minimizado (primeiro nome, sem RA). `rec` é a recomendação da
@@ -63,6 +63,8 @@ def redigir_intervencao(digest, rec, lang="pt"):
         + "\n\nReescreva a mensagem da intervenção para este aluno."
     )
     try:
+        import time
+        started = time.time()
         resp = llm.messages_create(
             system=[{"type": "text", "text": _SYSTEM,
                      "cache_control": {"type": "ephemeral"}}],
@@ -70,7 +72,18 @@ def redigir_intervencao(digest, rec, lang="pt"):
             max_tokens=MAX_TOKENS,
             model=REDACTOR_MODEL,
         )
+        latency_ms = int((time.time() - started) * 1000)
         text = "".join(b.text for b in resp.content if b.type == "text").strip()
+        if text and student is not None:
+            from edubot.services.decisions import record_decision
+            usage = getattr(resp, "usage", None)
+            record_decision(
+                student, "redactor",
+                input_digest={"tipo": rec.get("tipo")},
+                model_id=getattr(resp, "model", REDACTOR_MODEL), mock=False,
+                latency_ms=latency_ms,
+                input_tokens=getattr(usage, "input_tokens", 0) or 0,
+                output_tokens=getattr(usage, "output_tokens", 0) or 0)
         return text or None
     except Exception as err:  # noqa: BLE001 — degrada para o template
         logger.warning("Redator LLM indisponível (%s); usando template.", err)
