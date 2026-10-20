@@ -82,7 +82,7 @@ def _redigir_para_caso(student, rec, profile, lang):
         "respondeu_melhor_a": pref["respondeu_melhor_a"],
     }
     try:
-        return redigir_intervencao(digest, rec, lang)
+        return redigir_intervencao(digest, rec, lang, student=student)
     except Exception:
         logger.exception("Falha ao redigir intervenção por caso")
         return None
@@ -130,6 +130,9 @@ def evaluate_student(student, *, create_alert=True, lang="pt", trigger_type="swe
     record_decision(
         student, trigger_type, input_digest=digest,
         model_id=rec.get("model_id"), mock=rec.get("mock", True),
+        latency_ms=rec.get("latency_ms", 0),
+        input_tokens=rec.get("input_tokens", 0),
+        output_tokens=rec.get("output_tokens", 0),
         actions=([{"type": "intervention", "tipo": rec.get("tipo")}] if acionavel else []))
 
     if not acionavel:
