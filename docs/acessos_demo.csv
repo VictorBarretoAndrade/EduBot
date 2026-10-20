@@ -1,0 +1,8 @@
+Papel,Perfil,Nome,Usuario_RA,Senha,Descricao_e_Comportamento
+Aluno,Primeiro Acesso (Zerado),Thiago,6,6,0% de consumo e sem histórico prévio. Ideal para demonstrar o primeiro acesso do zero.
+Aluno,Alto Desempenho,Eduardo,1,1,96% de consumo concluído, taxa de erro de 4%, nível 5, medalhas e sequência ativa de 5 dias.
+Aluno,Médio Desempenho / Reforço,Yasmin,3,3,55% de consumo, taxa de erro de 46%, possui OVA de reforço personalizada gerada por IA.
+Aluno,Risco de Evasão (Crítico),Pedro,5,5,Inativo há 14 dias, taxa de erro de 83%, score de risco 78/100 e alerta preventivo aberto.
+Gestão,Tutor da Turma,Gabriel,2,2,Acesso ao Painel do Tutor (acompanhamento da turma, mapa de calor de domínio e fila de aprovação da IA).
+Gestão,Coordenador / Admin,Sanval,4,4,Acesso total: Painel do Tutor e Painel do Gestor (métricas consolidadas e visão global da instituição).
+

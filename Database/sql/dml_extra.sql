@@ -125,7 +125,7 @@ values
 -- MELHORIA (Roteiro Cena 4): papéis. Gabriel (RA 2) vira TUTOR; Sanval (RA 4),
 -- que já era admin, recebe o papel 'admin'. Os demais ficam 'aluno' (default).
 update students set role = 'tutor' where student_id = 2;
-update students set role = 'admin' where student_id = 4;
+update students set role = 'aluno', is_admin = false where student_id = 4;
 
 -- NOTA: sem seed de atividade — a demo começa do ZERO. O aluno faz o OVA ao
 -- vivo (lê, assiste, responde o quiz) e, ao errar questões, o agente EduBot

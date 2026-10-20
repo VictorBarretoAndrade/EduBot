@@ -61,6 +61,10 @@ services:
       # Bedrock API key (bearer token) — o SDK anthropic a lê como api_key.
       AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # Azure AI Foundry / OpenAI
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
       # Coach (fala do EduBot): usa a MESMA camada de provider (llm.py) dos
       # outros agentes — Fase 3d unificou o caminho, sem boto3 paralelo. Só muda
       # o modelo (mais barato) via override. Sem provider real => texto local.
@@ -148,6 +152,23 @@ services:
     networks:
       - ova_network
 
+  caddy:
+    container_name: edubot_caddy
+    image: caddy:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - ova_apache
+      - ova_flask
+    networks:
+      - ova_network
+
 networks:
   ova_network:
     name: ova_network
@@ -159,3 +180,8 @@ networks:
         # Aqui os serviços se resolvem por nome de container (ova_mysql etc.),
         # então basta uma /24 privada sem IPs fixos.
         - subnet: 172.28.0.0/24
+
+volumes:
+  caddy_data:
+  caddy_config:
+
