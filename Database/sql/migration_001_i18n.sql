@@ -275,3 +275,34 @@ UPDATE questions SET
   statement_en = 'In the shared responsibility model, who configures access and encrypts the data?',
   alternatives_en = '{"alternatives": ["Only the cloud provider", "The customer", "The internet provider", "No one"]}'
 WHERE question_id = 32;
+
+UPDATE questions SET
+  statement_en = 'A developer needs to build and deploy a web application quickly, focusing solely on application code and business logic without managing servers, OS patching, or load balancers. Which cloud service model fits this requirement?',
+  alternatives_en = '{"alternatives": ["IaaS (Infrastructure as a Service)", "PaaS (Platform as a Service)", "SaaS (Software as a Service)", "DaaS (Desktop as a Service)"]}'
+WHERE question_id = 33;
+
+UPDATE questions SET
+  statement_en = 'When comparing the three cloud service models (IaaS, PaaS, and SaaS), in which one does the customer retain the HIGHEST level of control over network configuration, operating system, and custom library installation?',
+  alternatives_en = '{"alternatives": ["SaaS", "PaaS", "IaaS", "Customer control is identical across all models"]}'
+WHERE question_id = 34;
+
+UPDATE questions SET
+  statement_en = 'A public hospital stores highly sensitive patient records and is mandated by strict data sovereignty and privacy regulations to maintain complete physical isolation and exclusive control over computing hardware. Which cloud deployment model is most suitable?',
+  alternatives_en = '{"alternatives": ["Multi-tenant Public Cloud", "Private Cloud (dedicated on-premise or hosted)", "Open Community Cloud", "Unmanaged public edge cloud"]}'
+WHERE question_id = 35;
+
+UPDATE questions SET
+  statement_en = 'An educational institution maintains its confidential databases in its own internal data center, but during enrollment week and admissions surges (when traffic spikes 20x), it dynamically scales its application frontends into the public cloud. What is this deployment strategy called?',
+  alternatives_en = '{"alternatives": ["Static Private Cloud", "Hybrid Cloud with on-demand bursting (cloud bursting)", "Legacy Shared Hosting", "Monolithic Public Cloud"]}'
+WHERE question_id = 36;
+
+UPDATE questions SET
+  statement_en = 'From an accounting and financial planning perspective, what is the primary advantage of migrating from on-premise physical infrastructure to cloud computing?',
+  alternatives_en = '{"alternatives": ["Replacing large upfront capital expenditures (CapEx) with continuous, on-demand operating expenses (OpEx)", "Guaranteeing that monthly billing remains completely static and fixed, regardless of actual usage", "Compulsory transfer of 100% of legal data liability to the cloud vendor", "Complete elimination of the need for specialized IT personnel"]}'
+WHERE question_id = 37;
+
+UPDATE questions SET
+  statement_en = 'Cloud security incidents (such as credential leaks and breaches) frequently stem from customer-side governance misconfigurations. To mitigate these risks and safeguard student data under regulations like LGPD/GDPR, which practice is recommended?',
+  alternatives_en = '{"alternatives": ["Using the root/admin account for all day-to-day engineering tasks", "Enforcing the Principle of Least Privilege (PoLP) and mandatory Multi-Factor Authentication (MFA)", "Hardcoding permanent API access keys directly into application source code", "Disabling encryption-at-rest to speed up database requests"]}'
+WHERE question_id = 38;
+
