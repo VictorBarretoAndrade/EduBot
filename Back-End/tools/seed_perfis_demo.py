@@ -55,9 +55,19 @@ def seed():
         Students.update(student_name="Eduardo", student_password="1", role="aluno", title="Mestre").where(Students.student_id == 1).execute()
         Students.update(student_name="Gabriel", student_password="2", role="tutor").where(Students.student_id == 2).execute()
         Students.update(student_name="Yasmin", student_password="3", role="aluno", title=None).where(Students.student_id == 3).execute()
-        Students.update(ra="Sanval", student_name="Sanval", student_password="Cimatec123", role="aluno", is_admin=False).where(Students.student_id == 4).execute()
+        Students.update(ra="4", student_name="Sanval (Coordenador)", student_password="4", role="admin", is_admin=True).where(Students.student_id == 4).execute()
         Students.update(student_name="Pedro", student_password="5", role="aluno", title=None).where(Students.student_id == 5).execute()
         Students.update(student_name="Thiago", student_password="6", role="aluno", title=None).where(Students.student_id == 6).execute()
+        course_id = getattr(Students.get_or_none(Students.student_id == 1), "course_id_id", 1) or 1
+        for sid, ra_val, name_val, pwd_val in [(501, "Sanval", "Sanval", "Cimatec123"), (502, "Edon", "Educação Online", "Cimatec@123")]:
+            if Students.get_or_none(Students.student_id == sid):
+                Students.update(ra=ra_val, student_name=name_val, student_password=pwd_val, role="aluno", is_admin=False).where(Students.student_id == sid).execute()
+            else:
+                Students.insert(student_id=sid, ra=ra_val, student_name=name_val, student_password=pwd_val, course_id=course_id, role="aluno", is_admin=False).execute()
+        from edubot.services.consents import set_consent
+        for demo_sid in [1, 3, 5, 6, 501, 502]:
+            for purpose in ("tracking_pedagogico", "ia_sobre_dados", "imagem_voz", "ranking_turma"):
+                set_consent(demo_sid, purpose, True)
 
     today = datetime.date.today()
     now = datetime.datetime.now()

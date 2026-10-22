@@ -54,7 +54,14 @@ def _get_polly():
 
 def is_available():
     """True se a síntese real está habilitada e ainda não falhou irremediavelmente."""
-    return ENABLED and not _unavailable
+    if not ENABLED or _unavailable:
+        return False
+    if os.getenv("EDUBOT_OFFLINE", "0").lower() in ("1", "true", "on", "yes"):
+        return False
+    mode = os.getenv("EDUBOT_SPEECH", "auto").lower()
+    if mode == "auto" and not (os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_PROFILE")):
+        return False
+    return True
 
 
 def _parse_visemes(marks_text):

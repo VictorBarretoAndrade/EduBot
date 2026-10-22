@@ -131,7 +131,7 @@ services:
     volumes:
       - ./Front-End/react-logic-demo:/src
       - ./Front-End/files/app:/out
-    command: sh -c "npm install && npm run build"
+    command: sh -c "if [ -f /out/index.html ] && [ \"$$FORCE_REACT_BUILD\" != \"1\" ]; then echo 'Build React ja presente em Front-End/files/app (offline-ready)'; elif [ -d node_modules ]; then npm run build; else npm install --prefer-offline --no-audit && npm run build; fi"
     networks:
       - ova_network
 
@@ -154,6 +154,7 @@ services:
 
   caddy:
     container_name: edubot_caddy
+    profiles: ["cloud"]
     image: caddy:alpine
     restart: always
     ports:
