@@ -71,7 +71,7 @@ switch ($Acao) {
         Write-Host "`nRestaurando estado calibrado dos perfis de demonstracao (LOCAL)..." -ForegroundColor Yellow
         Apply-LocalMigrations
         docker exec -e PYTHONPATH=/api ova_back_end python /api/tools/seed_perfis_demo.py
-        Write-Host "  [OK] Perfis locais (Eduardo=1, Gabriel=2, Yasmin=3, Sanval Coord=4, Pedro=5, Thiago=6, Sanval, Edon) resetados!" -ForegroundColor Green
+        Write-Host "  [OK] Perfis locais (Eduardo=1, Gabriel=2, Yasmin=3, Sanval Coord=4, Pedro=5, Thiago=6) resetados!" -ForegroundColor Green
     }
 
     "testar-local" {

@@ -34,8 +34,8 @@ def run_verification():
     with app.app_context():
         client = app.test_client()
 
-        # 1. Testar Login dos 8 acessos da Demo
-        print("\n[Cena 1] Testando autenticacao dos 8 perfis de demonstracao...")
+        # 1. Testar Login dos 6 acessos da Demo
+        print("\n[Cena 1] Testando autenticacao dos 6 perfis de demonstracao...")
         credenciais = [
             ("1", "1", "Eduardo (Bom Desempenho)"),
             ("2", "2", "Gabriel (Tutor)"),
@@ -43,8 +43,6 @@ def run_verification():
             ("4", "4", "Sanval (Coordenador/Admin)"),
             ("5", "5", "Pedro (Risco Critico)"),
             ("6", "6", "Thiago (Perfil Zerado)"),
-            ("Sanval", "Cimatec123", "Sanval (Aluno Nominal)"),
-            ("Edon", "Cimatec@123", "Educacao Online (Aluno Nominal)"),
         ]
         tokens = {}
         for login_val, pwd_val, label in credenciais:
@@ -102,9 +100,7 @@ def run_verification():
 
         # 4. Testar Loop de Tool-Use (OVA Personalizada) + Artigos Cientificos Offline
         print("\n[Cena 4] Testando Loop de Tool-Use (OVA Personalizada Mock) e Artigos Offline...")
-        h_edon = {"Authorization": f"Bearer {tokens['Edon']}"}
-        t_req = time.time()
-        r_ova = client.post("/edubot/personalized-ova", headers=h_edon, json={"competency_id": 1})
+        r_ova = client.post("/edubot/personalized-ova", headers=h_yasmin, json={"competency_id": 1})
         ova_ms = (time.time() - t_req) * 1000
         assert r_ova.status_code in (200, 201), f"Erro em /edubot/personalized-ova: {r_ova.status_code}"
         d_ova = json.loads(r_ova.get_data(as_text=True))
@@ -112,10 +108,10 @@ def run_verification():
         assert p_id is not None, "personalized_ova_id nao gerado no modo mock!"
         print(f"  [OK] POST /edubot/personalized-ova ({ova_ms:5.1f} ms) -> id={p_id} | mock={d_ova.get('mock')} | iteracoes={d_ova.get('iteracoes')}")
 
-        # Limpar OVA temporaria criada para Edon (502) durante o teste
+        # Limpar OVA temporaria criada durante o teste (mantendo a OVA original da Yasmin intacta)
         PersonalizedOVAItem.delete().where(PersonalizedOVAItem.personalized_ova_id == p_id).execute()
         PersonalizedOVA.delete().where(PersonalizedOVA.personalized_ova_id == p_id).execute()
-        AgentDecisions.delete().where((AgentDecisions.student_id == 502) & (AgentDecisions.mock == True)).execute()
+        AgentDecisions.delete().where((AgentDecisions.student_id == 3) & (AgentDecisions.mock == True)).execute()
         Interventions.delete().where((Interventions.student_id == 3) & (Interventions.description.contains("Modo mock"))).execute()
 
         t_req = time.time()
