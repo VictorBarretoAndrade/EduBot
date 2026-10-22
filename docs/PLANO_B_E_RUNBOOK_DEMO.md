@@ -68,3 +68,4 @@ Garante que o **Thiago (`6`)** volte para `0%` de consumo e que **Eduardo (`1`)*
 | **Acesso Extra (Tutor)** | Gabriel | `2` | `2` | **Painel do Tutor** dedicado. |
 | **Acesso Nominal 1** | Sanval | `Sanval` | `Cimatec123` | Login alfanumérico de aluno. |
 | **Acesso Nominal 2** | Educação Online | `Edon` | `Cimatec@123` | Login alfanumérico de aluno com caracteres especiais na senha. |
+
