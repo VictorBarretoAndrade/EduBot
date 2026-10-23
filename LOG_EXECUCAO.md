@@ -2073,3 +2073,86 @@ de reforço para medir uso (§5.3), **calibração pedagógica dos pesos do risc
 (§5.4 — implementado com defaults documentados), produção editorial das questões
 das competências 7–9 (§6.2), auto-geração de reforço com LLM real (§6.3, atrás de
 decisão de custo) e promoção de `session_id` a coluna (§7.5, adiado de propósito).
+
+---
+
+## Plano 6 — Auditoria de UX e reestruturação para a Holanda (22/10/2026)
+
+Plano: [PLANO_EXECUCAO_6.md](PLANO_EXECUCAO_6.md). Decisões do usuário: inglês
+**americano**, produto e IA renomeados para **Engage-Agent**, competência = *learning
+outcome* em EN, home do professor = **Minha turma**, conteúdo real para Cálculo.
+
+### Trabalho multiagente (Claude Code + Gemini via Antigravity)
+
+- **Gemini (cota Google):** inventários de i18n (anexos 1 e 2 em
+  `docs/auditoria-ux-holanda/`), conteúdo novo de `calculus.html`/`calculus2.html` (G0),
+  traduções `quantum_computing.en.html`, `calculus.en.html`, `calculus2.en.html` (G1) e o
+  polimento do inglês da interface (G3, só o 2º argumento de `t()`).
+- **Claude:** todo o código, a migration e a conferência dos pacotes do Gemini — árvore de
+  tags PT×EN idêntica nos 4 OVAs, nenhuma palavra PT nas versões EN, exemplos de
+  limite/derivada/integral/otimização conferidos à mão.
+
+### Por que cada mudança
+
+- **Cálculo mostrava o texto de Computação Quântica** (os HTML diferiam em 2–4 linhas) enquanto
+  o quiz cobrava derivadas: o aluno lia uma coisa e era avaliado em outra.
+- **Navegação Canvas** (`#/materias` → `#/materia/:id` → `#/modulo/:id/:passo`): o aluno tinha
+  7 abas, 3 delas repetindo o que já existia dentro do módulo (Atividades, Quiz, Professor
+  Mediador). Agora são 3 (Minhas matérias · Prática personalizada · Meu progresso) + menu da
+  conta. Links antigos redirecionam (`#/dashboard`, `#/quiz`, `#/report`…).
+- **Stepper do módulo em painéis, não âncoras:** o progresso de leitura (que libera o quiz no
+  backend) é medido pela rolagem. Com âncoras, pular para o quiz contaria como leitura. A
+  medição agora só roda no passo Conteúdo, e "página curta" é decidida com base no conteúdo,
+  não no painel do quiz.
+- **Professor Mediador desmontado:** o nome cobria uma página de recomendação e o cabeçalho
+  do chat, e a mesma IA tinha 7 nomes. Agora: chat no módulo ("Perguntar ao Engage-Agent"),
+  sugestões em "Para fazer" na home (com "Pedir uma sugestão agora"), histórico em Meu
+  progresso, privacidade no menu da conta. O selo "resposta simulada — Bedrock" saiu da tela
+  do aluno.
+- **Textos gerados pelo backend em dois idiomas** (`migration_024`): intervenções, alertas e
+  trilhas de reforço eram gravados já escritos no idioma de quem disparou — a varredura
+  agendada roda em PT, então o aluno em EN recebia PT. Agora a mensagem é gravada em PT e EN
+  (o outro idioma vem do template determinístico da mesma regra, sem LLM) e lida com `tr()`.
+- **Nomes de curso/matéria e 7 links de leitura** ganharam versão EN (links conferidos: 200).
+
+### Validação
+
+- **Backend:** `python -m pytest` → **334 passed** (2 testes novos: matéria traduzida no perfil e
+  alerta do professor no idioma pedido; 3 asserções ajustadas para o texto EN novo e para o
+  aviso agora gravado em PT e EN).
+- **Front:** `tsc --noEmit` exit 0; `vite build` ok.
+- **Pacotes do Gemini conferidos por script:** nos diffs de G3 (85 textos, 14 arquivos) e G4
+  (37 textos, 4 arquivos), o código com os literais esvaziados é idêntico, os placeholders são
+  os mesmos e nenhum texto PT foi alterado.
+- **Ponta a ponta sem Docker** (o Docker Desktop não subiu nesta máquina: socket
+  `dockerInference` travado): Flask em SQLite carregado com `dml*.sql` + traduções das
+  migrations 001/024 + `seed_perfis_demo`, Vite e servidor estático dos OVAs. Navegado em EN
+  como aluna (Yasmin) e professor (Gabriel): home por matéria, matéria, módulo de Cálculo em
+  inglês, stepper (pular para o Quiz NÃO inflou a leitura: seguiu 45% e o quiz bloqueado),
+  Meu progresso, Privacidade, Minha turma, Visão do curso. A varredura da turma (que roda em PT)
+  gravou avisos e alertas em PT **e** EN.
+- **Pendente:** rodar a `migration_024` num MySQL real (Docker), leitura do inglês por um
+  falante nativo e validação do conteúdo de Cálculo por um professor.
+
+### Ajustes após o teste do usuário (22/10/2026)
+
+- **Cobertura de vídeo (bitmap) — bug:** o tick de 1 s acendia UM balde de 1% por segundo; num
+  vídeo de 20 s a barra parava em ~20–25% mesmo assistindo tudo. Agora cada tick acende todos os
+  baldes entre a posição anterior e a atual (se o avanço for compatível com reprodução contínua;
+  um salto maior é seek e não preenche), e o `ended` fecha o último trecho. Simulação: 20 s
+  inteiros → 100%; pulo de 5 s → 15 s → 51%. A prática também passou a devolver
+  `coverage_bitmap`/`coverage_perc` — antes o vídeo da prática recomeçava a barra do zero.
+- **"Some answers couldn't be graded" na prática:** a trilha de máximos e mínimos mistura
+  questões de Cálculo e Cálculo 2; o gate de leitura do MÓDULO recusava (403 `quiz_locked`) as
+  questões do módulo ainda não lido. Questão que faz parte da prática do próprio aluno agora não
+  passa pelo gate do módulo de origem (`services/quiz.in_practice_path`); fora da prática o gate
+  continua. Teste de regressão em `test_quiz_gate.py`.
+- **Curso da Cisco com certificado:** recurso novo `curso_externo` (migration_025) — "Introduction
+  to Cybersecurity", gratuito na Cisco Networking Academy (link conferido, disponível em PT),
+  ligado à competência 9 (segurança na nuvem). Aparece em "Cursos com certificado" na Prática, nas
+  trilhas dessa competência e no passo Atividades do módulo de Nuvem. O aluno envia o certificado
+  em PDF (`POST /resource/<id>/certificate`); a avaliação é **simulada**
+  (`services/certificates.py`: lê o texto do PDF, inclusive streams comprimidos, e procura sinais
+  de um certificado Cisco) — o ponto de troca para LLM real é `evaluate_certificate`. O PDF não é
+  guardado (só sha256, tamanho e veredito). Aprovado → o recurso conta como concluído.
+- Suíte: **340 passed**; `tsc` limpo.
