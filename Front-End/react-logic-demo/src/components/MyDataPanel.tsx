@@ -17,27 +17,27 @@ interface MyDataPanelProps {
 const PURPOSE_LABEL: Record<Consent["purpose"], { pt: string; en: string; desc_pt: string; desc_en: string }> = {
   tracking_pedagogico: {
     pt: "Acompanhamento pedagógico",
-    en: "Pedagogical tracking",
+    en: "Learning progress tracking",
     desc_pt: "Registrar seu consumo de recursos e desempenho para orientar seus estudos. Base do serviço — informado, não opcional.",
-    desc_en: "Record your resource consumption and performance to guide your studies. Core to the service — informed, not optional."
+    desc_en: "Tracks your progress and performance to guide your studies. Essential for the service — required, not optional."
   },
   ia_sobre_dados: {
     pt: "IA sobre os seus dados",
-    en: "AI over your data",
-    desc_pt: "Permitir que o EduBot use IA sobre o seu histórico e guarde o texto das perguntas ao tutor. Opcional e revogável.",
-    desc_en: "Let EduBot use AI over your history and store the text of your tutor questions. Optional and revocable."
+    en: "AI-powered personalization",
+    desc_pt: "Permitir que o Engage-Agent use IA sobre o seu histórico e guarde o texto das perguntas ao tutor. Opcional e revogável.",
+    desc_en: "Allow Engage-Agent to use AI on your study history and save the questions you ask in chat. Optional and revocable."
   },
   imagem_voz: {
     pt: "Imagem e voz",
     en: "Image and voice",
     desc_pt: "Permitir a virtualização de personagem com a sua imagem/voz. Opcional e revogável.",
-    desc_en: "Allow character virtualization with your image/voice. Optional and revocable."
+    desc_en: "Allow creating a custom avatar with your image and voice. Optional and revocable."
   },
   ranking_turma: {
     pt: "Ranking da turma",
-    en: "Class ranking",
+    en: "Class leaderboard",
     desc_pt: "Aparecer no ranking da turma com o seu apelido. Opcional e revogável.",
-    desc_en: "Appear in the class ranking with your nickname. Optional and revocable."
+    desc_en: "Appear on the class leaderboard with your nickname. Optional and revocable."
   }
 };
 

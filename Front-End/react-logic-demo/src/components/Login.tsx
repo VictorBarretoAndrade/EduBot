@@ -34,7 +34,7 @@ export const Login = ({ onLogged }: LoginProps) => {
       setError(
         err instanceof ApiError && err.status === 401
           ? t("RA ou senha incorretos.", "Wrong ID or password.")
-          : t("Não foi possível entrar — verifique se a API está no ar.", "Couldn't sign in — check if the API is up.")
+          : t("Não conseguimos conectar. Tente de novo em instantes.", "We couldn't connect. Please try again in a moment.")
       );
     } finally {
       setLoading(false);
@@ -47,8 +47,8 @@ export const Login = ({ onLogged }: LoginProps) => {
         <div className="mb-8 flex items-center gap-3">
           <EduBotLogo size={52} />
           <div>
-            <div className="text-2xl font-bold leading-none text-ink">Adapta</div>
-            <div className="mt-1 text-sm tracking-[0.18em] text-muted">LEARN · IA</div>
+            <div className="text-2xl font-bold leading-none text-ink">Engage-Agent</div>
+            <div className="mt-1 text-sm tracking-[0.18em] text-muted">{t("APRENDIZAGEM · IA", "LEARNING · AI")}</div>
           </div>
         </div>
 

@@ -27,7 +27,8 @@ import {
   YAxis
 } from "recharts";
 import { StudentProfile } from "../services/api";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { competencyStatusLabel, resourceTypeLabel } from "../services/labels";
 
 interface PerformanceChartsProps {
   profile: StudentProfile;
@@ -36,9 +37,10 @@ interface PerformanceChartsProps {
 
 export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProps) => {
   const t = useT();
+  const { lang } = useLanguage();
   const kRead = t("percentual lido", "percent read");
   const kMin = t("minutos de leitura", "reading minutes");
-  const kConsumed = t("consumidos", "consumed");
+  const kConsumed = t("consumidos", "completed");
   const kTotal = t("total", "total");
 
   // D.2: quando há domínio estimado por BKT, a teia usa esse sinal (mais estável
@@ -53,7 +55,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
   }));
 
   const typeData = Object.entries(profile.recursos.por_tipo).map(([tipo, stats]) => ({
-    tipo,
+    tipo: resourceTypeLabel(tipo, lang),
     [kConsumed]: stats.consumidos,
     [kTotal]: stats.total
   }));
@@ -71,8 +73,8 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
     <div className="grid gap-6 xl:grid-cols-2">
       {/* Teia de competências (gráfico radar) — visão do domínio do aluno */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm xl:col-span-2">
-        <h2 className="text-xl font-bold text-ink">{t("Teia de competências", "Competency web")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("Domínio estimado por competência (quanto mais cheia a teia, melhor o domínio).", "Estimated mastery per competency (the fuller the web, the better the mastery).")}</p>
+        <h2 className="text-xl font-bold text-ink">{t("Teia de competências", "Learning outcomes radar")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("Domínio estimado por competência (quanto mais cheia a teia, melhor o domínio).", "Estimated mastery per learning outcome (the fuller the chart, the stronger your mastery).")}</p>
         <div className="mt-5 h-96">
           <ResponsiveContainer>
             <RadarChart data={competencyData} outerRadius="72%">
@@ -83,7 +85,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
                 formatter={(value: number) => [`${value}%`, t("domínio estimado", "estimated mastery")]}
                 labelFormatter={(label: string) => {
                   const item = competencyData.find((entry) => entry.nome === label);
-                  return item ? `${item.completo} (${item.status})` : label;
+                  return item ? `${item.completo} (${competencyStatusLabel(item.status, lang)})` : label;
                 }}
               />
               <Radar name={t("Domínio", "Mastery")} dataKey="score" stroke="#604fd8" fill="#604fd8" fillOpacity={0.35} />
@@ -94,7 +96,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
       </div>
 
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-ink">{t("Leitura por OVA", "Reading per OVA")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Leitura por módulo", "Reading by module")}</h2>
         <div className="mt-5 h-72">
           <ResponsiveContainer>
             <BarChart data={ovaData}>
@@ -111,7 +113,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
       </div>
 
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-ink">{t("Consumo por tipo de recurso", "Consumption by resource type")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Consumo por tipo de recurso", "Progress by resource type")}</h2>
         <div className="mt-5 h-72">
           <ResponsiveContainer>
             <BarChart data={typeData}>
@@ -129,7 +131,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
 
       {/* Competências desenvolvidas (barras) — o mesmo score do radar, em barra */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm xl:col-span-2">
-        <h2 className="text-xl font-bold text-ink">{t("Competências desenvolvidas", "Developed competencies")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Competências desenvolvidas", "Mastered learning outcomes")}</h2>
         <div className="mt-5 h-80">
           <ResponsiveContainer>
             <BarChart data={competencyData}>
@@ -140,7 +142,7 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
                 formatter={(value: number) => [`${value}%`, t("acertos", "correct")]}
                 labelFormatter={(label: string) => {
                   const item = competencyData.find((entry) => entry.nome === label);
-                  return item ? `${item.completo} (${item.status})` : label;
+                  return item ? `${item.completo} (${competencyStatusLabel(item.status, lang)})` : label;
                 }}
               />
               <Bar dataKey="score" fill="#15beb5" radius={[8, 8, 0, 0]} />

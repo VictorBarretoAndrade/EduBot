@@ -11,9 +11,10 @@ posição, não o tempo assistido. Agora medimos três coisas distintas:
 
   - tempo assistido REAL: ticker de 1s que só conta com o vídeo TOCANDO e a aba
     VISÍVEL (mesmo princípio do gate de idle da leitura). Replay conta.
-  - cobertura da linha do tempo: 100 baldes de 1%; o balde da posição corrente
-    acende a cada tick de reprodução, então seek NÃO preenche. É a cobertura que
-    define a conclusão (>= 90%).
+  - cobertura da linha do tempo: 100 baldes de 1%; a cada tick de reprodução
+    acendem TODOS os baldes entre a posição do tick anterior e a atual (num vídeo
+    de 20 s, 1 s de vídeo = 5 baldes). Um salto maior que o avanço normal é seek
+    e NÃO preenche o meio. É a cobertura que define a conclusão (>= 90%).
   - posição: última (ponto de abandono / retomada) e máxima.
 
 Transições (play/pause/seek/velocidade/fim) viram eventos xAPI-lite pela fila
@@ -106,23 +107,38 @@ export const VideoPlayer = ({
   const durationRef = useRef(0);
   const playingRef = useRef(false);
   const rateRef = useRef(1);
+  // Posição no tick anterior de reprodução (null = sem referência: início, pause, seek).
+  const lastTickPosRef = useRef<number | null>(null);
 
   const ytId = mediaType === "youtube" || /youtu/.test(url ?? "") ? youtubeIdFromUrl(url) : null;
 
   useEffect(() => {
-    // Marca o balde de 1% correspondente à posição atual. Só é chamado a partir
-    // do ticker de reprodução — por isso um seek não acende baldes intermediários.
-    const markCurrentBucket = () => {
+    // Marca os baldes de 1% percorridos desde o tick anterior. Só é chamado a
+    // partir do ticker de reprodução. BUGFIX (Plano 6): antes acendia UM balde por
+    // segundo — num vídeo de 20 s a cobertura parava em ~20-25% mesmo assistindo
+    // tudo. Agora o trecho [anterior, atual] inteiro conta, desde que o avanço seja
+    // compatível com reprodução contínua; um salto maior é seek e não preenche.
+    const bucketOf = (pos: number, duration: number) =>
+      Math.min(BITMAP_SIZE - 1, Math.max(0, Math.floor((BITMAP_SIZE * pos) / duration)));
+    const markPlayedRange = () => {
       const duration = durationRef.current;
       if (duration <= 0) return;
-      const bucket = Math.min(
-        BITMAP_SIZE - 1,
-        Math.floor((BITMAP_SIZE * positionRef.current) / duration)
-      );
-      if (bucketsRef.current[bucket] !== "1") {
-        bucketsRef.current[bucket] = "1";
-        setCoverage(bucketsRef.current.filter((b) => b === "1").length);
+      const current = positionRef.current;
+      const previous = lastTickPosRef.current;
+      lastTickPosRef.current = current;
+      const step = previous == null ? -1 : current - previous;
+      // 1 s de relógio avança ~1 s × velocidade; folga para o polling irregular.
+      const contiguous = step >= 0 && step <= 1.5 * rateRef.current + 1;
+      const from = contiguous ? bucketOf(previous as number, duration) : bucketOf(current, duration);
+      const to = bucketOf(current, duration);
+      let changed = false;
+      for (let b = from; b <= to; b += 1) {
+        if (bucketsRef.current[b] !== "1") {
+          bucketsRef.current[b] = "1";
+          changed = true;
+        }
       }
+      if (changed) setCoverage(bucketsRef.current.filter((b) => b === "1").length);
     };
 
     const coveragePerc = () => bucketsRef.current.filter((b) => b === "1").length;
@@ -153,12 +169,13 @@ export const VideoPlayer = ({
       if (!playingRef.current || document.visibilityState === "hidden") return;
       unsyncedSecondsRef.current += 1;
       setWatched((value) => value + 1);
-      markCurrentBucket();
+      markPlayedRange();
       if (unsyncedSecondsRef.current >= SYNC_EVERY_SECONDS) sync();
     }, 1000);
 
     const onPlay = () => {
       playingRef.current = true;
+      lastTickPosRef.current = positionRef.current;
       track("played", "resource", resourceId, { position_s: Math.round(positionRef.current) });
     };
     const onPause = () => {
@@ -168,11 +185,16 @@ export const VideoPlayer = ({
       sync();
     };
     const onEnded = () => {
+      // O último trecho (entre o tick e o fim) também foi assistido.
+      positionRef.current = durationRef.current || positionRef.current;
+      markPlayedRange();
       playingRef.current = false;
       track("completed", "resource", resourceId, { position_s: Math.round(positionRef.current) });
       sync(true);
     };
     const onSeek = (fromSeconds: number, toSeconds: number) => {
+      // Depois de um salto, o próximo tick recomeça a contar da posição nova.
+      lastTickPosRef.current = toSeconds;
       track("seeked", "resource", resourceId, {
         from_s: Math.round(fromSeconds),
         to_s: Math.round(toSeconds)

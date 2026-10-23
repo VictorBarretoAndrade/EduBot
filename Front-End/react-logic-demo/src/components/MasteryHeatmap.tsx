@@ -6,7 +6,8 @@ Vermelho = frágil (<0.4), âmbar = em desenvolvimento (0.4–0.8), verde = domi
 import { Grid3x3, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MasteryColumn, MasteryRow, getTutorMastery } from "../services/api";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { competencyStatusLabel } from "../services/labels";
 
 function cellColor(p: number | null): string {
   if (p == null) return "bg-slate-100 text-slate-400";
@@ -19,6 +20,7 @@ function cellColor(p: number | null): string {
 
 export const MasteryHeatmap = () => {
   const t = useT();
+  const { lang } = useLanguage();
   const [cols, setCols] = useState<MasteryColumn[] | null>(null);
   const [rows, setRows] = useState<MasteryRow[]>([]);
 
@@ -50,7 +52,7 @@ export const MasteryHeatmap = () => {
       </div>
       <p className="mt-1 text-sm text-muted">
         {t("Domínio estimado (BKT) por aluno e competência. Vermelho pede atenção; verde domina.",
-           "Estimated mastery (BKT) per student and competency. Red needs attention; green mastered.")}
+           "Estimated mastery (BKT) by student and learning outcome. Red needs attention; green is mastered.")}
       </p>
 
       {cols === null ? (
@@ -103,7 +105,7 @@ export const MasteryHeatmap = () => {
                     <td key={cell.competency_id} className="p-0">
                       <div
                         className={`flex h-8 min-w-[44px] items-center justify-center rounded-[6px] text-xs font-bold ${cellColor(cell.p_mastery)}`}
-                        title={cell.status ?? t("sem dados", "no data")}
+                        title={cell.status ? competencyStatusLabel(cell.status, lang) : t("sem dados", "no data")}
                       >
                         {cell.p_mastery != null ? Math.round(cell.p_mastery * 100) : "–"}
                       </div>

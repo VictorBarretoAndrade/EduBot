@@ -30,18 +30,27 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
+    // Fora do LanguageProvider (envolve o app inteiro): lê o idioma salvo direto.
+    let en = false;
+    try {
+      en = window.localStorage.getItem("edubot.lang") === "en";
+    } catch {
+      /* storage bloqueado: fica em PT */
+    }
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">
         <AlertTriangle className="text-rose-500" size={48} />
-        <h1 className="text-2xl font-bold text-ink">Algo deu errado na interface</h1>
+        <h1 className="text-2xl font-bold text-ink">{en ? "Something went wrong" : "Algo deu errado"}</h1>
         <p className="max-w-md text-muted">
-          Ocorreu um erro inesperado ao exibir esta tela. Recarregue a página para tentar novamente.
+          {en
+            ? "This screen ran into an unexpected error. Reload the page to try again."
+            : "Ocorreu um erro inesperado ao exibir esta tela. Recarregue a página para tentar novamente."}
         </p>
         <button
           onClick={() => window.location.reload()}
           className="h-11 rounded-[8px] bg-brand px-6 font-semibold text-white"
         >
-          Recarregar
+          {en ? "Reload" : "Recarregar"}
         </button>
       </div>
     );

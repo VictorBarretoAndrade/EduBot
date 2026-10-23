@@ -9,7 +9,7 @@ pergunta no MESMO chat.
 
 A persona (AV.2) segue no `ask`: o tutor responde no estilo do personagem escolhido.
 */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { TutorMessage, TutorSource, tutorChat } from "../services/api";
 import { useLanguage, useT } from "../i18n";
 
@@ -28,6 +28,22 @@ export function useTutorChat(ovaId: number, ovaName: string, context: string, pe
     },
   ]);
   const [loading, setLoading] = useState(false);
+
+  // Plano 6: se o aluno troca o idioma antes de conversar, a saudação acompanha.
+  useEffect(() => {
+    setMessages((cur) =>
+      cur.length === 1 && cur[0].role === "assistant"
+        ? [{
+            role: "assistant",
+            content: t(
+              `Olá! Posso conversar com você sobre o que está lendo agora, em "${ovaName}". Pergunte o que quiser sobre este conteúdo. 😊`,
+              `Hi! I can talk with you about what you're reading now, in "${ovaName}". Ask anything about this content. 😊`
+            )
+          }]
+        : cur
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang, ovaName]);
 
   // Retorna true se a resposta chegou; false em falha (o chamador mostra o toast).
   const ask = useCallback(

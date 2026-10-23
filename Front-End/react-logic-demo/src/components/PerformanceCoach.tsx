@@ -1,10 +1,10 @@
 /*
-MELHORIA (Roteiro Cena 3) — "EduBot fala com você".
+MELHORIA (Roteiro Cena 3) — "Engage-Agent fala com você".
 
 Um personagem virtualizado (CompanionAvatar — mascote EduBot ou a persona 3D
 escolhida) que conversa com o aluno sobre o progresso dele, em "Meu Desempenho".
 Por padrão a fala é GERADA localmente a
-partir dos dados do perfil (offline, sem custo). O botão "Versão do EduBot (IA)"
+partir dos dados do perfil (offline, sem custo). O botão "Versão do Engage-Agent (IA)"
 pede um texto mais natural ao Claude na AWS Bedrock — SOB DEMANDA (controle de
 custo). A fala pode ser OUVIDA com a boca do avatar animada.
 */
@@ -21,7 +21,7 @@ import { useToast } from "./ui/Toast";
 // Opções do seletor de avatar do card "Meu Desempenho": o mascote EduBot (2D,
 // sempre disponível) + os cientistas 3D (Einstein, Curie). `persona: null` = EduBot.
 const AVATAR_OPTIONS = [
-  { id: "edubot", label: "EduBot", persona: null },
+  { id: "edubot", label: "Engage-Agent", persona: null },
   ...AVATAR_PERSONAS.map((p) => ({
     id: p.id,
     label: p.variant === "einstein" ? "Einstein" : "Curie",
@@ -89,9 +89,8 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
       if (aiMsg) {
         setMessage(aiMsg);
         setFromAi(true);
-      } else {
-        toast.error(t("IA indisponível agora — usando a versão local.", "AI unavailable right now — using the local version."));
       }
+      // Sem IA real o recado local continua na tela — sem aviso técnico ao aluno.
     } catch {
       toast.error(t("Não foi possível falar com a IA agora.", "Couldn't reach the AI right now."));
     } finally {
@@ -138,7 +137,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-sm font-bold text-brand">
-            <Sparkles size={16} /> {t("EduBot fala com você", "EduBot speaks to you")}
+            <Sparkles size={16} /> {t("Recado do Engage-Agent", "A note from Engage-Agent")}
             {fromAi && (
               <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-indigo-700">
                 {t("por IA", "by AI")}
@@ -166,7 +165,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
                 disabled={!supported}
                 className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                <Play size={18} /> {t("Ouvir o EduBot", "Listen to EduBot")}
+                <Play size={18} /> {t("Ouvir o Engage-Agent", "Listen to Engage-Agent")}
               </button>
             )}
 
@@ -176,7 +175,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
               className="flex h-10 items-center gap-2 rounded-[8px] border border-brand px-4 font-semibold text-brand transition hover:bg-indigo-50 disabled:opacity-60"
             >
               <Sparkles size={18} />
-              {aiLoading ? t("Gerando...", "Generating...") : t("Versão do EduBot (IA)", "EduBot version (AI)")}
+              {aiLoading ? t("Gerando...", "Generating...") : t("Gerar com IA", "Generate with AI")}
             </button>
 
             {!supported && (

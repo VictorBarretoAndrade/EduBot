@@ -4,8 +4,12 @@ e passou a consumir o backend Flask:
   - Sem token -> tela de Login (POST /login)
   - Logado    -> perfil real via GET /student/me alimenta todas as views
 O visual original (Lovable) foi mantido; apenas a fonte dos dados mudou.
+
+Plano 6 (B.1) — navegação no modelo Canvas: Minhas matérias → Matéria → Módulo
+(conteúdo → atividades → quiz). As abas Dashboard, Conteúdos, Atividades, Quiz e
+Professor Mediador foram fundidas; os links antigos são redirecionados.
 */
-import { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { Sidebar, STAFF_VIEWS, Topbar } from "./components/Sidebar";
 import { Login } from "./components/Login";
 import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
@@ -19,13 +23,11 @@ import { safeGet, safeSet, safeRemove } from "./services/storage";
 // MELHORIA — cada tela vira um chunk separado (React.lazy), então o app só baixa
 // o código da aba que o aluno abrir, em vez de tudo (inclusive os gráficos
 // pesados do Recharts) no primeiro carregamento.
-const Dashboard = lazy(() => import("./components/Dashboard").then((m) => ({ default: m.Dashboard })));
-const Contents = lazy(() => import("./components/Contents").then((m) => ({ default: m.Contents })));
+const CoursesHome = lazy(() => import("./components/CoursesHome").then((m) => ({ default: m.CoursesHome })));
+const SubjectPage = lazy(() => import("./components/SubjectPage").then((m) => ({ default: m.SubjectPage })));
 const Evolution = lazy(() => import("./components/Evolution").then((m) => ({ default: m.Evolution })));
-const Exercises = lazy(() => import("./components/Exercises").then((m) => ({ default: m.Exercises })));
-const Quiz = lazy(() => import("./components/Quiz").then((m) => ({ default: m.Quiz })));
 const Reforco = lazy(() => import("./components/Reforco").then((m) => ({ default: m.Reforco })));
-const Report = lazy(() => import("./components/Report").then((m) => ({ default: m.Report })));
+const PrivacyPage = lazy(() => import("./components/PrivacyPage").then((m) => ({ default: m.PrivacyPage })));
 const OvaReader = lazy(() => import("./components/ova/OvaReader").then((m) => ({ default: m.OvaReader })));
 const TutorPanel = lazy(() => import("./components/TutorPanel").then((m) => ({ default: m.TutorPanel })));
 // Plano 5: detalhe do aluno visto pelo professor (#/aluno/:id) e painel do gestor.
@@ -43,39 +45,47 @@ const ViewFallback = () => {
   );
 };
 
-// Fase 5 (A17): URLs navegáveis por hash (#/dashboard, #/quiz...). HashRouting
-// dispensa reescrita no Apache (o app é servido em subpath /app/) e dá botão
-// voltar/avançar + links compartilháveis. As views válidas espelham a Sidebar.
-// E.1 (Plano 2): `#/modulo/:id` abre o leitor daquele OVA — módulos viram
-// deep-linkáveis (F5 reabre o mesmo módulo; uma intervenção pode apontar o alvo).
-// Plano 5: "gestor" (dashboard do gestor) entra como view conhecida (staff).
-const KNOWN_VIEWS = ["dashboard", "contents", "exercises", "quiz", "reforco", "evolution", "report", "tutor", "gestor"];
-const parseHash = (): { view: string; ovaId?: number; studentId?: number } => {
-  const m = window.location.hash.match(/^#\/modulo\/(\d+)/);
-  if (m) return { view: "module", ovaId: Number(m[1]) };
+// Fase 5 (A17): URLs navegáveis por hash. HashRouting dispensa reescrita no
+// Apache (o app é servido em subpath /app/) e dá botão voltar/avançar + links
+// compartilháveis. Plano 6: rotas do modelo Canvas + redirecionamento das antigas.
+const HOME = "materias";
+const STAFF_HOME = "tutor";
+const KNOWN_VIEWS = ["materias", "pratica", "progresso", "privacidade", "tutor", "gestor"];
+const LEGACY_VIEWS: Record<string, string> = {
+  dashboard: "materias",
+  contents: "materias",
+  exercises: "materias",
+  quiz: "materias",
+  report: "progresso",
+  evolution: "progresso",
+  reforco: "pratica"
+};
+export const MODULE_STEPS = ["conteudo", "atividades", "quiz"] as const;
+export type ModuleStep = (typeof MODULE_STEPS)[number];
+
+type Route = { view: string; ovaId?: number; step?: ModuleStep; subjectId?: number; studentId?: number };
+
+const parseHash = (): Route => {
+  const m = window.location.hash.match(/^#\/modulo\/(\d+)(?:\/(\w+))?/);
+  if (m) {
+    const step = MODULE_STEPS.includes(m[2] as ModuleStep) ? (m[2] as ModuleStep) : "conteudo";
+    return { view: "module", ovaId: Number(m[1]), step };
+  }
+  const s = window.location.hash.match(/^#\/materia\/(\d+)/);
+  if (s) return { view: "materia", subjectId: Number(s[1]) };
   // Plano 5 (19.2): #/aluno/:id abre o detalhe daquele aluno para o professor.
   const a = window.location.hash.match(/^#\/aluno\/(\d+)/);
   if (a) return { view: "aluno", studentId: Number(a[1]) };
   const raw = window.location.hash.replace(/^#\/?/, "");
-  return { view: KNOWN_VIEWS.includes(raw) ? raw : "dashboard" };
+  if (LEGACY_VIEWS[raw]) return { view: LEGACY_VIEWS[raw] };
+  return { view: KNOWN_VIEWS.includes(raw) ? raw : HOME };
 };
 
 const App = () => {
-  const initialHash = parseHash();
-  const [activeView, setActiveView] = useState<string>(() =>
-    initialHash.view === "module" ? "contents"
-      : initialHash.view === "aluno" ? "tutor"  // Plano 5: detalhe do aluno mora "dentro" da Turma
-      : initialHash.view);
-  // Plano 5 (19.2): id do aluno aberto no detalhe do professor (null = nenhum).
-  const [tutorStudentId, setTutorStudentId] = useState<number | null>(initialHash.studentId ?? null);
+  const [route, setRoute] = useState<Route>(parseHash);
   const [session, setSession] = useState<Session | null>(() => (getToken() ? getSession() : null));
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // OVA aberto no leitor nativo (null = nenhum). Tem precedência sobre activeView.
-  const [readerOva, setReaderOva] = useState<OvaState | null>(null);
-  // E.1: id do módulo pedido pela URL (#/modulo/:id); resolvido para readerOva
-  // quando o perfil carrega (o OVA vem de profile.ovas).
-  const [moduleId, setModuleId] = useState<number | null>(initialHash.ovaId ?? null);
   // D.5: modal de consentimento no primeiro login (flag em localStorage).
   const [needsConsent, setNeedsConsent] = useState<boolean>(
     () => safeGet("local", CONSENT_FLAG) !== "1"
@@ -88,8 +98,8 @@ const App = () => {
   const { lang } = useLanguage();
 
   // (Re)carrega o perfil completo do aluno — chamado no login e após cada
-  // ação rastreada (progresso de mídia, quiz, recomendação), mantendo
-  // dashboard/competências sempre coerentes com o backend
+  // ação rastreada (progresso de mídia, quiz, recomendação), mantendo as telas
+  // sempre coerentes com o backend.
   const refreshProfile = useCallback(async () => {
     try {
       const me = await getMe();
@@ -109,8 +119,8 @@ const App = () => {
     }
   }, []);
 
-  // Recarrega também quando o idioma muda: o conteúdo (nomes de OVA, recursos,
-  // competências) vem TRADUZIDO do banco conforme ?lang= (Fase 4 — A12).
+  // Recarrega também quando o idioma muda: o conteúdo (nomes de matéria, módulos,
+  // recursos, competências) vem TRADUZIDO do banco conforme ?lang= (Fase 4 — A12).
   useEffect(() => {
     if (session) refreshProfile();
   }, [session, refreshProfile, lang]);
@@ -136,91 +146,67 @@ const App = () => {
     };
   }, [session]);
 
+  // Toda navegação passa pelo hash: o estado deriva da URL (voltar/avançar, F5 e
+  // links colados funcionam em qualquer nível — matéria, módulo, passo).
+  const navigate = useCallback((hash: string) => {
+    if (window.location.hash !== hash) window.location.hash = hash;
+    else setRoute(parseHash());
+  }, []);
+  const changeView = useCallback((view: string) => navigate(`#/${view}`), [navigate]);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = parseHash();
+      // Link legado (#/report, #/quiz...): troca a URL pela atual sem nova entrada no histórico.
+      const raw = window.location.hash.replace(/^#\/?/, "");
+      if (LEGACY_VIEWS[raw]) window.history.replaceState(null, "", `#/${next.view}`);
+      setRoute(next);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    // Normaliza a URL de entrada (vazia ou legada) sem criar entrada no histórico.
+    const initial = parseHash();
+    const canonical =
+      initial.view === "module" || initial.view === "materia" || initial.view === "aluno"
+        ? window.location.hash
+        : `#/${initial.view}`;
+    if (window.location.hash !== canonical) window.history.replaceState(null, "", canonical);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const logout = () => {
     clearSession();
     setSession(null);
     setProfile(null);
-    setReaderOva(null);
-    setActiveView("dashboard");
-    window.location.hash = "#/dashboard";
+    window.location.hash = `#/${HOME}`;
   };
-
-  // Troca de aba pela sidebar/topbar: fecha o leitor de OVA e reflete na URL
-  // (hash). Fecha o leitor diretamente para cobrir o caso de reabrir a mesma
-  // aba onde o OVA estava aberto (o hash não mudaria e não dispararia o evento).
-  const changeView = useCallback((view: string) => {
-    setReaderOva(null);
-    setModuleId(null);
-    setTutorStudentId(null); // Plano 5: sair do detalhe de aluno ao trocar de aba
-    setActiveView(view);
-    if (window.location.hash !== `#/${view}`) window.location.hash = `#/${view}`;
-  }, []);
-
-  // Sincroniza com o botão voltar/avançar do navegador. `#/modulo/:id` mantém o
-  // moduleId (o leitor é reaberto pelo efeito); as demais views fecham o leitor.
-  useEffect(() => {
-    const onHashChange = () => {
-      const p = parseHash();
-      if (p.view === "module" && p.ovaId != null) {
-        setModuleId(p.ovaId);
-        setTutorStudentId(null);
-      } else if (p.view === "aluno" && p.studentId != null) {
-        // Plano 5: detalhe do aluno tem precedência; a aba de fundo é a Turma.
-        setTutorStudentId(p.studentId);
-        setModuleId(null);
-        setReaderOva(null);
-        setActiveView("tutor");
-      } else {
-        setModuleId(null);
-        setReaderOva(null);
-        setTutorStudentId(null);
-        setActiveView(p.view);
-      }
-    };
-    window.addEventListener("hashchange", onHashChange);
-    if (!window.location.hash) {
-      window.history.replaceState(null, "", `#/${parseHash().view}`);
-    }
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
-
-  // E.1: resolve o módulo pedido pela URL para o leitor, assim que o perfil
-  // (profile.ovas) estiver disponível — F5 dentro de um módulo reabre o mesmo.
-  useEffect(() => {
-    if (moduleId != null && profile) {
-      const ova = profile.ovas.find((o) => o.ova_id === moduleId);
-      if (ova) setReaderOva(ova);
-    }
-  }, [moduleId, profile]);
 
   // Papel do usuário (staff = tutor/admin). Deriva do perfil carregado.
   const isStaff = profile?.estudante.role === "tutor" || profile?.estudante.role === "admin";
 
-  // O staff não usa as abas de aluno: se cair numa delas (default de login ou URL
-  // digitada à mão), manda para a Turma. O aluno, por sua vez, não acessa
-  // Turma/Gestor. O detalhe de aluno e o leitor de OVA têm precedência (não mexe).
+  // Guarda por papel: o staff não usa as telas de aluno (Prática, Meu progresso) —
+  // cai em Minha turma; o aluno não acessa Turma/Visão do curso. No 1º carregamento
+  // do perfil, o professor que chegou na home de aluno vai para a home dele.
+  const landedRef = useRef(false);
   useEffect(() => {
-    if (!profile || tutorStudentId != null || readerOva) return;
+    if (!profile) return;
+    const { view } = route;
+    const firstLoad = !landedRef.current;
+    landedRef.current = true;
+    if (isStaff && firstLoad && view === HOME) {
+      changeView(STAFF_HOME);
+      return;
+    }
     if (isStaff) {
-      if (!STAFF_VIEWS.includes(activeView)) changeView("tutor");
-    } else if (activeView === "tutor" || activeView === "gestor") {
-      changeView("dashboard");
+      if (!STAFF_VIEWS.includes(view) && !["module", "materia", "aluno"].includes(view)) changeView(STAFF_HOME);
+    } else if (view === "tutor" || view === "gestor" || view === "aluno") {
+      changeView(HOME);
     }
-  }, [profile, isStaff, activeView, tutorStudentId, readerOva, changeView]);
+  }, [profile, isStaff, route, changeView]);
 
-  // Abre um OVA no leitor nativo (chamado pela Área de Conteúdo). Reflete a URL
-  // em #/modulo/:id (deep-link) — F5/voltar funcionam dentro do módulo.
-  const openOva = (ova: OvaState) => {
-    setReaderOva(ova);
-    setModuleId(ova.ova_id);
-    if (window.location.hash !== `#/modulo/${ova.ova_id}`) {
-      window.location.hash = `#/modulo/${ova.ova_id}`;
-    }
-    window.scrollTo({ top: 0 });
-  };
-
-  // Fecha o leitor voltando para "Conteúdos" (limpa o #/modulo da URL).
-  const closeReader = () => changeView("contents");
+  const openModule = (ova: OvaState, step: ModuleStep = "conteudo") =>
+    navigate(step === "conteudo" ? `#/modulo/${ova.ova_id}` : `#/modulo/${ova.ova_id}/${step}`);
+  const openSubject = (subjectId: number) => navigate(`#/materia/${subjectId}`);
 
   if (!session) {
     return <Login onLogged={(logged) => setSession(logged)} />;
@@ -232,7 +218,7 @@ const App = () => {
         <LoaderCircle className="animate-spin text-brand" size={40} />
         {error ? (
           <p className="font-semibold text-rose-600">
-            {t("Não foi possível carregar seus dados. A API está no ar?", "Couldn't load your data. Is the API up?")}
+            {t("Não conseguimos carregar seus dados. Tente de novo em instantes.", "We couldn't load your data. Please try again in a moment.")}
           </p>
         ) : (
           <p>{t("Carregando seu perfil...", "Loading your profile...")}</p>
@@ -241,51 +227,67 @@ const App = () => {
     );
   }
 
+  const moduleOva = route.view === "module" ? profile.ovas.find((o) => o.ova_id === route.ovaId) : undefined;
+
   const renderView = () => {
-    // Plano 5: detalhe do aluno (professor) tem precedência sobre a aba. Guarda
-    // por papel — o backend também valida (404 fora de escopo), mas o front não
-    // monta a tela para quem não é staff.
-    if (tutorStudentId != null && isStaff) {
-      return <TutorStudentDetail studentId={tutorStudentId} onBack={() => changeView("tutor")} />;
+    // Plano 5: detalhe do aluno (professor). O backend também valida (404 fora
+    // de escopo), mas o front não monta a tela para quem não é staff.
+    if (route.view === "aluno" && route.studentId != null && isStaff) {
+      return <TutorStudentDetail studentId={route.studentId} onBack={() => changeView(STAFF_HOME)} />;
     }
-    // O leitor de OVA tem precedência sobre a aba ativa
-    if (readerOva && session) {
+    if (route.view === "module" && moduleOva) {
+      const backToSubject = () => (moduleOva.subject_id != null ? openSubject(moduleOva.subject_id) : changeView(HOME));
       return (
         <OvaReader
           // AUDITORIA P3: remonta por OVA — zera o estado por-sessão do companheiro
-          // (saudação/marcos) e do chat ao navegar de um módulo direto para outro
-          // (deep-link #/modulo/:id) sem passar pela lista.
-          key={readerOva.ova_id}
-          ova={readerOva}
+          // (saudação/marcos) e do chat ao navegar de um módulo direto para outro.
+          key={moduleOva.ova_id}
+          ova={moduleOva}
           studentId={session.student_id}
           persona={profile.estudante.persona}
           companionEnabled={profile.features?.companion ?? true}
-          onBack={closeReader}
+          step={route.step ?? "conteudo"}
+          onStepChange={(step) => openModule(moduleOva, step)}
+          onBack={backToSubject}
+          onOpenPractice={() => changeView("pratica")}
           onTracked={refreshProfile}
         />
       );
     }
-    if (activeView === "contents") return <Contents profile={profile} onTracked={refreshProfile} onOpenOva={openOva} />;
-    if (activeView === "exercises") return <Exercises profile={profile} onTracked={refreshProfile} />;
-    if (activeView === "quiz") return <Quiz profile={profile} onTracked={refreshProfile} />;
-    if (activeView === "reforco") return <Reforco profile={profile} onTracked={refreshProfile} />;
-    if (activeView === "evolution") return <Evolution profile={profile} />;
-    if (activeView === "tutor") return <TutorPanel />;
-    if (activeView === "gestor" && isStaff) return <ManagerDashboard />;
-    if (activeView === "report") return <Report profile={profile} onTracked={refreshProfile} />;
+    if (route.view === "materia" && route.subjectId != null) {
+      return (
+        <SubjectPage
+          profile={profile}
+          subjectId={route.subjectId}
+          onBack={() => changeView(HOME)}
+          onOpenModule={(ova) => openModule(ova)}
+          onOpenPractice={() => changeView("pratica")}
+        />
+      );
+    }
+    if (route.view === "pratica") return <Reforco profile={profile} onTracked={refreshProfile} />;
+    if (route.view === "progresso") return <Evolution profile={profile} />;
+    if (route.view === "privacidade") return <PrivacyPage profile={profile} />;
+    if (route.view === "tutor" && isStaff) return <TutorPanel />;
+    if (route.view === "gestor" && isStaff) return <ManagerDashboard />;
     return (
-      <Dashboard
+      <CoursesHome
         profile={profile}
-        onOpenContent={() => changeView("contents")}
-        onOpenReforco={() => changeView("reforco")}
+        preview={isStaff}
+        onOpenSubject={openSubject}
+        onOpenModule={(ova) => openModule(ova)}
+        onOpenPractice={() => changeView("pratica")}
       />
     );
   };
 
+  // Aba destacada na barra lateral: matéria e módulo moram "dentro" de Minhas matérias.
+  const navView = ["module", "materia"].includes(route.view) ? HOME : route.view === "aluno" ? STAFF_HOME : route.view;
+
   return (
     <div className="min-h-screen bg-slate-50 text-ink">
       {/* NA.3 (Plano 4): pular para o conteúdo. preventDefault + foco programático
-          para NÃO tocar no hash (o app usa hash-routing #/dashboard). */}
+          para NÃO tocar no hash (o app usa hash-routing). */}
       <a
         href="#conteudo"
         onClick={(e) => {
@@ -302,7 +304,7 @@ const App = () => {
       {needsConsent ? (
         <ConsentModal onDone={() => setNeedsConsent(false)} />
       ) : (
-        needsOnboarding && (
+        needsOnboarding && !isStaff && (
           <OnboardingModal
             studentName={profile.estudante.nome}
             persona={profile.estudante.persona}
@@ -311,12 +313,13 @@ const App = () => {
         )
       )}
       <div className="flex">
-        <Sidebar activeView={readerOva ? "contents" : activeView} onChangeView={changeView} studentName={profile.estudante.nome} role={profile.estudante.role} onLogout={logout} />
+        <Sidebar activeView={navView} onChangeView={changeView} studentName={profile.estudante.nome} role={profile.estudante.role} onLogout={logout} />
         <main id="conteudo" tabIndex={-1} className="min-w-0 flex-1 outline-none">
           <Topbar
             profile={profile}
             onChangeView={changeView}
-            activeView={readerOva ? "contents" : activeView}
+            onNavigate={navigate}
+            activeView={navView}
             studentName={profile.estudante.nome}
             role={profile.estudante.role}
             onLogout={logout}

@@ -20,7 +20,7 @@ export const EduBotLogo = ({ size = 40, className }: EduBotLogoProps) => (
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     role="img"
-    aria-label="EduBot"
+    aria-label="Engage-Agent"
   >
     {/* antena */}
     <line x1="32" y1="6" x2="32" y2="14" stroke="#15beb5" strokeWidth="3" strokeLinecap="round" />

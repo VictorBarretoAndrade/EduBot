@@ -1,5 +1,5 @@
 /*
-B.5 — "Ações propostas pelo EduBot". A fila de aprovação do tutor: ações de tier
+B.5 — "Ações propostas pelo Engage-Agent". A fila de aprovação do tutor: ações de tier
 alto (alertas de severidade alta, mensagens propostas ao aluno) que o agente NÃO
 executa sozinho. O tutor aprova (executa a ação — ex.: intervenção assinada "do
 seu tutor") ou rejeita. Nada chega ao aluno sem aprovação.
@@ -8,10 +8,12 @@ import { CheckCircle2, Inbox, LoaderCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QueueItem, approveQueueItem, getTutorQueue, rejectQueueItem } from "../services/api";
 import { useToast } from "./ui/Toast";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { noticeTypeLabel } from "../services/labels";
 
 export const ApprovalQueue = () => {
   const t = useT();
+  const { lang } = useLanguage();
   const [fila, setFila] = useState<QueueItem[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
   const toast = useToast();
@@ -43,7 +45,7 @@ export const ApprovalQueue = () => {
     <div className="rounded-[8px] border border-indigo-200 bg-indigo-50/50 p-6">
       <div className="flex items-center gap-2">
         <Inbox size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Ações propostas pelo EduBot", "Actions proposed by EduBot")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Aguardando sua aprovação", "Awaiting your approval")}</h2>
         {fila && <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{fila.length}</span>}
       </div>
       <p className="mt-1 text-sm text-muted">
@@ -59,7 +61,7 @@ export const ApprovalQueue = () => {
             <li key={item.alert_id} className="rounded-[8px] border border-line bg-white p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-ink">{item.aluno}</span>
-                <span className="rounded-[8px] bg-slate-100 px-2 py-0.5 text-xs font-semibold text-muted">{item.type}</span>
+                <span className="rounded-[8px] bg-slate-100 px-2 py-0.5 text-xs font-semibold text-muted">{noticeTypeLabel(item.type, lang)}</span>
               </div>
               {item.proposed_action?.mensagem_aluno ? (
                 <p className="mt-2 rounded-[8px] bg-slate-50 p-3 text-sm text-slate-700">

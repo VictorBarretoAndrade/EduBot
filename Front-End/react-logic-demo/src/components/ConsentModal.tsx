@@ -68,15 +68,15 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
         </div>
         <p className="mt-3 text-muted">
           {t(
-            "Para personalizar seus estudos, a plataforma trata alguns dados. Você decide o que é opcional — e pode mudar quando quiser em \"Meus dados\".",
-            "To personalize your studies, the platform processes some data. You decide what is optional — and can change it anytime in \"My data\"."
+            "Para personalizar seus estudos, a plataforma trata alguns dados. Você decide o que é opcional — e pode mudar quando quiser em \"Privacidade e dados\", no menu da sua conta.",
+            "To personalize your studies, the platform processes some data. You decide what is optional — and can change it anytime under \"Privacy & data\" in your account menu."
           )}
         </p>
 
         <div className="mt-6 space-y-4">
           <div className="rounded-[8px] bg-slate-50 p-4">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-ink">{t("Acompanhamento pedagógico", "Pedagogical tracking")}</span>
+              <span className="font-semibold text-ink">{t("Acompanhamento pedagógico", "Learning progress tracking")}</span>
               <span className="rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-bold uppercase tracking-wide text-brand">
                 {t("Necessário", "Required")}
               </span>
@@ -84,7 +84,7 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
             <p className="mt-1 text-sm text-muted">
               {t(
                 "Registramos seu consumo de recursos e desempenho para orientar sua trilha. É a base do serviço educacional.",
-                "We record your resource consumption and performance to guide your track. This is core to the educational service."
+                "We track your progress and performance to guide your learning path. This is essential for the educational service."
               )}
             </p>
           </div>
@@ -92,11 +92,11 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
           <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-line p-4">
             <input type="checkbox" className="mt-1" checked={ia} onChange={(e) => setIa(e.target.checked)} />
             <span>
-              <span className="font-semibold text-ink">{t("IA sobre os seus dados", "AI over your data")}</span>
+              <span className="font-semibold text-ink">{t("IA sobre os seus dados", "AI-powered personalization")}</span>
               <span className="mt-1 block text-sm text-muted">
                 {t(
-                  "Permitir que o EduBot use IA sobre o seu histórico e guarde o texto das suas perguntas ao tutor. Opcional.",
-                  "Let EduBot use AI over your history and store the text of your tutor questions. Optional."
+                  "Permitir que o Engage-Agent use IA sobre o seu histórico e guarde o texto das suas perguntas ao tutor. Opcional.",
+                  "Allow Engage-Agent to use AI on your study history and save the questions you ask in chat. Optional."
                 )}
               </span>
             </span>
@@ -109,7 +109,7 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
               <span className="mt-1 block text-sm text-muted">
                 {t(
                   "Permitir a virtualização de personagem com a sua imagem/voz no futuro. Opcional.",
-                  "Allow character virtualization with your image/voice in the future. Optional."
+                  "Allow creating a custom avatar with your image and voice in the future. Optional."
                 )}
               </span>
             </span>

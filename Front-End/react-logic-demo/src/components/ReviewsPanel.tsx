@@ -6,25 +6,22 @@ principal de cobrança é a intervenção do EduBot; este painel dá a visão ge
 import { CalendarClock, LoaderCircle, PlayCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewItem, getReviews } from "../services/api";
-import { useT } from "../i18n";
-import { safeGet, safeSet, safeRemove } from "../services/storage";
-
-// Chave lida pelo Quiz ao montar: qual OVA pré-selecionar ao vir de "Revisar".
-export const REVIEW_OVA_KEY = "edubot.reviewOva";
+import { useLanguage, useT } from "../i18n";
+import { formatDate } from "../services/format";
 
 export const ReviewsPanel = () => {
   const t = useT();
+  const { lang } = useLanguage();
   const [reviews, setReviews] = useState<ReviewItem[] | null>(null);
 
   useEffect(() => {
     getReviews().then((r) => setReviews(r.reviews)).catch(() => setReviews([]));
-  }, []);
+  }, [lang]);
 
-  // "Revisar": guarda o OVA da competência e abre o Quiz (o Quiz lê a chave e já
-  // abre naquele OVA). Revisar = responder de novo as questões da competência.
+  // "Revisar": abre o passo Quiz do módulo da competência (Plano 6 — o quiz vive
+  // dentro do módulo). Revisar = responder de novo as questões da competência.
   const revisar = (ovaId: number) => {
-    safeSet("session", REVIEW_OVA_KEY, String(ovaId));
-    window.location.hash = "#/quiz";
+    window.location.hash = `#/modulo/${ovaId}/quiz`;
   };
 
   return (
@@ -57,7 +54,7 @@ export const ReviewsPanel = () => {
               <div className="min-w-0">
                 <span className="font-semibold text-ink">{r.competencia}</span>
                 <span className={`block text-sm font-semibold ${r.vencida ? "text-amber-700" : "text-muted"}`}>
-                  {r.vencida ? t("Revisar agora", "Review now") : t(`vence ${r.due_date}`, `due ${r.due_date}`)}
+                  {r.vencida ? t("Revisar agora", "Review now") : t(`vence em ${formatDate(r.due_date, lang)}`, `due ${formatDate(r.due_date, lang)}`)}
                 </span>
               </div>
               {r.ova_id != null && (

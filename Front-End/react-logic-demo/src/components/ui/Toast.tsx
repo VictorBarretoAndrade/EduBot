@@ -126,7 +126,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
               <button
                 onClick={() => dismiss(toast.id)}
                 className="shrink-0 opacity-60 transition hover:opacity-100"
-                aria-label={t("Fechar aviso", "Close notice")}
+                aria-label={t("Fechar aviso", "Dismiss notification")}
               >
                 <X size={16} aria-hidden="true" />
               </button>

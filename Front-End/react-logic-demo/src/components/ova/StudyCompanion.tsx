@@ -85,8 +85,8 @@ export const StudyCompanion = ({
         ref={reopenerRef}
         onClick={onShow}
         className="fixed bottom-4 left-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-soft transition hover:bg-indigo-600"
-        aria-label={t("Mostrar o EduBot", "Show EduBot")}
-        title={t("Mostrar o EduBot", "Show EduBot")}
+        aria-label={t("Mostrar o Engage-Agent", "Show Engage-Agent")}
+        title={t("Mostrar o Engage-Agent", "Show Engage-Agent")}
       >
         <Bot size={22} aria-hidden="true" />
       </button>
@@ -108,7 +108,7 @@ export const StudyCompanion = ({
     {
       key: "hide",
       icon: EyeOff,
-      label: t("Ocultar o EduBot", "Hide EduBot"),
+      label: t("Ocultar o Engage-Agent", "Hide Engage-Agent"),
       run: () => { hidFromMenuRef.current = true; onHide(); },
     },
   ];

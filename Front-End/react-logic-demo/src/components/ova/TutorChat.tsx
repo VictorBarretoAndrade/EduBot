@@ -30,7 +30,7 @@ interface TutorChatProps {
 
 function tutorName(personaId: string, lang: "pt" | "en", t: (pt: string, en: string) => string): string {
   const p = AVATAR_PERSONAS.find((x) => x.id === personaId);
-  return p ? personaName(p, lang) : t("Professor Mediador", "Mediating Professor");
+  return p ? personaName(p, lang) : "Engage-Agent";
 }
 
 export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClose }: TutorChatProps) => {
@@ -48,7 +48,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
   const SUGGESTIONS = [
     t("Resuma os principais pontos deste conteúdo", "Summarize the main points of this content"),
     t("Explique o conceito mais importante com outras palavras", "Explain the most important concept in other words"),
-    t("Me dê um exemplo prático do que estudei", "Give me a practical example of what I studied"),
+    t("Me dê um exemplo prático do que estudei", "Give me a real-world example of what I studied"),
   ];
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
   // aria-live na lista rolável faria o leitor de tela repetir mensagens antigas
   // a cada re-render do React.
   const liveMessage = useMemo(() => {
-    if (loading) return t("O tutor está pensando...", "The tutor is thinking...");
+    if (loading) return t("O tutor está pensando...", "Engage-Agent is thinking...");
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role !== "user") return messages[i].content;
     }

@@ -44,7 +44,7 @@ export const EngagementPanel = () => {
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div className="rounded-[8px] bg-slate-50 p-4">
-          <div className="text-sm text-muted">{t("Participam do ranking", "In the ranking")}</div>
+          <div className="text-sm text-muted">{t("Participam do ranking", "On the leaderboard")}</div>
           <div className="mt-1 text-2xl font-bold text-ink">
             {data.participacao_ranking.opt_in}/{data.participacao_ranking.total}
           </div>
@@ -92,7 +92,7 @@ export const EngagementPanel = () => {
             </div>
             <div className="rounded-[8px] border border-line p-3 text-center">
               <div className="text-lg font-bold text-brand">{data.companheiro.secoes_ouvidas_semana}</div>
-              <div className="text-[11px] text-muted">{t("seções ouvidas/sem.", "sections heard/wk")}</div>
+              <div className="text-[11px] text-muted">{t("seções ouvidas/sem.", "sections listened/wk")}</div>
             </div>
             <div className="rounded-[8px] border border-line p-3 text-center">
               <div className="text-lg font-bold text-brand">{data.companheiro.explicacoes_semana}</div>
@@ -100,7 +100,7 @@ export const EngagementPanel = () => {
             </div>
             <div className="rounded-[8px] border border-line p-3 text-center">
               <div className="text-lg font-bold text-brand">{data.companheiro.falas_ouvidas_semana}</div>
-              <div className="text-[11px] text-muted">{t("falas ouvidas/sem.", "lines heard/wk")}</div>
+              <div className="text-[11px] text-muted">{t("falas ouvidas/sem.", "voice clips played/wk")}</div>
             </div>
           </div>
         </div>

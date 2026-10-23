@@ -1,8 +1,10 @@
-import { Award, BarChart3, Bell, BookOpen, CalendarDays, Grid2X2, Languages, LayoutDashboard, LogOut, Menu, MessageCircle, Search, Stars, TrendingUp, Users, X } from "lucide-react";
+import { BarChart3, Bell, BookOpen, ChevronDown, Grid2X2, Languages, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Stars, TrendingUp, Users, X } from "lucide-react";
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StudentProfile } from "../services/api";
 import { useLanguage, useT } from "../i18n";
+import { noticeTypeLabel } from "../services/labels";
+import { stripCompetencyMarker } from "../services/reinforcementTarget";
 import { useInterventions } from "../hooks/useInterventions";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { EduBotLogo } from "./brand/EduBotLogo";
@@ -22,31 +24,40 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-// Cada item guarda o rótulo nos dois idiomas (traduzido no render)
+// Cada item guarda o rótulo nos dois idiomas (traduzido no render).
+// Plano 6 (B.1): o aluno tem 3 abas. Atividades e Quiz moram dentro do módulo,
+// o Dashboard virou "Minhas matérias" e o Professor Mediador foi desmontado
+// (sugestões na home, histórico em Meu progresso, privacidade no menu da conta).
+const coursesItem: NavItem = { id: "materias", pt: "Minhas matérias", en: "My courses", icon: BookOpen };
 const navItems: NavItem[] = [
-  { id: "dashboard", pt: "Dashboard", en: "Dashboard", icon: Grid2X2 },
-  { id: "contents", pt: "Conteúdos", en: "Contents", icon: BookOpen },
-  { id: "exercises", pt: "Atividades", en: "Activities", icon: CalendarDays },
-  { id: "quiz", pt: "Quiz", en: "Quiz", icon: Award },
-  { id: "reforco", pt: "Reforço", en: "Reinforcement", icon: Stars },
-  { id: "evolution", pt: "Meu Desempenho", en: "My Performance", icon: BarChart3 },
-  { id: "report", pt: "Professor Mediador", en: "Mediating Professor", icon: MessageCircle }
+  coursesItem,
+  { id: "pratica", pt: "Prática personalizada", en: "Personalized practice", icon: Stars },
+  { id: "progresso", pt: "Meu progresso", en: "My progress", icon: BarChart3 }
 ];
 
 // Itens exclusivos de tutor/admin (gestão pedagógica)
-const tutorItem: NavItem = { id: "tutor", pt: "Turma", en: "Class", icon: Users };
-// Plano 5 (20.2): visão do gestor — "tudo que o sistema rastreia" da turma.
-const gestorItem: NavItem = { id: "gestor", pt: "Visão do Gestor", en: "Manager View", icon: LayoutDashboard };
+const tutorItem: NavItem = { id: "tutor", pt: "Minha turma", en: "My class", icon: Users };
+// Plano 5 (20.2): visão do curso — "tudo que o sistema rastreia" da turma.
+const gestorItem: NavItem = { id: "gestor", pt: "Visão do curso", en: "Program overview", icon: LayoutDashboard };
+const staffCoursesItem: NavItem = { ...coursesItem, pt: "Matérias", en: "Courses", icon: Grid2X2 };
 
-// O menu do STAFF (tutor/gestor) foca em gestão: NÃO herda as abas de aluno
-// (Dashboard, Atividades, Quiz, Reforço, Meu Desempenho, Professor Mediador) —
-// que são ferramentas de aprendizado e apareceriam vazias. Mantém só "Conteúdos"
-// (para pré-visualizar o material do aluno) + Turma + Visão do Gestor.
-export const STAFF_VIEWS = ["contents", "tutor", "gestor"];
-const contentsItem = navItems.find((i) => i.id === "contents")!;
+// O menu do STAFF foca em gestão: Minha turma (home) + Visão do curso + Matérias
+// (pré-visualizar o material do aluno). Matéria e módulo são subpáginas.
+export const STAFF_VIEWS = ["tutor", "gestor", "materias", "privacidade"];
 
 const itemsFor = (role: string): NavItem[] =>
-  role === "tutor" || role === "admin" ? [contentsItem, tutorItem, gestorItem] : navItems;
+  role === "tutor" || role === "admin" ? [tutorItem, gestorItem, staffCoursesItem] : navItems;
+
+// Plano 6 (A12): marca única do produto.
+export const Wordmark = ({ small = false }: { small?: boolean }) => {
+  const t = useT();
+  return (
+    <div>
+      <div className={`${small ? "text-xl" : "text-2xl"} font-bold leading-none text-ink`}>Engage-Agent</div>
+      <div className={`mt-1 ${small ? "text-xs" : "text-sm"} tracking-[0.18em] text-muted`}>{t("APRENDIZAGEM · IA", "LEARNING · AI")}</div>
+    </div>
+  );
+};
 
 // NA.1 (Plano 4): lista de navegação compartilhada entre a sidebar (desktop) e o
 // drawer (mobile) — uma única fonte dos itens e do estilo. `aria-current="page"`
@@ -91,10 +102,7 @@ export const Sidebar = ({ activeView, onChangeView, studentName, role, onLogout 
     <aside className="hidden min-h-screen w-[340px] shrink-0 border-r border-line bg-white/70 lg:block">
       <div className="flex h-20 items-center gap-3 border-b border-line px-5">
         <EduBotLogo size={46} />
-        <div>
-          <div className="text-2xl font-bold leading-none text-ink">Adapta</div>
-          <div className="mt-1 text-sm tracking-[0.18em] text-muted">LEARN · IA</div>
-        </div>
+        <Wordmark />
       </div>
 
       <nav aria-label={t("Navegação principal", "Main navigation")} className="space-y-2 px-3 py-8">
@@ -167,10 +175,7 @@ export const MobileNav = ({ activeView, onChangeView, studentName, role, onLogou
             <div className="flex h-20 items-center justify-between gap-3 border-b border-line px-5">
               <div className="flex items-center gap-3">
                 <EduBotLogo size={40} />
-                <div>
-                  <div className="text-xl font-bold leading-none text-ink">Adapta</div>
-                  <div className="mt-1 text-xs tracking-[0.18em] text-muted">LEARN · IA</div>
-                </div>
+                <Wordmark small />
               </div>
               <button
                 onClick={() => setOpen(false)}
@@ -207,12 +212,14 @@ export const MobileNav = ({ activeView, onChangeView, studentName, role, onLogou
 interface SearchResult {
   label: string;
   sub: string;
-  view: string;
+  hash: string;
 }
 
 interface TopbarProps {
   profile: StudentProfile;
   onChangeView: (view: string) => void;
+  // Plano 6: navegação por hash completo (a busca abre a matéria/módulo direto).
+  onNavigate: (hash: string) => void;
   // NA.1: a Topbar hospeda o hambúrguer/drawer (que precisa dos dados do aluno).
   activeView: string;
   studentName: string;
@@ -225,12 +232,14 @@ interface TopbarProps {
 //  - sino: abre os avisos do EduBot (histórico de intervenções) com badge.
 // NA.2 (Plano 4): busca no padrão combobox (↑/↓/Enter/Esc + contagem anunciada) e
 // sino operável por teclado (Esc fecha e devolve o foco; contagem no rótulo).
-export const Topbar = ({ profile, onChangeView, activeView, studentName, role, onLogout }: TopbarProps) => {
+export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentName, role, onLogout }: TopbarProps) => {
   const t = useT();
   const { lang, toggle } = useLanguage();
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(-1);
   const [showNotif, setShowNotif] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
@@ -241,6 +250,7 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
       const target = event.target as Node;
       if (searchRef.current && !searchRef.current.contains(target)) setQuery("");
       if (notifRef.current && !notifRef.current.contains(target)) setShowNotif(false);
+      if (accountRef.current && !accountRef.current.contains(target)) setShowAccount(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -255,16 +265,25 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
     // de aluno; sugerir "Meu Desempenho" para um gestor só levaria a um redirect).
     itemsFor(role).forEach((item) => {
       const label = t(item.pt, item.en);
-      if (label.toLowerCase().includes(q)) out.push({ label, sub: t("Ir para a seção", "Go to section"), view: item.id });
+      if (label.toLowerCase().includes(q)) out.push({ label, sub: t("Ir para a seção", "Go to section"), hash: `#/${item.id}` });
+    });
+    // Plano 6 (A13): matéria e módulo abrem direto o item, não a aba genérica.
+    const subjects = new Map<number, string>();
+    profile.ovas.forEach((ova) => {
+      if (ova.subject_id != null && ova.subject_nome) subjects.set(ova.subject_id, ova.subject_nome);
+    });
+    subjects.forEach((nome, id) => {
+      if (nome.toLowerCase().includes(q)) out.push({ label: nome, sub: t("Matéria", "Course"), hash: `#/materia/${id}` });
     });
     profile.ovas.forEach((ova) => {
-      if (ova.ova_name.toLowerCase().includes(q)) out.push({ label: ova.ova_name, sub: t("OVA · Conteúdos", "OVA · Contents"), view: "contents" });
+      if (ova.ova_name.toLowerCase().includes(q))
+        out.push({ label: ova.ova_name, sub: t(`Módulo · ${ova.subject_nome ?? ""}`, `Module · ${ova.subject_nome ?? ""}`), hash: `#/modulo/${ova.ova_id}` });
     });
-    // Competência → "Meu Desempenho" só faz sentido para o aluno.
+    // Resultado de aprendizagem → "Meu progresso" só faz sentido para o aluno.
     if (!staff) {
       profile.competencias.forEach((comp) => {
         if (comp.nome.toLowerCase().includes(q))
-          out.push({ label: comp.nome, sub: t("Competência · Meu Desempenho", "Competency · My Performance"), view: "evolution" });
+          out.push({ label: comp.nome, sub: t("Resultado de aprendizagem · Meu progresso", "Learning outcome · My progress"), hash: "#/progresso" });
       });
     }
     return out.slice(0, 8);
@@ -273,8 +292,8 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
   // A opção destacada zera quando os resultados mudam.
   useEffect(() => { setActiveIdx(-1); }, [q]);
 
-  const pick = (view: string) => {
-    onChangeView(view);
+  const pick = (hash: string) => {
+    onNavigate(hash);
     setQuery("");
     setActiveIdx(-1);
   };
@@ -287,7 +306,7 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
     // caía em n-2 em vez do último item (n-1) — confirmado ao vivo. `i <= 0` cobre
     // tanto "nada selecionado" quanto "no primeiro item", indo direto ao último.
     else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx((i) => (i <= 0 ? results.length - 1 : i - 1)); }
-    else if (e.key === "Enter" && activeIdx >= 0) { e.preventDefault(); pick(results[activeIdx].view); }
+    else if (e.key === "Enter" && activeIdx >= 0) { e.preventDefault(); pick(results[activeIdx].hash); }
   };
 
   // E.2 — sino lê a MESMA fonte do card do dashboard (não lidas) via hook único.
@@ -320,17 +339,17 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
               aria-controls="search-results"
               aria-activedescendant={activeIdx >= 0 ? `search-opt-${activeIdx}` : undefined}
               aria-autocomplete="list"
-              aria-label={t("Buscar OVAs, competências, seções", "Search OVAs, competencies, sections")}
+              aria-label={t("Buscar matérias, módulos e resultados", "Search courses, modules and outcomes")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onSearchKeyDown}
-              placeholder={t("Buscar OVAs, competências, seções...", "Search OVAs, competencies, sections...")}
+              placeholder={t("Buscar matérias, módulos...", "Search courses, modules...")}
               className="w-full bg-transparent text-lg text-ink outline-none placeholder:text-muted"
             />
           </div>
           {/* Contagem anunciada por leitor de tela (NA.2). */}
           <span className="sr-only" role="status">
-            {q ? t(`${results.length} resultados`, `${results.length} results`) : ""}
+            {q ? t(`${results.length} ${results.length === 1 ? "resultado" : "resultados"}`, `${results.length} ${results.length === 1 ? "result" : "results"}`) : ""}
           </span>
           {q && (
             <div
@@ -344,12 +363,12 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
               ) : (
                 results.map((result, index) => (
                   <button
-                    key={`${result.view}-${index}`}
+                    key={`${result.hash}-${index}`}
                     id={`search-opt-${index}`}
                     role="option"
                     aria-selected={index === activeIdx}
                     tabIndex={-1}
-                    onClick={() => pick(result.view)}
+                    onClick={() => pick(result.hash)}
                     onMouseEnter={() => setActiveIdx(index)}
                     className={`flex w-full flex-col items-start gap-0.5 border-b border-line px-5 py-3 text-left transition last:border-0 ${
                       index === activeIdx ? "bg-slate-50" : "hover:bg-slate-50"
@@ -380,10 +399,12 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
         {/* INTEGRAÇÃO: o chip fake de "streak" virou o consumo real de recursos.
             NA.1: oculto em telas muito estreitas para o header não transbordar
             sobre o hambúrguer (o mesmo dado está no dashboard). */}
-        <div className="hidden h-10 items-center gap-2 rounded-[8px] bg-coral px-4 font-bold text-white sm:flex">
-          <TrendingUp size={19} aria-hidden="true" />
-          {profile.recursos.percentual_consumido}% {t("consumido", "consumed")}
-        </div>
+        {!staff && (
+          <div className="hidden h-10 items-center gap-2 rounded-[8px] bg-coral px-4 font-bold text-white sm:flex">
+            <TrendingUp size={19} aria-hidden="true" />
+            {profile.recursos.percentual_consumido}% {t("concluído", "complete")}
+          </div>
+        )}
         <div
           ref={notifRef}
           className="relative"
@@ -397,8 +418,8 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
             className="relative flex h-12 w-12 items-center justify-center rounded-full border border-line bg-white text-ink transition hover:bg-slate-50"
             aria-label={
               notifCount > 0
-                ? t(`Avisos do EduBot — ${notifCount} não lidos`, `EduBot notices — ${notifCount} unread`)
-                : t("Avisos do EduBot", "EduBot notices")
+                ? t(`Avisos — ${notifCount} ${notifCount === 1 ? "não lido" : "não lidos"}`, `Notifications — ${notifCount} unread`)
+                : t("Avisos", "Notifications")
             }
           >
             <Bell size={22} aria-hidden="true" />
@@ -406,28 +427,68 @@ export const Topbar = ({ profile, onChangeView, activeView, studentName, role, o
           </button>
           {showNotif && (
             <div id="notif-popover" className="absolute right-0 top-14 z-30 w-80 overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-              <div className="border-b border-line px-4 py-3 font-bold text-ink">{t("Avisos do EduBot", "EduBot notices")}</div>
+              <div className="border-b border-line px-4 py-3 font-bold text-ink">{t("Avisos do Engage-Agent", "Engage-Agent notifications")}</div>
               <div className="max-h-96 overflow-auto">
                 {notifications.length === 0 ? (
-                  <p className="px-4 py-4 text-sm text-muted">{t("Nenhum aviso por enquanto.", "No notices yet.")}</p>
+                  <p className="px-4 py-4 text-sm text-muted">{t("Nenhum aviso por enquanto.", "No notifications yet.")}</p>
                 ) : (
                   notifications.map((item) => (
                     <div key={item.intervention_id} className="border-b border-line px-4 py-3 last:border-0">
                       <div className="flex items-center justify-between text-xs text-muted">
-                        <span className="font-bold uppercase tracking-wide">{item.tipo}</span>
+                        <span className="font-bold uppercase tracking-wide">{noticeTypeLabel(item.tipo, lang)}</span>
                         <button
                           onClick={() => dismiss(item.intervention_id)}
                           className="text-muted transition hover:text-ink"
-                          aria-label={t(`Dispensar aviso: ${item.tipo}`, `Dismiss notice: ${item.tipo}`)}
+                          aria-label={t(`Dispensar aviso: ${noticeTypeLabel(item.tipo, lang)}`, `Dismiss notification: ${noticeTypeLabel(item.tipo, lang)}`)}
                         >
                           <X size={14} aria-hidden="true" />
                         </button>
                       </div>
-                      {item.descricao && <p className="mt-1 text-sm text-slate-700">{item.descricao}</p>}
+                      {item.descricao && <p className="mt-1 text-sm text-slate-700">{stripCompetencyMarker(item.descricao)}</p>}
                     </div>
                   ))
                 )}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Plano 6 (C3.7): menu da conta — privacidade (LGPD/GDPR) e sair. */}
+        <div
+          ref={accountRef}
+          className="relative"
+          onKeyDown={(e) => { if (e.key === "Escape" && showAccount) { e.preventDefault(); setShowAccount(false); } }}
+        >
+          <button
+            onClick={() => setShowAccount((value) => !value)}
+            aria-expanded={showAccount}
+            aria-controls="account-menu"
+            aria-label={t(`Conta de ${studentName}`, `${studentName}'s account`)}
+            className="flex h-12 items-center gap-2 rounded-full border border-line bg-white pl-1.5 pr-3 text-ink transition hover:bg-slate-50"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 font-bold text-brand" aria-hidden="true">
+              {studentName.charAt(0).toUpperCase()}
+            </span>
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
+          {showAccount && (
+            <div id="account-menu" className="absolute right-0 top-14 z-30 w-64 overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
+              <div className="border-b border-line px-4 py-3">
+                <div className="text-xs text-muted">{t("Conectado como", "Signed in as")}</div>
+                <div className="font-bold text-ink">{studentName}</div>
+              </div>
+              <button
+                onClick={() => { setShowAccount(false); onChangeView("privacidade"); }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-ink transition hover:bg-slate-50"
+              >
+                <ShieldCheck size={18} className="text-brand" aria-hidden="true" /> {t("Privacidade e dados", "Privacy & data")}
+              </button>
+              <button
+                onClick={onLogout}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-muted transition hover:bg-rose-50 hover:text-rose-700"
+              >
+                <LogOut size={18} aria-hidden="true" /> {t("Sair", "Sign out")}
+              </button>
             </div>
           )}
         </div>

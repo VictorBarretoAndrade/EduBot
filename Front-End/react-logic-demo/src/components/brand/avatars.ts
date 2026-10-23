@@ -3,7 +3,7 @@ MELHORIA (Roteiro Cena 3) — Personas 3D do EduBot (100% offline, Three.js).
 
 Cada persona é um personagem 3D construído em código (sem baixar nenhum arquivo,
 sem depender de site externo). O aluno escolhe entre elas no card "Meu
-Desempenho". A boca anima enquanto o EduBot fala.
+Desempenho". A boca anima enquanto o Engage-Agent fala.
 
 Para criar uma nova persona: adicione um item aqui (variante + paleta) e, se for
 um novo "tipo" de cabeça, trate a `variant` em Avatar3D.tsx.

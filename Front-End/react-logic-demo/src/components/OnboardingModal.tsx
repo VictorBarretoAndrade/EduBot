@@ -35,26 +35,26 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
   const steps = [
     {
       icon: BookOpen,
-      title: t("Seus módulos estão aqui", "Your modules are here"),
+      title: t("Suas matérias estão aqui", "Your courses are here"),
       text: t(
-        `Oi${first ? ", " + first : ""}! Eu sou o EduBot. Seus módulos de estudo ficam em "Área de Conteúdo" — é por lá que você começa.`,
-        `Hi${first ? ", " + first : ""}! I'm EduBot. Your study modules live under "Content" — that's where you start.`
+        `Oi${first ? ", " + first : ""}! Eu sou o Engage-Agent. Em "Minhas matérias" você escolhe a matéria e abre os módulos dela.`,
+        `Hi${first ? ", " + first : ""}! I'm Engage-Agent. Under "My courses" you pick a course and open its modules.`
       ),
     },
     {
       icon: Lock,
-      title: t("O quiz libera após a leitura", "The quiz unlocks after reading"),
+      title: t("Conteúdo, atividades e quiz", "Content, activities and quiz"),
       text: t(
-        "Cada quiz abre depois que você consome o conteúdo do módulo. Assim você chega nele já preparado.",
-        "Each quiz unlocks after you consume the module's content, so you get there already prepared."
+        "Cada módulo tem três passos. O quiz libera depois que você lê o conteúdo — assim você chega nele preparado.",
+        "Every module has three steps. The quiz unlocks once you've read the content, so you show up prepared."
       ),
     },
     {
       icon: Bell,
-      title: t("Eu aviso você por aqui", "I'll nudge you right here"),
+      title: t("Seus próximos passos", "Your next steps"),
       text: t(
-        "Quando eu tiver uma recomendação — retomar um assunto, revisar, reforçar — ela aparece no seu painel. Fique de olho!",
-        "When I have a recommendation — resume a topic, review, reinforce — it shows up on your dashboard. Keep an eye out!"
+        "Quando eu tiver uma sugestão — retomar um assunto, revisar, praticar — ela aparece em \"Para fazer\", na sua página inicial.",
+        "Whenever I have a suggestion — pick a topic back up, review, practice — it shows up under \"To do\" on your home page."
       ),
     },
   ];

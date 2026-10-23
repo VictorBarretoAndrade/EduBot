@@ -7,7 +7,8 @@ redator) para variar a abordagem.
 import { LineChart, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AgentKpi as AgentKpiType, AgentKpiByFormat, getAgentKpi } from "../services/api";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { noticeTypeLabel, resourceTypeLabel } from "../services/labels";
 
 function rateColor(rate: number | null): string {
   if (rate == null) return "text-muted";
@@ -16,10 +17,11 @@ function rateColor(rate: number | null): string {
   return "text-rose-600";
 }
 
-const FORMAT_LABEL: Record<string, string> = { video: "🎬 vídeo", texto: "📖 texto", podcast: "🎧 podcast" };
+const FORMAT_ICON: Record<string, string> = { video: "🎬", texto: "📖", podcast: "🎧" };
 
 export const AgentKpi = () => {
   const t = useT();
+  const { lang } = useLanguage();
   const [kpis, setKpis] = useState<AgentKpiType[] | null>(null);
   const [byFormat, setByFormat] = useState<AgentKpiByFormat[]>([]);
 
@@ -38,7 +40,7 @@ export const AgentKpi = () => {
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
       <div className="flex items-center gap-2">
         <LineChart size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Desempenho do EduBot", "EduBot performance")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Desempenho do Engage-Agent", "Engage-Agent performance")}</h2>
       </div>
       <p className="mt-1 text-sm text-muted">
         {t("Taxa de aceitação das intervenções por tipo (aceita ou melhorou = sucesso).",
@@ -52,7 +54,7 @@ export const AgentKpi = () => {
           {kpis.map((k) => (
             <div key={k.tipo} className="rounded-[8px] border border-line p-4">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-ink">{k.tipo}</span>
+                <span className="font-semibold text-ink">{noticeTypeLabel(k.tipo, lang)}</span>
                 <span className={`text-lg font-bold ${rateColor(k.taxa_aceitacao)}`}>
                   {k.taxa_aceitacao != null ? `${Math.round(k.taxa_aceitacao * 100)}%` : "—"}
                 </span>
@@ -75,7 +77,7 @@ export const AgentKpi = () => {
               <div className="flex flex-wrap gap-3">
                 {byFormat.map((f) => (
                   <div key={f.formato} className="rounded-[8px] border border-line px-3 py-2">
-                    <span className="text-sm font-semibold text-ink">{FORMAT_LABEL[f.formato] ?? f.formato}</span>
+                    <span className="text-sm font-semibold text-ink">{`${FORMAT_ICON[f.formato] ?? ""} ${resourceTypeLabel(f.formato, lang)}`.trim()}</span>
                     <span className={`ml-2 font-bold ${rateColor(f.taxa_aceitacao)}`}>
                       {f.taxa_aceitacao != null ? `${Math.round(f.taxa_aceitacao * 100)}%` : "—"}
                     </span>

@@ -73,7 +73,7 @@ async function request<T>(
 
   if (response.status === 401) {
     clearSession();
-    throw new ApiError(401, "Sessão expirada — faça login novamente.");
+    throw new ApiError(401, currentLang() === "en" ? "Your session expired — please sign in again." : "Sessão expirada — faça login novamente.");
   }
   if (!response.ok) {
     const text = await response.text();
@@ -122,7 +122,7 @@ const withLang = (path: string) =>
 export interface ResourceState {
   resource_id: number;
   titulo: string;
-  tipo: "texto" | "video" | "podcast" | "quiz" | "atividade";
+  tipo: "texto" | "video" | "podcast" | "quiz" | "atividade" | "curso_externo";
   url: string | null;
   media_type: string | null;
   perc_consumido: number;
@@ -135,6 +135,11 @@ export interface OvaState {
   ova_id: number;
   ova_name: string;
   link: string;
+  // Plano 6: matéria do módulo (modelo Canvas: matéria → módulos). Opcionais:
+  // backend antigo não envia e o front agrupa tudo numa matéria só.
+  subject_id?: number;
+  subject_nome?: string;
+  last_access?: string | null;
   read_time: number;
   perc_scrolled: number;
   completed: boolean;
@@ -261,7 +266,7 @@ export interface UnreadIntervention {
 }
 
 export const getInterventions = () =>
-  request<{ interventions: UnreadIntervention[] }>("/edubot/interventions");
+  request<{ interventions: UnreadIntervention[] }>(withLang("/edubot/interventions"));
 
 export const ackIntervention = (interventionId: number) =>
   request<{ ok: boolean }>("/edubot/intervention/ack", {
@@ -458,7 +463,7 @@ export interface TutorAlert {
 }
 
 export const getTurma = () => request<{ total: number; alunos: TurmaStudent[] }>("/tutor/turma");
-export const getTutorAlerts = () => request<{ alertas: TutorAlert[] }>("/tutor/alerts");
+export const getTutorAlerts = () => request<{ alertas: TutorAlert[] }>(withLang("/tutor/alerts"));
 
 // Plano 5 (19.1) — perfil detalhado de UM aluno para o professor. Mesmo shape de
 // /student/me, então o detalhe reaproveita os componentes de desempenho do aluno.
@@ -510,7 +515,7 @@ export interface ContentGap {
   formatos: string[];
   ok: boolean;
 }
-export const getTutorOverview = () => request<TutorOverview>("/tutor/overview");
+export const getTutorOverview = () => request<TutorOverview>(withLang("/tutor/overview"));
 export const evaluateTurma = () =>
   request<{ alertas_criados: number }>("/tutor/evaluate", { method: "POST" });
 
@@ -536,7 +541,7 @@ export interface MasteryRow {
   celulas: { competency_id: number; p_mastery: number | null; status: string | null }[];
 }
 export const getTutorMastery = () =>
-  request<{ competencias: MasteryColumn[]; matriz: MasteryRow[] }>("/tutor/mastery");
+  request<{ competencias: MasteryColumn[]; matriz: MasteryRow[] }>(withLang("/tutor/mastery"));
 
 // B.5 — fila de aprovação: ações de tier alto propostas pelo EduBot.
 export interface QueueItem {
@@ -549,7 +554,7 @@ export interface QueueItem {
   proposed_action: { type: string; mensagem_aluno?: string; justificativa?: string } | null;
   created_at: string;
 }
-export const getTutorQueue = () => request<{ fila: QueueItem[] }>("/tutor/queue");
+export const getTutorQueue = () => request<{ fila: QueueItem[] }>(withLang("/tutor/queue"));
 
 // B.6 — KPI do agente: taxa de aceitação das intervenções por tipo.
 export interface AgentKpi {
@@ -823,3 +828,42 @@ export const synthesizeSpeech = (text: string, lang: "pt" | "en", persona?: stri
 // AV.2 (Plano 3) — persona do companheiro de estudo (persistida no aluno).
 export const setStudentPersona = (persona: string) =>
   request<{ persona: string }>("/student/persona", { method: "POST", body: { persona } });
+
+// Plano 6 — cursos externos com certificado (Cisco NetAcad). O aluno faz o curso
+// fora da plataforma e envia o certificado em PDF; o Engage-Agent avalia.
+export interface CertificateState {
+  status: "aprovado" | "recusado" | null;
+  feedback: string | null;
+  enviado_em: string | null;
+  mock?: boolean;
+}
+
+export interface ExternalCourse {
+  resource_id: number;
+  ova_id: number;
+  titulo: string;
+  url: string | null;
+  competency_id: number | null;
+  certificado: CertificateState;
+}
+
+export const getExternalCourses = () => request<ExternalCourse[]>(withLang("/external-courses"));
+
+// Upload multipart: o `request` padrão manda JSON, então este usa fetch direto
+// (mesmo token, mesmo tratamento de 401 e de erro).
+export async function uploadCertificate(resourceId: number, file: File): Promise<CertificateState> {
+  const form = new FormData();
+  form.append("file", file);
+  const token = getToken();
+  const response = await fetch(BASE_URL + withLang(`/resource/${resourceId}/certificate`), {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form
+  });
+  if (response.status === 401) {
+    clearSession();
+    throw new ApiError(401, "session");
+  }
+  if (!response.ok) throw new ApiError(response.status, (await response.text()) || `Erro ${response.status}`);
+  return response.json();
+}

@@ -8,8 +8,11 @@ card passam a bater. Dispensar (`ack`) remove local + no backend.
 */
 import { useCallback, useEffect, useState } from "react";
 import { UnreadIntervention, ackIntervention, getInterventions } from "../services/api";
+import { useLanguage } from "../i18n";
 
 export function useInterventions() {
+  // Plano 6: recarrega ao trocar o idioma (o texto vem traduzido do backend).
+  const { lang } = useLanguage();
   const [items, setItems] = useState<UnreadIntervention[]>([]);
 
   const reload = useCallback(() => {
@@ -26,7 +29,7 @@ export function useInterventions() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [lang]);
 
   const dismiss = useCallback((id: number) => {
     setItems((cur) => cur.filter((i) => i.intervention_id !== id));

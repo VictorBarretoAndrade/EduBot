@@ -2,10 +2,10 @@
 INTEGRAÇÃO (OVA personalizada) — Aba "Reforço".
 
 O EduBot, agora um AGENTE de tool-use no backend, diagnostica o assunto em que o
-aluno foi pior e monta uma OVA de reforço (vídeos, textos e questões do banco
+aluno foi pior e monta uma prática (vídeos, textos e questões do banco
 classificado por competência). Esta tela:
   - aciona o agente (POST /edubot/personalized-ova),
-  - lista as OVAs de reforço já geradas (GET /personalized-ova),
+  - lista as práticas já geradas (GET /personalized-ova),
   - abre uma OVA e a renderiza reaproveitando os mesmos players (VideoPlayer/
     AudioPlayer) e o mesmo padrão de quiz corrigido no servidor das OVAs normais
     (GET /personalized-ova/<id>).
@@ -25,8 +25,11 @@ import {
   getExternalResources,
   getPersonalizedOVA,
   getSession,
-  listPersonalizedOVAs
+  listPersonalizedOVAs,
+  ExternalCourse,
+  getExternalCourses,
 } from "../services/api";
+import { ExternalCourseCard } from "./ExternalCourseCard";
 import { saveMediaProgress } from "../services/mediaProgress";
 import { REFORCO_COMP_KEY } from "../services/reinforcementTarget";
 import { AudioPlayer } from "./players/AudioPlayer";
@@ -65,10 +68,16 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Plano 6: cursos externos com certificado (Cisco) — lista e estado do envio.
+  const [externalCourses, setExternalCourses] = useState<ExternalCourse[]>([]);
   const toast = useToast();
 
+  useEffect(() => {
+    getExternalCourses().then(setExternalCourses).catch(() => setExternalCourses([]));
+  }, [lang]);
+
   const refreshList = () =>
-    listPersonalizedOVAs().then(setOvas).catch(() => setError(t("Não foi possível listar as OVAs de reforço.", "Couldn't list the reinforcement OVAs.")));
+    listPersonalizedOVAs().then(setOvas).catch(() => setError(t("Não foi possível listar as práticas.", "Couldn't load your practice paths.")));
 
   useEffect(() => {
     refreshList();
@@ -77,14 +86,14 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
   const generate = async () => {
     setGenerating(true);
     setError(null);
-    setFeedback(t("O EduBot está diagnosticando e montando sua trilha de reforço...", "EduBot is diagnosing and building your reinforcement track..."));
+    setFeedback(t("O Engage-Agent está diagnosticando e montando sua trilha de prática...", "Engage-Agent is diagnosing and building your practice path..."));
     try {
       // Se o aluno chegou pelo convite de reforço, a competência já foi decidida
       // pelo gatilho (é a que ele acabou de errar). Consome a chave uma vez.
       const alvo = safeGet("session", REFORCO_COMP_KEY);
       safeRemove("session", REFORCO_COMP_KEY);
       const created = await createPersonalizedOVA(alvo ? Number(alvo) : undefined);
-      setFeedback(created.mensagem_aluno || t("OVA de reforço criada!", "Reinforcement OVA created!"));
+      setFeedback(created.mensagem_aluno || t("Prática criada!", "Practice path created!"));
       await refreshList();
       await open(created.personalized_ova_id);
       onTracked();
@@ -93,8 +102,8 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
       const msg = (err as { message?: string }).message ?? "";
       setError(
         msg.includes("conteúdo de reforço")
-          ? t("Não há conteúdo de reforço para o seu assunto fraco no momento.", "There's no reinforcement content for your weak topic right now.")
-          : t("Não foi possível gerar a OVA de reforço agora.", "Couldn't generate the reinforcement OVA right now.")
+          ? t("Não há conteúdo de reforço para o seu assunto fraco no momento.", "There's no practice material available for this topic right now.")
+          : t("Não foi possível gerar a prática agora.", "Couldn't build your practice path right now.")
       );
     } finally {
       setGenerating(false);
@@ -107,7 +116,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
     try {
       setActive(await getPersonalizedOVA(id));
     } catch {
-      setError(t("Não foi possível abrir a OVA de reforço.", "Couldn't open the reinforcement OVA."));
+      setError(t("Não foi possível abrir a prática.", "Couldn't open this practice path."));
     } finally {
       setLoadingId(null);
     }
@@ -126,7 +135,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
           onClick={() => setActive(null)}
           className="flex items-center gap-2 text-muted transition hover:text-ink"
         >
-          <ArrowLeft size={18} /> {t("Voltar para minhas OVAs de reforço", "Back to my reinforcement OVAs")}
+          <ArrowLeft size={18} /> {t("Voltar para minhas práticas", "Back to my practice paths")}
         </button>
 
         <div className="rounded-[8px] border border-line bg-white p-8 shadow-soft">
@@ -139,7 +148,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
             {/* P.2 — a trilha começa pelo formato em que o aluno mais aprende. */}
             {active.formato_preferido && (
               <span className="rounded-[8px] bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
-                {t("No seu formato:", "In your format:")} {formatChip(active.formato_preferido, t)}
+                {t("No seu formato:", "Preferred format:")} {formatChip(active.formato_preferido, t)}
               </span>
             )}
           </div>
@@ -167,7 +176,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
         </div>
 
         <div>
-          <h2 className="mb-3 text-xl font-bold text-ink">{t("Conteúdo de reforço", "Reinforcement content")}</h2>
+          <h2 className="mb-3 text-xl font-bold text-ink">{t("Conteúdo de reforço", "Practice material")}</h2>
           <div className="space-y-4">
             {active.recursos.map((resource) => {
               if (resource.resource_type === "video") {
@@ -214,10 +223,18 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
                       onClick={() => saveProgress(resource, { perc: 100, completed: true })}
                       className="rounded-[8px] border border-brand px-4 py-2 font-semibold text-brand transition hover:bg-indigo-50"
                     >
-                      {resource.completed ? t("Reler", "Read again") : t("Abrir leitura", "Open reading")}
+                      {resource.completed ? t("Reler", "Read again") : t("Abrir leitura", "Read article")}
                     </a>
                   </div>
                 );
+              }
+              if (resource.resource_type === "curso_externo") {
+                const course = externalCourses.find((c) => c.resource_id === resource.resource_id) ?? {
+                  resource_id: resource.resource_id, ova_id: 0, titulo: resource.resource_title,
+                  url: resource.resource_url, competency_id: null,
+                  certificado: { status: resource.completed ? "aprovado" : null, feedback: null, enviado_em: null }
+                };
+                return <ExternalCourseCard key={resource.resource_id} course={course} onApproved={onTracked} />;
               }
               if (resource.resource_type === "atividade") {
                 return (
@@ -231,7 +248,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
               return null;
             })}
             {active.recursos.length === 0 && (
-              <p className="rounded-[8px] border border-line bg-white p-6 text-muted">{t("Nenhum recurso nesta trilha.", "No resources in this track.")}</p>
+              <p className="rounded-[8px] border border-line bg-white p-6 text-muted">{t("Nenhum recurso nesta trilha.", "No resources in this path.")}</p>
             )}
           </div>
         </div>
@@ -252,12 +269,12 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="flex items-center gap-2 text-3xl font-bold text-ink">
-              <Stars className="text-brand" /> {t("OVA de Reforço", "Reinforcement OVA")}
+              <Stars className="text-brand" /> {t("Prática personalizada", "Personalized practice")}
             </h1>
             <p className="mt-2 text-muted">
               {t(
-                "O EduBot identifica o assunto em que você foi pior e monta uma trilha de reforço só para você.",
-                "EduBot spots the topic you did worst on and builds a reinforcement track just for you."
+                "O Engage-Agent identifica o assunto em que você foi pior e monta uma trilha de prática só para você.",
+                "Engage-Agent identifies the topic where you need the most help and builds a practice path just for you."
               )}
             </p>
           </div>
@@ -267,7 +284,7 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
             className="flex h-12 items-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white disabled:bg-slate-300"
           >
             {generating ? <LoaderCircle className="animate-spin" size={20} /> : <Sparkles size={20} />}
-            {t("Gerar OVA de reforço", "Generate reinforcement OVA")}
+            {t("Montar minha prática", "Build my practice path")}
           </button>
         </div>
         {feedback && <p className="mt-5 rounded-[8px] bg-indigo-50/60 p-4 text-slate-800">{feedback}</p>}
@@ -297,10 +314,23 @@ export const Reforco = ({ profile, onTracked }: ReforcoProps) => {
         ))}
         {ovas.length === 0 && (
           <p className="rounded-[8px] border border-line bg-white p-6 text-muted">
-            {t("Nenhuma OVA de reforço ainda — clique em", "No reinforcement OVA yet — click")} <strong>"{t("Gerar OVA de reforço", "Generate reinforcement OVA")}"</strong>.
+            {t("Nenhuma prática ainda — clique em", "No practice paths yet — click")} <strong>"{t("Montar minha prática", "Build my practice path")}"</strong>.
           </p>
         )}
       </div>
+
+      {externalCourses.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xl font-bold text-ink">{t("Cursos com certificado", "Courses with a certificate")}</h2>
+          <p className="text-sm text-muted">
+            {t("Vá além do módulo com um curso reconhecido pelo mercado. Envie o certificado para ele contar no seu progresso.",
+               "Go beyond the module with an industry-recognized course. Upload your certificate so it counts toward your progress.")}
+          </p>
+          {externalCourses.map((course) => (
+            <ExternalCourseCard key={course.resource_id} course={course} onApproved={onTracked} />
+          ))}
+        </div>
+      )}
     </section>
   );
 };
@@ -382,7 +412,7 @@ const ActivityCard = ({ resource, onComplete }: { resource: OvaResource; onCompl
           done ? "bg-emerald-100 text-emerald-700" : "border border-emerald-500 text-emerald-700 hover:bg-emerald-50"
         }`}
       >
-        {done ? t("Concluída ✓", "Completed ✓") : t("Marcar como concluída", "Mark as completed")}
+        {done ? t("Concluída ✓", "Completed ✓") : t("Marcar como concluída", "Mark as done")}
       </button>
     </div>
   );
@@ -472,7 +502,7 @@ const ReforcoQuiz = ({
         disabled={submitting || Object.keys(answers).length < questions.length}
         className="mt-6 h-12 rounded-[8px] bg-coral px-6 font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
       >
-        {submitting ? t("Corrigindo no servidor...", "Grading on the server...") : t("Finalizar quiz", "Finish quiz")}
+        {submitting ? t("Corrigindo…", "Checking your answers…") : t("Finalizar quiz", "Finish quiz")}
       </button>
     </div>
   );

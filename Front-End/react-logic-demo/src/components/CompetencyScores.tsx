@@ -69,17 +69,17 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
       <div className="flex items-center gap-2">
         <Target size={20} className="text-brand" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por competência", "Correct and wrong answers per competency")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por competência", "Correct and incorrect answers by learning outcome")}</h2>
       </div>
       <p className="mt-1 text-sm text-muted">
         {other
           ? t(
               "Quantas questões o aluno já acertou e quantas tentativas erradas fez em cada competência.",
-              "How many questions this student got right and how many wrong attempts they made in each competency."
+              "Questions answered correctly and incorrect attempts for each learning outcome."
             )
           : t(
               "Quantas questões você já acertou e quantas tentativas erradas fez em cada competência.",
-              "How many questions you have got right and how many wrong attempts you made in each competency."
+              "Questions answered correctly and incorrect attempts for each learning outcome."
             )}
       </p>
 
@@ -94,14 +94,14 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
         <div className="flex items-center gap-2">
           <XCircle size={22} className="text-rose-600" aria-hidden="true" />
           <span className="text-2xl font-bold text-rose-700">{totalErros}</span>
-          <span className="text-sm text-muted">{t("erros", "wrong")}</span>
+          <span className="text-sm text-muted">{t("erros", "incorrect")}</span>
         </div>
         {aproveitamento !== null && (
           <>
             <span className="text-slate-300" aria-hidden="true">|</span>
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-brand">{aproveitamento}%</span>
-              <span className="text-sm text-muted">{t("de aproveitamento", "success rate")}</span>
+              <span className="text-sm text-muted">{t("de aproveitamento", "accuracy")}</span>
             </div>
           </>
         )}
@@ -109,7 +109,7 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
 
       {competencias.length === 0 ? (
         <p className="mt-4 rounded-[8px] bg-slate-50 p-4 text-sm text-muted">
-          {t("Nenhuma competência cadastrada para o seu curso.", "No competencies registered for your course.")}
+          {t("Nenhuma competência cadastrada para o seu curso.", "No learning outcomes available for your program.")}
         </p>
       ) : (
         <div className="mt-5 space-y-6">
@@ -122,7 +122,7 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                   <h3 className="text-base font-bold text-ink">{g.nome}</h3>
                   <span className="text-xs text-muted">
                     {g.itens.length}{" "}
-                    {g.itens.length === 1 ? t("competência", "competency") : t("competências", "competencies")}
+                    {g.itens.length === 1 ? t("competência", "learning outcome") : t("competências", "learning outcomes")}
                   </span>
                 </div>
               )}
@@ -150,8 +150,8 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                 {semTentativas ? (
                   <p className="mt-2 text-sm text-muted">
                     {other
-                      ? t("O aluno ainda não respondeu questões desta competência.", "This student hasn't answered any questions in this competency yet.")
-                      : t("Você ainda não respondeu questões desta competência.", "You haven't answered any questions in this competency yet.")}
+                      ? t("O aluno ainda não respondeu questões desta competência.", "This student hasn't answered any questions for this learning outcome yet.")
+                      : t("Você ainda não respondeu questões desta competência.", "You haven't answered any questions for this learning outcome yet.")}
                   </p>
                 ) : (
                   <>
@@ -165,10 +165,10 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                       <span className="flex items-center gap-1.5 text-sm">
                         <XCircle size={16} className="text-rose-600" aria-hidden="true" />
                         <strong className="text-base text-rose-700">{erros}</strong>
-                        <span className="text-muted">{erros === 1 ? t("erro", "wrong") : t("erros", "wrong")}</span>
+                        <span className="text-muted">{erros === 1 ? t("erro", "incorrect") : t("erros", "incorrect")}</span>
                       </span>
                       <span className="text-sm font-semibold text-brand">
-                        {perc}% {t("de aproveitamento", "success rate")}
+                        {perc}% {t("de aproveitamento", "accuracy")}
                       </span>
                     </div>
 
@@ -183,8 +183,8 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                 {/* Cobertura + domínio: contexto, em unidade diferente da barra */}
                 <p className="mt-2 text-xs text-muted">
                   {t(
-                    `${acertos} de ${c.total_questoes} questões da competência`,
-                    `${acertos} of ${c.total_questoes} questions in this competency`
+                    `${acertos} de ${c.total_questoes} ${c.total_questoes === 1 ? "questão" : "questões"} deste resultado`,
+                    `${acertos} of ${c.total_questoes} ${c.total_questoes === 1 ? "question" : "questions"} for this outcome`
                   )}
                   {c.dominio_estimado != null && (
                     <> · {t("domínio estimado", "estimated mastery")}: {Math.round(c.dominio_estimado * 100)}%</>

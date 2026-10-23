@@ -19,7 +19,9 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TutorOverview, getTutorOverview } from "../services/api";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { resourceTypeLabel } from "../services/labels";
+import { formatNumber } from "../services/format";
 import { MasteryHeatmap } from "./MasteryHeatmap";
 import { EngagementPanel } from "./EngagementPanel";
 
@@ -27,13 +29,13 @@ import { EngagementPanel } from "./EngagementPanel";
 // PERSISTE no banco (é justamente o que o sistema já grava).
 const CATALOGO: { key: string; pt: string; en: string }[] = [
   { key: "interacoes", pt: "Interações (scroll, clique, vídeo)", en: "Interactions (scroll, click, video)" },
-  { key: "ova_progress", pt: "Progresso por OVA (tempo e % de leitura)", en: "OVA progress (time and % read)" },
-  { key: "progresso_recursos", pt: "Consumo de recursos (vídeo/podcast/atividade)", en: "Resource consumption (video/podcast/activity)" },
-  { key: "tentativas_quiz", pt: "Tentativas de quiz (certas e erradas)", en: "Quiz attempts (right and wrong)" },
-  { key: "eventos_aprendizado", pt: "Eventos de aprendizado (login, tutor, mídia)", en: "Learning events (login, tutor, media)" },
-  { key: "linhas_mastery", pt: "Domínio estimado por competência (BKT)", en: "Estimated mastery per competency (BKT)" },
+  { key: "ova_progress", pt: "Progresso por módulo (tempo e % de leitura)", en: "Module progress (time and % read)" },
+  { key: "progresso_recursos", pt: "Consumo de recursos (vídeo/podcast/atividade)", en: "Resource progress (video/podcast/activity)" },
+  { key: "tentativas_quiz", pt: "Tentativas de quiz (certas e erradas)", en: "Quiz attempts (correct and incorrect)" },
+  { key: "eventos_aprendizado", pt: "Eventos de aprendizado (login, tutor, mídia)", en: "Learning events (sign-in, AI chat, media)" },
+  { key: "linhas_mastery", pt: "Domínio estimado por competência (BKT)", en: "Estimated mastery per learning outcome (BKT)" },
   // Fase 2 do Plano de Rastreabilidade — leitura por seção do OVA.
-  { key: "leitura_por_secao", pt: "Leitura por seção do OVA (onde o aluno travou)", en: "Reading per OVA section (where the student got stuck)" },
+  { key: "leitura_por_secao", pt: "Leitura por seção do módulo (onde o aluno travou)", en: "Reading by module section (where students get stuck)" },
   { key: "consentimentos", pt: "Consentimentos LGPD", en: "GDPR/LGPD consents" }
 ];
 
@@ -41,7 +43,7 @@ const CATALOGO: { key: string; pt: string; en: string }[] = [
 // "% de vídeo efetivamente assistido" SAIU desta lista na Fase 1: passou a ser
 // medido de verdade (tempo assistido + cobertura da linha do tempo).
 const NAO_RASTREADO: { pt: string; en: string }[] = [
-  { pt: "Submissão e correção de atividades práticas", en: "Practical activity submission and grading" }
+  { pt: "Submissão e correção de atividades práticas", en: "Hands-on activity submission and grading" }
 ];
 
 interface KpiProps {
@@ -59,6 +61,7 @@ const Kpi = ({ icon, label, value, alerta }: KpiProps) => (
 
 export const ManagerDashboard = () => {
   const t = useT();
+  const { lang } = useLanguage();
   const [data, setData] = useState<TutorOverview | null>(null);
   const [error, setError] = useState(false);
 
@@ -69,7 +72,7 @@ export const ManagerDashboard = () => {
   if (error) {
     return (
       <div className="rounded-[8px] border border-rose-200 bg-rose-50 p-6 text-rose-800" role="alert">
-        {t("Não foi possível carregar a visão do gestor.", "Couldn't load the manager view.")}
+        {t("Não foi possível carregar a visão do gestor.", "Couldn't load the program overview.")}
       </div>
     );
   }
@@ -83,7 +86,7 @@ export const ManagerDashboard = () => {
   }
 
   const kLabel = t("acertos", "correct");
-  const eLabel = t("erros", "wrong");
+  const eLabel = t("erros", "incorrect");
   const assuntoChart = data.por_assunto.map((s) => ({
     nome: s.subject_nome.length > 16 ? `${s.subject_nome.slice(0, 16)}…` : s.subject_nome,
     [kLabel]: s.acertos,
@@ -97,10 +100,10 @@ export const ManagerDashboard = () => {
     <section className="space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-3xl font-bold text-ink">
-          <Database className="text-brand" aria-hidden="true" /> {t("Visão do Gestor", "Manager View")}
+          <Database className="text-brand" aria-hidden="true" /> {t("Visão do Gestor", "Program Coordinator Overview")}
         </h1>
         <p className="mt-2 text-muted">
-          {t("Tudo que o sistema consegue medir da turma, com números reais.", "Everything the system can measure from the class, with real numbers.")}
+          {t("Tudo que o sistema consegue medir da turma, com números reais.", "Everything the platform measures across the class, with live data.")}
         </p>
       </div>
 
@@ -109,12 +112,12 @@ export const ManagerDashboard = () => {
         <Kpi icon={<Users size={18} />} label={t("Alunos ativos", "Active students")} value={String(data.turma.alunos_ativos)} />
         <Kpi icon={<AlertTriangle size={18} />} label={t("Em risco", "At risk")} value={String(data.turma.em_risco)} alerta={data.turma.em_risco > 0} />
         <Kpi icon={<Bell size={18} />} label={t("Alertas abertos", "Open alerts")} value={String(data.turma.alertas_abertos)} alerta={data.turma.alertas_abertos > 0} />
-        <Kpi icon={<Gauge size={18} />} label={t("Consumo médio", "Average consumption")} value={`${data.consumo.percentual_medio}%`} />
+        <Kpi icon={<Gauge size={18} />} label={t("Consumo médio", "Average progress")} value={`${data.consumo.percentual_medio}%`} />
       </div>
 
       {/* Acertos x erros totais da turma (número cru) */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("Quiz da turma", "Class quiz")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Quiz da turma", "Class quiz performance")}</h2>
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-slate-50 p-4">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={22} className="text-emerald-600" aria-hidden="true" />
@@ -125,14 +128,14 @@ export const ManagerDashboard = () => {
           <div className="flex items-center gap-2">
             <XCircle size={22} className="text-rose-600" aria-hidden="true" />
             <span className="text-2xl font-bold text-rose-700">{data.quiz.erros}</span>
-            <span className="text-sm text-muted">{t("erros", "wrong")}</span>
+            <span className="text-sm text-muted">{t("erros", "incorrect")}</span>
           </div>
           {aproveitamento !== null && (
             <>
               <span className="text-slate-300" aria-hidden="true">|</span>
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold text-brand">{aproveitamento}%</span>
-                <span className="text-sm text-muted">{t("de aproveitamento", "success rate")}</span>
+                <span className="text-sm text-muted">{t("de aproveitamento", "accuracy")}</span>
               </div>
             </>
           )}
@@ -141,7 +144,7 @@ export const ManagerDashboard = () => {
 
       {/* Acertos x erros POR ASSUNTO — gráfico + números brutos */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto (turma)", "Correct and wrong answers per subject (class)")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto (turma)", "Correct and incorrect answers by course (class)")}</h2>
         {data.por_assunto.length === 0 ? (
           <p className="mt-4 rounded-[8px] bg-slate-50 p-4 text-sm text-muted">
             {t("Ainda não há respostas registradas nesta turma.", "No answers recorded in this class yet.")}
@@ -166,10 +169,10 @@ export const ManagerDashboard = () => {
               <table className="w-full text-left text-sm">
                 <thead className="text-muted">
                   <tr>
-                    <th className="py-2 pr-4 font-semibold">{t("Assunto", "Subject")}</th>
+                    <th className="py-2 pr-4 font-semibold">{t("Assunto", "Course")}</th>
                     <th className="py-2 pr-4 font-semibold">{t("Acertos", "Correct")}</th>
-                    <th className="py-2 pr-4 font-semibold">{t("Erros", "Wrong")}</th>
-                    <th className="py-2 pr-4 font-semibold">{t("Aproveitamento", "Success rate")}</th>
+                    <th className="py-2 pr-4 font-semibold">{t("Erros", "Incorrect")}</th>
+                    <th className="py-2 pr-4 font-semibold">{t("Aproveitamento", "Accuracy")}</th>
                     <th className="py-2 pr-4 font-semibold">{t("Domínio médio", "Avg. mastery")}</th>
                   </tr>
                 </thead>
@@ -202,7 +205,7 @@ export const ManagerDashboard = () => {
           máxima do player: um seek para o fim marcava 100% sem assistir nada. */}
       {data.video && data.video.segundos_assistidos > 0 && (
         <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-          <h2 className="text-xl font-bold text-ink">{t("Vídeo — consumo real", "Video — real consumption")}</h2>
+          <h2 className="text-xl font-bold text-ink">{t("Vídeo — consumo real", "Video — actual watch time")}</h2>
           <p className="mt-1 text-sm text-muted">
             {t("Cobertura é o trecho do vídeo efetivamente percorrido (pular à frente não conta).",
                "Coverage is the portion of the video actually played through (skipping ahead doesn't count).")}
@@ -244,7 +247,7 @@ export const ManagerDashboard = () => {
               <thead className="bg-slate-50 text-muted">
                 <tr>
                   <th className="px-4 py-2 font-semibold">{t("Seção", "Section")}</th>
-                  <th className="px-3 py-2 font-semibold">{t("OVA", "OVA")}</th>
+                  <th className="px-3 py-2 font-semibold">{t("Módulo", "Module")}</th>
                   <th className="px-3 py-2 font-semibold">{t("Alunos", "Students")}</th>
                   <th className="px-3 py-2 font-semibold">{t("Tempo médio", "Avg. time")}</th>
                   <th className="px-3 py-2 font-semibold">{t("Releituras", "Re-reads")}</th>
@@ -279,11 +282,11 @@ export const ManagerDashboard = () => {
         <div className="rounded-[8px] border border-amber-200 bg-amber-50 p-6 shadow-soft">
           <h2 className="flex items-center gap-2 text-xl font-bold text-ink">
             <XCircle size={20} className="text-amber-600" aria-hidden="true" />
-            {t("Lacunas de conteúdo para o reforço", "Content gaps for reinforcement")}
+            {t("Lacunas de conteúdo para o reforço", "Content gaps for personalized practice")}
           </h2>
           <p className="mt-1 text-sm text-amber-900">
-            {t("Estas competências não têm material suficiente para o EduBot montar um reforço eficaz: são necessárias ao menos 3 questões e 2 formatos de material.",
-               "These competencies lack enough material for EduBot to build effective reinforcement: at least 3 questions and 2 material formats are required.")}
+            {t("Estas competências não têm material suficiente para o Engage-Agent montar um reforço eficaz: são necessárias ao menos 3 questões e 2 formatos de material.",
+               "These learning outcomes don't have enough material for Engage-Agent to build effective practice paths: at least 3 questions and 2 resource formats are needed.")}
           </p>
           <ul className="mt-4 space-y-2">
             {data.lacunas_conteudo.map((c) => (
@@ -294,8 +297,8 @@ export const ManagerDashboard = () => {
                   {c.questoes} {c.questoes === 1 ? t("questão", "question") : t("questões", "questions")}
                   {" · "}
                   {c.formatos.length > 0
-                    ? `${t("formatos", "formats")}: ${c.formatos.join(", ")}`
-                    : t("nenhum material de reforço", "no reinforcement material")}
+                    ? `${t("formatos", "formats")}: ${c.formatos.map((f) => resourceTypeLabel(f, lang)).join(", ")}`
+                    : t("nenhum material de reforço", "no practice material")}
                 </div>
               </li>
             ))}
@@ -305,10 +308,10 @@ export const ManagerDashboard = () => {
 
       {/* Catálogo de rastreamento — transparência com o gestor */}
       <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("O que o sistema rastreia", "What the system tracks")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("O que o sistema rastreia", "What the platform tracks")}</h2>
         <p className="mt-1 text-sm text-muted">
           {t("Cada sinal com a contagem real de registros da turma. Tudo abaixo persiste no banco.",
-             "Each signal with the real record count for the class. Everything below persists in the database.")}
+             "Each learning signal and its live record count for this class.")}
         </p>
         <ul className="mt-4 divide-y divide-line">
           {CATALOGO.map((c) => (
@@ -318,7 +321,7 @@ export const ManagerDashboard = () => {
                 {t(c.pt, c.en)}
               </span>
               <span className="shrink-0 text-sm">
-                <strong className="text-ink">{(data.rastreamento[c.key] ?? 0).toLocaleString("pt-BR")}</strong>{" "}
+                <strong className="text-ink">{formatNumber(data.rastreamento[c.key] ?? 0, lang)}</strong>{" "}
                 <span className="text-muted">{t("registros", "records")}</span>
               </span>
             </li>

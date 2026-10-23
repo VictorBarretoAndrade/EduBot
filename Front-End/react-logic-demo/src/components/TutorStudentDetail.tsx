@@ -17,6 +17,7 @@ import { AlertTriangle, ArrowLeft, BookX, CalendarClock, Gauge, LoaderCircle } f
 import { useEffect, useRef, useState } from "react";
 import { StudentProfile, getTutorStudent } from "../services/api";
 import { useLanguage, useT } from "../i18n";
+import { plural } from "../services/format";
 import { SubjectScores } from "./SubjectScores";
 import { CompetencyScores } from "./CompetencyScores";
 import { PerformanceCharts } from "./PerformanceCharts";
@@ -115,7 +116,7 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
             {est.nome}
           </h1>
           <p className="mt-1 text-muted">
-            RA {est.ra}{est.curso ? ` · ${est.curso}` : ""}
+            {t("RA", "ID")} {est.ra}{est.curso ? ` · ${est.curso}` : ""}
           </p>
         </div>
       </div>
@@ -124,13 +125,13 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           icon={<CalendarClock size={18} />}
-          label={t("Sem acesso", "No access")}
-          value={dias != null ? t(`${dias} dias`, `${dias} days`) : "—"}
+          label={t("Sem acesso", "Days inactive")}
+          value={dias != null ? plural(dias, lang, ["dia", "dias"], ["day", "days"]) : "—"}
           alerta={dias != null && dias >= 7}
         />
         <KpiCard
           icon={<Gauge size={18} />}
-          label={t("Consumo de recursos", "Resource consumption")}
+          label={t("Consumo de recursos", "Resource progress")}
           value={`${profile.recursos.percentual_consumido}%`}
         />
         <KpiCard

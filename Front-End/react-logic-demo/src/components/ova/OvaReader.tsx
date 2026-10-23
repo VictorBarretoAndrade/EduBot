@@ -11,12 +11,19 @@ nativos (parágrafos, imagens, Carousel, Accordion), além de:
   - quiz embutido corrigido no servidor (OvaQuiz);
   - painel lateral retrátil do Tutor IA (TutorChat), com o material do OVA como
     contexto.
+
+Plano 6 (B.1): a página do módulo vira um stepper Conteúdo → Atividades → Quiz
+(#/modulo/:id/:passo). Cada passo é um painel; o progresso de LEITURA só é medido
+no passo Conteúdo — pular direto para o quiz não pode contar como leitura (é a
+leitura que libera o quiz no backend).
 */
-import { ArrowLeft, BookOpenText, CheckCircle2, ListChecks, LoaderCircle, Sparkles, Volume2 } from "lucide-react";
+import { ArrowLeft, BookOpenText, CheckCircle2, ClipboardList, ListChecks, LoaderCircle, Sparkles, Trophy, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GamificationAward,
   OvaResource,
+  ExternalCourse,
+  getExternalCourses,
   getOVAResources,
   registerInteraction,
   saveOVAProgress,
@@ -39,6 +46,7 @@ import { Carousel } from "./Carousel";
 import { OvaQuiz } from "./OvaQuiz";
 import { TutorChat } from "./TutorChat";
 import { StudyCompanion } from "./StudyCompanion";
+import { ExternalCourseCard } from "../ExternalCourseCard";
 import { safeGet, safeSet, safeRemove } from "../../services/storage";
 
 const COMPLETED_PERC = 90;
@@ -52,10 +60,13 @@ const SHORT_PAGE_MIN_SECONDS = 20;
 // aba está visível E houve atividade (scroll/mouse/teclado) nos últimos N seg.
 const IDLE_LIMIT_SECONDS = 180;
 
+type ModuleStep = "conteudo" | "atividades" | "quiz";
+
 interface OvaInfo {
   ova_id: number;
   ova_name: string;
   link: string;
+  subject_nome?: string;
   perc_scrolled?: number;
   completed?: boolean;
 }
@@ -66,7 +77,11 @@ interface OvaReaderProps {
   // CP.1 (Plano 3): persona do companheiro (vem do perfil) e flag da feature.
   persona: string;
   companionEnabled: boolean;
+  // Plano 6: passo atual do stepper (vem da URL) e navegação entre passos.
+  step: ModuleStep;
+  onStepChange: (step: ModuleStep) => void;
   onBack: () => void;
+  onOpenPractice: () => void;
   onTracked: () => void;
 }
 
@@ -75,10 +90,17 @@ const COMPANION_HIDDEN_KEY = "edubot.companion.hidden";
 // misturar PT/EN na telemetria. O rótulo PT antigo segue reconhecido nos relatórios.
 const OVA_ASSISTANT_OPENED = "ova_assistant_opened";
 
-export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, onTracked }: OvaReaderProps) => {
+export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onStepChange, onBack, onOpenPractice, onTracked }: OvaReaderProps) => {
+  // O efeito de rastreio lê o passo por ref (não reinicia o cronômetro a cada troca).
+  const stepRef = useRef<ModuleStep>(step);
+  stepRef.current = step;
+  // Se o CONTEÚDO rola ou não — medido só no passo Conteúdo, para o painel curto
+  // do quiz não ser confundido com "página curta" (que completa por tempo).
+  const contentScrollableRef = useRef<boolean | null>(null);
   const [content, setContent] = useState<OvaContent | null>(null);
   const [error, setError] = useState(false);
   const [resources, setResources] = useState<OvaResource[]>([]);
+  const [externalCourses, setExternalCourses] = useState<ExternalCourse[]>([]);
   // O assistente já aparece aberto na lateral em telas largas (o aluno conversa
   // sobre o que está lendo sem sair do OVA); em telas pequenas começa recolhido.
   const [showTutor, setShowTutor] = useState(
@@ -199,6 +221,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
     getOVAResources(ova.ova_id)
       .then((data) => active && setResources(data))
       .catch(() => active && setResources([]));
+    getExternalCourses()
+      .then((data) => active && setExternalCourses(data))
+      .catch(() => active && setExternalCourses([]));
     return () => {
       active = false;
     };
@@ -268,7 +293,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
     };
 
     const isCompleted = () =>
-      contentScrollable()
+      contentScrollableRef.current !== false
         ? maxScrollRef.current >= COMPLETED_PERC
         : sessionSecondsRef.current >= SHORT_PAGE_MIN_SECONDS;
 
@@ -296,7 +321,10 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
 
     const onScroll = () => {
       markActivity();
-      if (contentScrollable()) bumpProgress(readingPerc());
+      // Plano 6: só o passo Conteúdo mede leitura.
+      if (stepRef.current !== "conteudo") return;
+      contentScrollableRef.current = contentScrollable();
+      if (contentScrollableRef.current) bumpProgress(readingPerc());
     };
 
     const ticker = window.setInterval(() => {
@@ -314,7 +342,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
       // Fase 2: o MESMO segundo (já filtrado) é creditado à seção visível.
       creditSecond();
       // Em página curta o progresso é por tempo (não há scroll a medir)
-      if (!contentScrollable()) {
+      if (stepRef.current === "conteudo" && !contentScrollable()) {
+        contentScrollableRef.current = false;
         bumpProgress(Math.min(100, Math.round((sessionSecondsRef.current / SHORT_PAGE_MIN_SECONDS) * 100)));
       }
     }, 1000);
@@ -363,8 +392,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
     if (progress >= COMPLETED_PERC) {
       companion.say({
         trigger: "done", spontaneous: true,
-        text: t("Leitura concluída! Que tal testar no quiz aqui embaixo? 💪",
-                "Reading complete! How about trying the quiz below? 💪"),
+        text: t("Leitura concluída! Que tal testar no quiz? 💪",
+                "Reading complete! Ready to try the quiz? 💪"),
+        action: { label: t("Ir para o quiz", "Go to the quiz"), run: () => onStepChange("quiz") },
       });
     } else if (progress >= 50) {
       companion.say({
@@ -403,7 +433,27 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
   const videoResources = resources.filter((r) => r.resource_type === "video");
   const podcastResources = resources.filter((r) => r.resource_type === "podcast");
   const activityResources = resources.filter((r) => r.resource_type === "atividade");
-  const hasMedia = videoResources.length + podcastResources.length + activityResources.length > 0;
+  // Plano 6: curso externo com certificado (Cisco) entra no passo Atividades.
+  const moduleCourses = externalCourses.filter((c) => c.ova_id === ova.ova_id);
+  const hasMedia = videoResources.length + podcastResources.length > 0;
+  const activitiesDone = activityResources.filter((r) => r.completed).length;
+  // O progresso da sessão começa em 0; para o aluno, vale o maior entre o já salvo e o desta sessão.
+  const shownProgress = Math.max(progress, ova.completed ? 100 : ova.perc_scrolled ?? 0);
+
+  // Plano 6: os 3 passos do módulo. "Atividades" some quando o módulo não tem.
+  const steps: { id: ModuleStep; label: string; detail: string; icon: typeof BookOpenText }[] = [
+    { id: "conteudo", label: t("Conteúdo", "Content"), detail: t(`${shownProgress}% lido`, `${shownProgress}% read`), icon: BookOpenText },
+    ...(activityResources.length + moduleCourses.length > 0
+      ? [{
+          id: "atividades" as ModuleStep,
+          label: t("Atividades", "Activities"),
+          detail: `${activitiesDone + moduleCourses.filter((c) => c.certificado.status === "aprovado").length}/${activityResources.length + moduleCourses.length}`,
+          icon: ClipboardList
+        }]
+      : []),
+    { id: "quiz", label: t("Quiz", "Quiz"), detail: t("teste o que aprendeu", "check what you learned"), icon: Trophy }
+  ];
+  const nextStep = steps[steps.findIndex((s) => s.id === step) + 1];
 
   return (
     <div className="flex gap-6">
@@ -414,13 +464,13 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             <button
               onClick={onBack}
               className="flex h-11 w-11 items-center justify-center rounded-[8px] border border-line bg-white text-ink transition hover:bg-slate-50"
-              aria-label={t("Voltar", "Back")}
+              aria-label={t("Voltar para a matéria", "Back to the course")}
             >
               <ArrowLeft size={20} />
             </button>
             <div>
               <p className="flex items-center gap-2 font-semibold text-brand">
-                <BookOpenText size={18} /> {t("Leitura interativa", "Interactive reading")}
+                <BookOpenText size={18} aria-hidden="true" /> {ova.subject_nome ?? t("Módulo", "Module")}
               </p>
               <h1 className="text-2xl font-bold text-ink">{ova.ova_name}</h1>
             </div>
@@ -435,7 +485,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             }`}
           >
             <Sparkles size={18} />
-            {showTutor ? t("Ocultar assistente", "Hide assistant") : t("Tirar dúvidas com a IA", "Ask the AI")}
+            {showTutor ? t("Fechar o chat", "Close chat") : t("Perguntar ao Engage-Agent", "Ask Engage-Agent")}
           </button>
         </div>
 
@@ -445,16 +495,49 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={progress}
+          aria-valuenow={shownProgress}
           aria-label={t("Progresso de leitura", "Reading progress")}
           className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-200"
         >
-          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${progress}%` }} />
+          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${shownProgress}%` }} />
         </div>
+
+        {/* Plano 6 (B.1): stepper do módulo — cada passo tem URL própria. */}
+        <nav aria-label={t("Passos do módulo", "Module steps")} className="mb-6">
+          <ol className="grid gap-2 sm:grid-flow-col sm:auto-cols-fr">
+            {steps.map((item, index) => {
+              const Icon = item.icon;
+              const active = item.id === step;
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => onStepChange(item.id)}
+                    aria-current={active ? "step" : undefined}
+                    className={`flex w-full items-center gap-3 rounded-[8px] border p-3 text-left transition ${
+                      active ? "border-brand bg-indigo-50" : "border-line bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold ${
+                      active ? "bg-brand text-white" : "bg-slate-100 text-muted"
+                    }`}>
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0">
+                      <span className={`flex items-center gap-1.5 font-semibold ${active ? "text-indigo-800" : "text-ink"}`}>
+                        <Icon size={16} aria-hidden="true" /> {item.label}
+                      </span>
+                      <span className="block text-xs text-muted">{item.detail}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
 
         {error && (
           <div className="rounded-[8px] border border-rose-200 bg-rose-50 p-6 text-rose-700">
-            {t("Não foi possível carregar o conteúdo deste OVA.", "Couldn't load this OVA's content.")}
+            {t("Não foi possível carregar o conteúdo deste módulo.", "Couldn't load this module's content.")}
           </div>
         )}
 
@@ -465,7 +548,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
           </div>
         )}
 
-        {content && (
+        {content && step === "conteudo" && (
           <div className="space-y-6">
             {/* Hero / introdução */}
             {content.intro && (
@@ -511,9 +594,9 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
                             ));
                           }}
                           className="flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
-                          title={t("Explique esta seção com o tutor", "Explain this section with the tutor")}
+                          title={t("Explicar esta seção", "Explain this section")}
                         >
-                          <Sparkles size={14} /> {t("Explique", "Explain")}
+                          <Sparkles size={14} aria-hidden="true" /> {t("Explicar", "Explain")}
                         </button>
                       </div>
                     )}
@@ -545,22 +628,15 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
                     return <Accordion key={index} items={block.items} onInteract={logInteraction} />;
                   })}
 
-                  {/* Quiz embutido na seção de conclusão */}
-                  {section.hasQuiz && (
-                    <div className="pt-2">
-                      <h3 className="mb-4 text-xl font-bold text-ink">{t("Teste seus conhecimentos", "Test your knowledge")}</h3>
-                      <OvaQuiz ovaId={ova.ova_id} studentId={studentId} onTracked={onTracked} onGraded={onQuizGraded} />
-                    </div>
-                  )}
                 </div>
               </section>
             ))}
 
-            {/* Recursos adicionais (mídias do banco) */}
+            {/* Vídeos e áudios (mídias do banco) — fazem parte do conteúdo */}
             {hasMedia && (
               <section className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
                 <h2 className="mb-5 border-b border-line pb-3 text-2xl font-bold text-ink">
-                  {t("Recursos adicionais", "Additional resources")}
+                  {t("Vídeos e áudios", "Videos & audio")}
                 </h2>
                 <div className="space-y-5">
                   {videoResources.map((resource) => (
@@ -586,35 +662,73 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
                       onProgress={trackMedia(resource)}
                     />
                   ))}
-                  {activityResources.map((resource) => (
-                    <div
-                      key={resource.resource_id}
-                      className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] border border-line bg-white p-5"
-                    >
-                      <div className="flex items-center gap-3">
-                        <ListChecks className="text-brand" size={24} />
-                        <div>
-                          <div className="font-bold text-ink">{resource.resource_title}</div>
-                          <div className="text-sm text-muted">{t("Atividade prática", "Practical activity")}</div>
-                        </div>
-                      </div>
-                      {resource.completed ? (
-                        <span className="flex items-center gap-2 rounded-[8px] bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
-                          <CheckCircle2 size={18} /> {t("Concluída", "Completed")}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => completeActivity(resource)}
-                          className="h-11 rounded-[8px] bg-teal px-5 font-semibold text-white"
-                        >
-                          {t("Marcar como concluída", "Mark as completed")}
-                        </button>
-                      )}
-                    </div>
-                  ))}
                 </div>
               </section>
             )}
+          </div>
+        )}
+
+        {/* Passo 2 — atividades do módulo */}
+        {step === "atividades" && (
+          <section className="space-y-4 rounded-[8px] border border-line bg-white p-7 shadow-soft">
+            <h2 className="border-b border-line pb-3 text-2xl font-bold text-ink">{t("Atividades", "Activities")}</h2>
+            <p className="text-muted">
+              {t("Coloque em prática o que você leu. Marque cada atividade quando terminar.",
+                 "Put what you read into practice. Mark each activity when you're done.")}
+            </p>
+            {activityResources.map((resource) => (
+              <div
+                key={resource.resource_id}
+                className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] border border-line bg-white p-5"
+              >
+                <div className="flex items-center gap-3">
+                  <ListChecks className="text-brand" size={24} aria-hidden="true" />
+                  <div className="font-bold text-ink">{resource.resource_title}</div>
+                </div>
+                {resource.completed ? (
+                  <span className="flex items-center gap-2 rounded-[8px] bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
+                    <CheckCircle2 size={18} aria-hidden="true" /> {t("Concluída", "Done")}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => completeActivity(resource)}
+                    className="h-11 rounded-[8px] bg-teal px-5 font-semibold text-white"
+                  >
+                    {t("Marcar como concluída", "Mark as done")}
+                  </button>
+                )}
+              </div>
+            ))}
+            {moduleCourses.map((course) => (
+              <ExternalCourseCard key={course.resource_id} course={course} onApproved={onTracked} />
+            ))}
+          </section>
+        )}
+
+        {/* Passo 3 — quiz do módulo (com o modo desafio que morava na aba Quiz) */}
+        {step === "quiz" && (
+          <section className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
+            <h2 className="mb-5 border-b border-line pb-3 text-2xl font-bold text-ink">{t("Teste seus conhecimentos", "Test your knowledge")}</h2>
+            <OvaQuiz
+              ovaId={ova.ova_id}
+              studentId={studentId}
+              onTracked={onTracked}
+              onGraded={onQuizGraded}
+              onGoToContent={() => onStepChange("conteudo")}
+              onOpenPractice={onOpenPractice}
+            />
+          </section>
+        )}
+
+        {/* Próximo passo — o aluno não precisa voltar ao topo para avançar */}
+        {content && nextStep && (
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => onStepChange(nextStep.id)}
+              className="h-11 rounded-[8px] bg-brand px-5 font-semibold text-white transition hover:bg-indigo-600"
+            >
+              {t(`Próximo: ${nextStep.label}`, `Next: ${nextStep.label}`)}
+            </button>
           </div>
         )}
       </div>
@@ -628,10 +742,10 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             logInteraction(OVA_ASSISTANT_OPENED);
           }}
           className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-l-[10px] bg-brand py-4 pl-3 pr-2 font-semibold text-white shadow-soft transition hover:bg-indigo-600 [writing-mode:vertical-rl]"
-          aria-label={t("Abrir o assistente do conteúdo", "Open the content assistant")}
+          aria-label={t("Perguntar ao Engage-Agent", "Ask Engage-Agent")}
         >
-          <Sparkles size={18} className="rotate-90" />
-          {t("Pergunte à IA", "Ask the AI")}
+          <Sparkles size={18} className="rotate-90" aria-hidden="true" />
+          {t("Perguntar", "Ask")}
         </button>
       )}
 
@@ -647,7 +761,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, onBack, o
             ref={asideRef}
             role={isDesktop ? undefined : "dialog"}
             aria-modal={isDesktop ? undefined : true}
-            aria-label={isDesktop ? undefined : t("Assistente do conteúdo", "Content assistant")}
+            aria-label={isDesktop ? undefined : t("Chat do Engage-Agent", "Engage-Agent chat")}
             className="fixed inset-y-0 right-0 z-40 w-full max-w-[420px] p-4 lg:static lg:z-auto lg:w-[380px] lg:shrink-0 lg:p-0"
           >
             <div className="h-full lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">

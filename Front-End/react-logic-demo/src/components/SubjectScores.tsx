@@ -68,8 +68,8 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
   const t = useT();
   const assuntos = agrupaPorAssunto(competencias);
   const vazio = perspective === "other"
-    ? t("O aluno ainda não respondeu questões deste assunto.", "This student hasn't answered any questions in this subject yet.")
-    : t("Você ainda não respondeu questões deste assunto.", "You haven't answered any questions in this subject yet.");
+    ? t("O aluno ainda não respondeu questões deste assunto.", "This student hasn't answered any questions in this course yet.")
+    : t("Você ainda não respondeu questões deste assunto.", "You haven't answered any questions in this course yet.");
 
   // Degradação segura: sem vínculo de assunto (backend antigo), não renderiza.
   if (assuntos.length === 0) return null;
@@ -78,12 +78,12 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
       <div className="flex items-center gap-2">
         <Layers size={20} className="text-brand" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto", "Correct and wrong answers per subject")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto", "Correct and incorrect answers by course")}</h2>
       </div>
       <p className="mt-1 text-sm text-muted">
         {t(
           "Visão por disciplina — cada assunto reúne as suas competências.",
-          "View per subject — each subject gathers its competencies."
+          "Breakdown by course — grouping related learning outcomes."
         )}
       </p>
 
@@ -102,7 +102,7 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
                 <span className="font-semibold text-ink">{s.nome}</span>
                 <span className="text-xs text-muted">
                   {s.n_competencias}{" "}
-                  {s.n_competencias === 1 ? t("competência", "competency") : t("competências", "competencies")}
+                  {s.n_competencias === 1 ? t("competência", "learning outcome") : t("competências", "learning outcomes")}
                 </span>
               </div>
 
@@ -119,10 +119,10 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
                     <span className="flex items-center gap-1.5 text-sm">
                       <XCircle size={16} className="text-rose-600" aria-hidden="true" />
                       <strong className="text-base text-rose-700">{s.erros}</strong>
-                      <span className="text-muted">{s.erros === 1 ? t("erro", "wrong") : t("erros", "wrong")}</span>
+                      <span className="text-muted">{s.erros === 1 ? t("erro", "incorrect") : t("erros", "incorrect")}</span>
                     </span>
                     <span className="text-sm font-semibold text-brand">
-                      {perc}% {t("de aproveitamento", "success rate")}
+                      {perc}% {t("de aproveitamento", "accuracy")}
                     </span>
                   </div>
 
@@ -136,8 +136,8 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
 
               <p className="mt-2 text-xs text-muted">
                 {t(
-                  `${s.acertos} de ${s.total_questoes} questões do assunto`,
-                  `${s.acertos} of ${s.total_questoes} questions in this subject`
+                  `${s.acertos} de ${s.total_questoes} ${s.total_questoes === 1 ? "questão" : "questões"} da matéria`,
+                  `${s.acertos} of ${s.total_questoes} ${s.total_questoes === 1 ? "question" : "questions"} in this course`
                 )}
                 {dominioMedio != null && (
                   <> · {t("domínio médio", "average mastery")}: {dominioMedio}%</>

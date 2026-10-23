@@ -25,7 +25,7 @@ export const EduBotAvatar = ({ size = 120, speaking = false }: EduBotAvatarProps
         .eb-float, .eb-eye, .eb-mouth-talk { animation: none !important; }
       }
     `}</style>
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EduBot">
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Engage-Agent">
       {/* antena */}
       <line x1="32" y1="6" x2="32" y2="14" stroke="#15beb5" strokeWidth="3" strokeLinecap="round" />
       <circle cx="32" cy="5" r="3.5" fill="#ff7b65" />

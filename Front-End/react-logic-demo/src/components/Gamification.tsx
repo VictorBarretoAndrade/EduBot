@@ -27,7 +27,8 @@ import {
   setActiveTitle
 } from "../services/api";
 import { EduBotAvatar } from "./brand/EduBotAvatar";
-import { useT } from "../i18n";
+import { useLanguage, useT } from "../i18n";
+import { ordinal, plural } from "../services/format";
 
 // Ícone/emoji por conquista (o backend manda só id + nome traduzido).
 const ACH_ICON: Record<string, string> = {
@@ -134,6 +135,7 @@ export const WeeklyGoalsCard = () => {
 
 const JourneyHeader = ({ me, onTitleChange }: { me: GamificationMe; studentName?: string; onTitleChange: () => void }) => {
   const t = useT();
+  const { lang } = useLanguage();
   const pct = me.level_span > 0 ? Math.round((100 * me.into_level) / me.level_span) : 100;
   const toNext = Math.max(0, me.next_level_at - me.xp_total);
   const streak = me.streak.current_days;
@@ -186,11 +188,11 @@ const JourneyHeader = ({ me, onTitleChange }: { me: GamificationMe; studentName?
 
         {/* sequência */}
         <div className="flex items-center gap-2 rounded-[8px] bg-white px-4 py-3 shadow-sm"
-             aria-label={t(`Sequência de ${streak} dias`, `${streak}-day streak`)}>
+             aria-label={t(`Sequência de ${plural(streak, lang, ["dia", "dias"], ["day", "days"])}`, `${streak}-day streak`)}>
           <Flame className={`text-orange-500 ${streak > 0 ? "eb-flame" : "opacity-40"}`} size={26} />
           <div className="leading-tight">
             <div className="text-lg font-bold text-ink">{streak}</div>
-            <div className="text-[11px] text-muted">{t("dias seguidos", "day streak")}</div>
+            <div className="text-[11px] text-muted">{streak === 1 ? t("dia seguido", "day streak") : t("dias seguidos", "day streak")}</div>
           </div>
           {me.streak.shield_available && (
             <Shield size={16} className="text-brand" aria-label={t("escudo disponível", "shield available")} />
@@ -243,6 +245,7 @@ const AchievementsShowcase = ({ achievements }: { achievements: AchievementState
 
 const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
   const t = useT();
+  const { lang } = useLanguage();
   const [board, setBoard] = useState<Leaderboard | null>(null);
   const [nickname, setNickname] = useState("");
   const [saving, setSaving] = useState(false);
@@ -263,7 +266,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
       // 409 = apelido já usado na turma; mostra a mensagem do backend
       try {
         const body = JSON.parse((err as Error).message);
-        setJoinError(body?.error ?? t("Não foi possível entrar agora.", "Couldn't join right now."));
+        setJoinError(t("Não foi possível entrar no ranking agora.", "Couldn't join the leaderboard right now."));
       } catch {
         setJoinError(t("Não foi possível entrar agora.", "Couldn't join right now."));
       }
@@ -278,7 +281,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
     <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
       <div className="flex items-center gap-2">
         <Medal size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Ranking da turma", "Class ranking")}</h2>
+        <h2 className="text-xl font-bold text-ink">{t("Ranking da turma", "Class leaderboard")}</h2>
         <span className="ml-auto text-xs text-muted">{t("esta semana", "this week")}</span>
       </div>
 
@@ -286,7 +289,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
         <p className="mt-2 text-sm text-muted">
           {board.me.rank
             ? t(`Você está em #${board.me.rank}`, `You're #${board.me.rank}`)
-            : t("Estude para entrar no ranking", "Study to enter the ranking")}
+            : t("Estude para entrar no ranking", "Study to get on the leaderboard")}
           {board.me.top_percent != null && ` · ${t("top", "top")} ${board.me.top_percent}%`}
           {` · ${board.me.xp_semana} XP`}
         </p>
@@ -301,7 +304,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
             }`}
           >
             <span className="flex items-center gap-2">
-              <span className="w-6 text-center text-sm font-bold text-muted">{i + 1}º</span>
+              <span className="w-6 text-center text-sm font-bold text-muted">{ordinal(i + 1, lang)}</span>
               <span className="text-ink">{e.apelido}{e.eu && ` (${t("você", "you")})`}</span>
             </span>
             <span className="text-sm text-muted">{t("Nv", "Lv")} {e.nivel} · {e.xp_semana} XP</span>
@@ -309,7 +312,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
         ))}
         {board.top.length === 0 && (
           <p className="rounded-[8px] bg-slate-50 p-3 text-sm text-muted">
-            {t("Ninguém no ranking ainda. Seja o primeiro!", "No one on the ranking yet. Be the first!")}
+            {t("Ninguém no ranking ainda. Seja o primeiro!", "No one on the leaderboard yet. Be the first!")}
           </p>
         )}
       </div>
@@ -317,7 +320,7 @@ const LeaderboardCard = ({ onJoined }: { onJoined: () => void }) => {
       {!board.participando && (
         <div className="mt-4 rounded-[8px] border border-brand/30 bg-indigo-50/40 p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Sparkles size={16} className="text-brand" /> {t("Participar do ranking", "Join the ranking")}
+            <Sparkles size={16} className="text-brand" /> {t("Participar do ranking", "Join the leaderboard")}
           </p>
           <p className="mt-1 text-xs text-muted">
             {t("Escolha um apelido. Seus colegas verão o apelido e seu XP — nunca seu nome ou suas notas.",
