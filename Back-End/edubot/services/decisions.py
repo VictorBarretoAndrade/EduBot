@@ -22,7 +22,7 @@ MODEL_PRICES = {
     "sonnet": (3.0, 15.0),
     "opus": (5.0, 25.0),
     "fable": (10.0, 50.0),
-    "mini": (0.15, 0.60),
+    "mini": (0.25, 2.00),
     "gpt": (0.15, 0.60),
 }
 DEFAULT_PRICE = (3.0, 15.0)  # fallback tier-Sonnet

@@ -191,11 +191,14 @@ def _azure_messages_create(system, messages, tools=None, max_tokens=None, model=
     }
 
     out_messages = _convert_messages_for_openai(system, messages)
+    target_model = model or AZURE_OPENAI_DEPLOYMENT or DEFAULT_MODEL
     payload = {
-        "model": model or AZURE_OPENAI_DEPLOYMENT or DEFAULT_MODEL,
+        "model": target_model,
         "messages": out_messages,
-        "max_completion_tokens": max(max_tokens or MAX_TOKENS, 1500)
+        "max_completion_tokens": max(max_tokens or MAX_TOKENS, 2048)
     }
+    if any(k in (target_model or "").lower() for k in ("gpt-5", "o1", "o3", "o4")):
+        payload["reasoning_effort"] = os.getenv("AZURE_REASONING_EFFORT", "low")
 
     if tools:
         payload["tools"] = [{

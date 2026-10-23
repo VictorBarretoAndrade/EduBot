@@ -92,6 +92,9 @@ def edubot_recommendation():
             },
             model_id=recommendation.get("model_id"),
             mock=recommendation.get("mock", True),
+            latency_ms=recommendation.get("latency_ms", 0),
+            input_tokens=recommendation.get("input_tokens", 0),
+            output_tokens=recommendation.get("output_tokens", 0),
             actions=[{"type": "intervention", "tipo": recommendation.get("tipo")}])
 
         return json.dumps({
@@ -172,6 +175,7 @@ def edubot_tutor_chat():
             g.student, "chat",
             input_digest={"ova_id": ova_id},
             model_id=result.get("model_id"), mock=False,
+            latency_ms=result.get("latency_ms", 0),
             input_tokens=result.get("input_tokens", 0),
             output_tokens=result.get("output_tokens", 0))
 

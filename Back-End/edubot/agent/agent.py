@@ -253,15 +253,36 @@ def get_recommendation(profile, lang="pt", allow_llm=True):
     # system prompt já instrui o formato JSON; o parsing é o mesmo do mock.
     if allow_llm and llm.is_real():
         try:
+            import re
+            import time
+            started = time.time()
+            import re
+            import time
+            started = time.time()
             resp = llm.messages_create(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
             )
-            text = "".join(b.text for b in resp.content if b.type == "text")
+            latency_ms = int((time.time() - started) * 1000)
+            text = "".join(b.text for b in resp.content if b.type == "text").strip()
+            if text.startswith("```"):
+                text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.DOTALL).strip()
+            latency_ms = int((time.time() - started) * 1000)
+            text = "".join(b.text for b in resp.content if b.type == "text").strip()
+            if text.startswith("```"):
+                text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.DOTALL).strip()
             recommendation = json.loads(text)
+            usage = getattr(resp, "usage", None)
+            usage = getattr(resp, "usage", None)
             recommendation["model_id"] = resp.model
             recommendation["message_id"] = resp.id
             recommendation["mock"] = False
+            recommendation["latency_ms"] = latency_ms
+            recommendation["input_tokens"] = getattr(usage, "input_tokens", 0) or 0
+            recommendation["output_tokens"] = getattr(usage, "output_tokens", 0) or 0
+            recommendation["latency_ms"] = latency_ms
+            recommendation["input_tokens"] = getattr(usage, "input_tokens", 0) or 0
+            recommendation["output_tokens"] = getattr(usage, "output_tokens", 0) or 0
             return recommendation
         except Exception as err:  # noqa: BLE001 — degrada para o mock
             print(f"[edubot] LLM real falhou ({err}); usando mock.")

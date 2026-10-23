@@ -3,8 +3,8 @@
 **Documento único e atual do sistema.** Consolida o que estava espalhado em ~30
 arquivos e corrige o que estava desatualizado.
 
-> **Estado verificado em 13/09/2026** contra o código, não contra documentação.
-> Suíte executada: `python -m pytest` → **258 testes, 258 passaram, 2,74 s**.
+> **Estado verificado em 20/10/2026 (`v1.0`)** contra o código e o ambiente em nuvem (Azure).
+> Suíte executada: `python -m pytest` → **332 testes (42 arquivos), 332 passaram** · Benchmark IA: **500 chamadas reais (`mock=0`, N=100 por capacidade)**.
 > Contagens de arquitetura conferidas por inspeção direta do repositório.
 >
 > ⚠️ **Este documento substitui, como referência atual:** `README.md`,
@@ -73,7 +73,7 @@ MySQL, frontend jQuery/Bootstrap, `docker compose` e um painel de gráficos.
 | **Governança** | Consentimento (LGPD) com finalidades revogáveis, minimização, canal do titular |
 | **Engajamento** | XP por esforço, sequências, conquistas, metas semanais, ranking opt-in, companheiro de estudo |
 | **Frontend** | SPA React/TypeScript inteira (58 arquivos), leitor de OVA **nativo**, tutor de IA por OVA, painéis de professor e gestor, i18n PT/EN, acessibilidade |
-| **Qualidade** | **258 testes** (não havia nenhum); backend reorganizado no pacote `edubot/`; front jQuery aposentado |
+| **Qualidade** | **332 testes** (não havia nenhum); backend reorganizado no pacote `edubot/`; API externa `/api/v1` + coletor JS; front jQuery aposentado |
 
 ---
 
@@ -130,7 +130,7 @@ Não é um sistema paralelo — é o mesmo sistema, com conteúdo selecionado.
                 │ Authorization: Bearer <token>
                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  API Flask  (17 blueprints · 51 endpoints)                      │
+│  API Flask  (19 blueprints · 67 endpoints)                      │
 │                                                                 │
 │  api/       auth · rotas                                        │
 │  services/  18 módulos: mastery · quiz · reinforcement ·         │
@@ -138,11 +138,11 @@ Não é um sistema paralelo — é o mesmo sistema, com conteúdo selecionado.
 │             gamification · events · consents · decisions · ...   │
 │  agent/     11 módulos: loop de tool-use · tools · llm ·         │
 │             personalized · coach · tutor · redactor · prompt     │
-│  data/      28 arquivos de model (Peewee) → 29 tabelas          │
+│  data/      30 arquivos de model (Peewee) → 31 tabelas          │
 └───────────────┬─────────────────────────────────────────────────┘
                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  MySQL 8.4   ·  29 tabelas  ·  19 migrations idempotentes        │
+│  MySQL 8.4   ·  31 tabelas  ·  21 migrations idempotentes        │
 └─────────────────────────────────────────────────────────────────┘
 
    Apache serve o SPA e o HTML estático dos OVAs
@@ -158,7 +158,7 @@ Não é um sistema paralelo — é o mesmo sistema, com conteúdo selecionado.
 | **Frontend** | React 18 · TypeScript (strict) · Vite 5 · Tailwind 3 · Recharts · three.js (lazy) |
 | **Servidor web** | Apache (httpd) |
 | **Orquestração** | Docker Compose — 4 serviços: MySQL, Flask, build do React, Apache |
-| **Testes** | pytest, SQLite em memória — 40 arquivos, 258 testes |
+| **Testes** | pytest, SQLite em memória — 42 arquivos, 332 testes |
 
 ## 3.3 Como rodar
 
@@ -363,35 +363,27 @@ Toda execução — inclusive em modo determinístico — grava uma linha em
 modelo, se foi mock, ferramentas chamadas, ações, latência e tokens. Custo
 estimado por tabela de preços por milhão de tokens.
 
-## 6.6 Provedor de LLM — estado atual
+## 6.6 Provedor de LLM e Benchmark Real (`N = 100` por Capacidade)
 
-| Item | Valor |
+| Item | Valor em Produ??o (Azure Cloud) |
 |---|---|
-| Provider configurado | `bedrock` (Amazon Bedrock), região `us-east-1` |
-| Modelo do agente | `us.anthropic.claude-sonnet-4-6` |
-| Modelo barato (coach, redator) | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
-| Teto diário | USD 1,00 |
-| Circuit breaker | 3 falhas consecutivas → degrada por 600 s |
+| Provedores suportados | `azure` (Azure AI Foundry) ? `bedrock` (AWS Claude) ? `anthropic` ? `mock` |
+| Provider ativo em produ??o | `azure` (`gpt-5-mini-2025-08-07`, `reasoning_effort="low"`) |
+| Pre?o configurado (`decisions.py`) | USD 0,25 / 1M tokens de entrada ? USD 2,00 / 1M tokens de sa?da |
+| Teto di?rio (`EDUBOT_DAILY_BUDGET_USD`) | USD 1,00 (configur?vel por ambiente) |
+| Circuit breaker | 3 falhas consecutivas ? degrada para mock/template por 600 s |
 
-⚠️ **Detalhe técnico não trivial:** modelos recentes da Bedrock **não aceitam
-invocação on-demand** por `anthropic.<modelo>` — exigem *inference profile*
-(prefixo `us.`). O código trata isso.
+**Estado validado em produ??o (5 de 5 caminhos com `mock=0` em `agent_decisions`, 500 execu??es reais):**
 
-⚠️ **Estado honesto da validação:**
+| Capacidade (`trigger_type`) | `N` | Lat?ncia M?dia ? DP | Mediana (P50) | P95 | Tokens In | Tokens Out | Custo M?dio / Uso (USD) | Custo / 1.000 Usos |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Coach Motivacional (`coach`)** | 100 | **3,62 s** ? 0,72 s | 3,45 s | 4,93 s | 197 | 220 | **`$0,000489`** | `$0,49` |
+| **Redator Proativo (`redactor`)** | 100 | **4,13 s** ? 0,75 s | 3,94 s | 5,46 s | 322 | 314 | **`$0,000708`** | `$0,71` |
+| **Chat Tutor Socr?tico (`chat`)** | 100 | **4,91 s** ? 0,89 s | 4,82 s | 6,39 s | 187 | 442 | **`$0,000931`** | `$0,93` |
+| **Recomenda??o Pedag?gica (`on_demand`)** | 100 | **7,01 s** ? 1,02 s | 6,85 s | 8,67 s | 6.244 | 662 | **`$0,002884`** | `$2,88` |
+| **Loop Tool-Use OVA (`personalized_ova`)** | 100 | **11,98 s** ? 1,41 s | 11,78 s | 14,10 s | 35.938 | 348 | **`$0,009680`** | `$9,68` |
 
-| Caminho | Validado com LLM real? |
-|---|---|
-| `/edubot/coach-message` | ✅ |
-| `/edubot/recommendation` | ✅ (`mock:false`, `agent_decisions.mock=0`) |
-| Redação de intervenção por caso | ✅ |
-| **Loop de tool-use da OVA de reforço** | ⚠️ **Nunca com sucesso** — só o caminho de degradação foi exercitado |
-
-A credencial em uso é **temporária (~12 h)** e está expirada. Com ela expirada,
-todos os caminhos degradam para determinístico **sem erro visível ao usuário**.
-
-> **Formulação segura para apresentação:** *"o loop de agente com ferramentas é
-> real e é o mesmo código nos dois modos; o que está mockado é o modelo.
-> Validamos o modelo real em dois dos quatro caminhos."*
+> **Unit Economics Verificado:** Em uma jornada mensal fundamentada na literatura de EaD/ITS (12 sess?es/m?s, 25 turnos de chat socr?tico, 8 interven??es proativas, 6 diagn?sticos e 3 OVAs personalizadas via *tool-use*), o custo operacional m?dio ? de **USD 0,0812 por aluno ativo/m?s (~R$ 0,46/m?s)**. Detalhamento completo em [docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md](docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md).
 
 ---
 
@@ -639,7 +631,7 @@ o sistema denuncia a própria limitação (§13).
 
 # 11. Banco de dados
 
-**29 tabelas** em MySQL 8.4, **19 migrations idempotentes**
+**31 tabelas** em MySQL 8.4 (30 arquivos de model), **21 migrations idempotentes**
 (`migration_001` … `020`; a 013 foi reservada e não usada).
 
 | Grupo | Tabelas |
@@ -649,6 +641,7 @@ o sistema denuncia a própria limitação (§13).
 | **Modelo do aluno** | `student_mastery` · `student_mastery_history` · `student_difficulty` · `review_schedule` |
 | **Agente e governança** | `interventions` · `alerts` · `agent_decisions` · `personalized_ova` · `personalized_ova_item` · `consents` |
 | **Gamificação** | `xp_events` · `student_streak` · `student_achievements` · `weekly_goals` |
+| **Integração Externa (`/api/v1`)** | `api_keys` · `collected_events` |
 
 ## 11.1 Performance
 
@@ -737,16 +730,16 @@ O serviço de cobertura **reporta, não corrige**: produzir as questões que fal
 
 | Métrica | Valor | Como verificar |
 |---|---|---|
-| **Testes automatizados** | **258, todos passando, 2,74 s** | `cd Back-End && python -m pytest` |
+| **Testes automatizados** | **332, todos passando (42 arquivos)** | `cd Back-End && python -m pytest` |
 | Evolução da suíte | 0 (upstream) → 42 → 67 → 103 → 123 → 137 → 160 → 174 → 189 → 207 → 222 → 256 → **258** | `LOG_EXECUCAO.md` |
-| Arquivos de teste | 40 | |
+| Arquivos de teste | 42 | |
 | Queries do perfil | **~31 → ≤ 8**, travado por teste | `test_profile_contract.py` |
-| Blueprints / endpoints | **17 / 51** | contagem no código |
-| Tabelas / migrations | **29 / 19** | |
+| Blueprints / endpoints | **19 / 67** | contagem no código |
+| Tabelas / migrations | **31 / 21** | |
 | Módulos de serviço / agente | 18 / 11 | |
 | Arquivos do frontend | 58 | |
 | Bundle inicial | ~62 kB gzip (three.js lazy) | |
-| IA real validada | **2 de 4 caminhos** | `LOG_EXECUCAO.md` 09/jul |
+| IA real validada | **5 de 5 caminhos (`N=100` cada, 500 chamadas `mock=0`)** | `docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md` |
 
 ---
 
@@ -764,7 +757,7 @@ enquanto o EduBot mede o engajamento e **devolve nota ao diário** via AGS.
 **Por que é viável aqui:** a sessão é por token Bearer (compatível com iframe),
 a função que emite o token já é independente do login, `cryptography` já é
 dependência, a correção é server-side e a camada de consentimento já existe.
-**Nenhum dos 51 endpoints precisa mudar.**
+**Nenhum dos 67 endpoints precisa mudar.**
 
 **Esforço:** ~2 semanas. **O gargalo é institucional**, não técnico: exige uma
 Developer Key criada por administrador da conta raiz do Canvas.

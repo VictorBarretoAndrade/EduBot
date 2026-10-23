@@ -217,16 +217,20 @@ def tutor_reply(titulo, context, messages, lang="pt", persona=None):
     # (credencial/rede), cai no mock para o chat não quebrar.
     if llm.is_real():
         try:
+            import time
+            started = time.time()
             resp = llm.messages_create(
                 system=system,
                 messages=[{"role": m["role"], "content": m["content"]} for m in messages],
             )
+            latency_ms = int((time.time() - started) * 1000)
             reply = "".join(b.text for b in resp.content if b.type == "text")
             usage = getattr(resp, "usage", None)
             # B.2: a rota registra a decisão (metadados + tokens) — o tutor-chat
             # é chamada REAL paga e precisa contar no orçamento diário.
             return {"reply": reply, "model_id": resp.model, "mock": False,
                     "sources": sources,
+                    "latency_ms": latency_ms,
                     "input_tokens": getattr(usage, "input_tokens", 0) or 0,
                     "output_tokens": getattr(usage, "output_tokens", 0) or 0}
         except Exception as err:  # noqa: BLE001 — degrada graciosamente para o mock

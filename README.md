@@ -1,109 +1,94 @@
+# EduBot — Ecossistema de Aprendizagem Adaptativa e Tutoria Proativa por IA (`v1.0`)
+
+Plataforma de Objetos Virtuais de Aprendizagem (**OVA-IA**) que **mede o engajamento real** do estudante (leitura por seção, vídeo, áudio e tentativas de quiz), **modela o domínio por competência via BKT (*Bayesian Knowledge Tracing*) com decaimento temporal**, e **age proativamente** — intervindo antes da evasão, respondendo dúvidas de forma socrática e montando **OVAs personalizadas de reforço** por meio de um agente autônomo com loop de *tool-use*.
+
+- **Produção (Cloud Azure + HTTPS):** [https://edubot-project.chilecentral.cloudapp.azure.com/app/](https://edubot-project.chilecentral.cloudapp.azure.com/app/)
+- **Documentação Arquitetural Completa:** [ARQUITETURA_EDUBOT.md](ARQUITETURA_EDUBOT.md)
+- **Relatório Consolidado do Hackathon (Benchmarks $N=100$, Tool-Use e Fundamentação Teórica):** [docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md](docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md)
+
+---
+
+## Como Executar Localmente
+
+```bash
+git clone https://github.com/PERSONALIZED-CONTENT-RECOMMENDER/EduBot.git
+cd EduBot
+docker compose up -d --build
 ```
-git clone https://github.com/PERSONALIZED-CONTENT-RECOMMENDER/OVA-Rastreamento.git
-```
 
-# Running
-```
-cd OVA-Rastreamento
-docker compose up --build
-```
-- **Interface nova (React/Lovable, recomendada):** http://localhost:8010/app/
-- Interface clássica: http://localhost:8010/html/login.html
+- **Aplicação Web (SPA React / TypeScript):** `http://localhost:8010/app/`
+- **API Backend (Flask):** `http://localhost:5010`
 
-## Perfis de Demonstração e Login
+> O frontend React é compilado automaticamente durante o `docker compose up` pelo serviço `ova_react_build` — **não é necessário instalar Node.js na máquina host**.
 
-A plataforma possui perfis calibrados para validação pedagógica e acompanhamento no dashboard:
+---
 
-### 🎓 Alunos (Turma de Engenharia de Computação)
-| Perfil | Aluno | RA (Usuário) | Senha | Métricas / Comportamento |
-|---|---|:---:|:---:|---|
-| **Perfil Zerado (Primeiro Acesso)** | Thiago | `6` | `6` | **0% de consumo**, sem tentativas de quiz ou histórico prévio. Ideal para testar a jornada do aluno do zero ao vivo. |
-| **Bom Desempenho** | Eduardo | `1` | `1` | **96% de consumo**, taxa de erro de **4%** (0.04), score de risco **0/100**, streak ativo de 5 dias, nível 5 e medalhas conquistadas. |
-| **Médio Desempenho** | Yasmin | `3` | `3` | **55% de consumo**, taxa de erro de **46%** (0.46), score de risco **22/100** e **OVA de reforço já gerada** pelo agente de IA para dúvidas em Computação Quântica. |
-| **Baixo Desempenho / Risco de Evasão** | Pedro | `5` | `5` | **Inativo há 14 dias**, abandono de leitura (15%), taxa de erro de **83%** (0.83), score de risco **78/100** (**Crítico/Alto**) e **alerta preventivo aberto** para o tutor. |
+## Perfis de Demonstração e Credenciais
 
-### 👨‍🏫 Gestão e Tutoria (Visualização dos Dashboards)
-| Papel | Nome | RA (Usuário) | Senha | O que visualiza |
-|---|---|:---:|:---:|---|
-| **Coordenador / Admin** | Sanval | `4` | `4` | Acesso ao **Painel do Tutor** (visão da turma, alertas e riscos dos alunos) e ao **Painel do Gestor** (gráficos consolidados de acertos/erros e métricas globais). |
-| **Tutor da Turma** | Gabriel | `2` | `2` | Acesso ao **Painel do Tutor** (fila de aprovação, heatmap de domínio e alertas preventivos). |
+A plataforma aceita login tanto por **RA/Matrícula** quanto por **Nome de Usuário** (case-insensitive):
 
-> O frontend React é compilado automaticamente por um container Node durante o
-> `docker compose up` (serviço `ova_react_build`) — **não é preciso ter Node
-> instalado na máquina**. Para desenvolvê-lo com hot-reload, aí sim use Node:
-> `cd Front-End/react-logic-demo && npm install && npm run dev`.
+### Alunos (Turma de Engenharia de Computação)
+| Perfil | Aluno | Login (RA / Usuário) | Senha | Métricas e Estado Calibrado |
+| :--- | :--- | :---: | :---: | :--- |
+| **Primeiro Acesso (Zerado)** | Thiago | `6` | `6` | **0% de consumo**, sem tentativas prévias. Ideal para demonstrar a jornada do zero ao vivo. |
+| **Alto Desempenho** | Eduardo | `1` | `1` | **96% de consumo**, taxa de erro de **4%**, score de risco **0/100**, streak de 5 dias, nível 5. |
+| **Médio Desempenho (Reforço IA)** | Yasmin | `3` | `3` | **55% de consumo**, taxa de erro de **46%**, score de risco **22/100** e **OVA personalizada já gerada**. |
+| **Baixo Desempenho / Risco Crítico** | Pedro | `5` | `5` | **Inativo há 14 dias**, consumo de **15%**, taxa de erro de **83%**, score de risco **78/100** e alerta aberto para o tutor. |
+| **Acesso Nominal 1** | Sanval | `Sanval` | `Cimatec123` | Conta de aluno nominal para avaliação rápida. |
+| **Acesso Nominal 2** | Educação Online | `Edon` | `Cimatec@123` | Conta de aluno nominal para avaliação rápida. |
 
-> **Nota:** em um volume MySQL já existente (criado antes destas mudanças), aplique as
-> migrações manualmente: `docker compose exec -T ova_mysql sh -c "mysql -uroot -pPassword-1 ova_db < /docker-entrypoint-initdb.d/ddl_extra.sql"`
-> e o mesmo para `dml_extra.sql`. Em um volume novo, os scripts rodam sozinhos no init.
+### Gestão e Tutoria (Dashboards Docente e Institucional)
+| Papel | Nome | Login | Senha | O que visualiza |
+| :--- | :--- | :---: | :---: | :--- |
+| **Coordenador / Admin** | Sanval (Coordenador) | `4` | `4` | **Painel do Tutor** (risco, heatmap de domínio, alertas) + **Painel do Gestor** (métricas globais e cobertura do acervo). |
+| **Tutor da Turma** | Gabriel | `2` | `2` | **Painel do Tutor** (fila de aprovação de ações do agente, mapa de calor turma × competência e gargalos por seção). |
 
-# EduBot Track
+---
 
-- **Como a plataforma funciona + passo a passo para testar tudo:** [COMO_TESTAR_PLATAFORMA.md](COMO_TESTAR_PLATAFORMA.md)
-- **Ligar a IA real (AWS Bedrock) — só configurar a key:** [IA_AWS_SETUP.md](IA_AWS_SETUP.md)
-- **Requisitos do projeto × estado atual + backlog:** [REQUISITOS_E_BACKLOG.md](REQUISITOS_E_BACKLOG.md)
-- **Plano técnico das features faltantes para o roteiro do vídeo:** [PLANO_TECNICO_ROTEIRO.md](PLANO_TECNICO_ROTEIRO.md)
-- **Guia de gravação — passo a passo (onde clicar) por cena:** [GUIA_GRAVACAO_ROTEIRO.md](GUIA_GRAVACAO_ROTEIRO.md)
-- **Guia de gravação (Proposta de Roteiro, 8 min) — falas + onde mostrar por cena:** [GUIA_GRAVACAO_PROPOSTA.md](GUIA_GRAVACAO_PROPOSTA.md)
-- **Avatar 3D falante (Ready Player Me) + seletor de 2 personas no "Meu Desempenho":** [AVATAR_3D.md](AVATAR_3D.md)
-- **Lista completa de arquivos alterados + passo a passo de execução:** [ALTERACOES_EDUBOT.md](ALTERACOES_EDUBOT.md)
-- **Mapeamento do código, bugs corrigidos e justificativa da arquitetura:** [ANALISE.md](ANALISE.md)
-- **Dados captados, formato de exportação e integração com LLM:** [DADOS_E_AGENTE.md](DADOS_E_AGENTE.md)
-- **OVA personalizada (agente de tool-use) — arquitetura, tools, endpoints e como cadastrar conteúdo:** [OVA_PERSONALIZADA.md](OVA_PERSONALIZADA.md)
-- **Como adicionar conteúdo (OVAs, vídeos, podcasts e textos) via SQL:** [COMO_ADICIONAR_CONTEUDO.md](COMO_ADICIONAR_CONTEUDO.md)
-- **Como abrir o frontend novo (React/Lovable):** [COMO_ABRIR_FRONTEND_NOVO.md](COMO_ABRIR_FRONTEND_NOVO.md)
+## Números da Arquitetura (`v1.0`)
 
-Resumo do que existe agora:
+| Indicador | Valor Verificado | Detalhamento |
+| :--- | :---: | :--- |
+| **Testes Automatizados** | **332 testes** | 42 arquivos de teste (`pytest`), 100% passando |
+| **Endpoints HTTP** | **67 endpoints** | Distribuídos em **19 blueprints** Flask |
+| **Banco de Dados** | **31 tabelas** | 30 arquivos de model (Peewee ORM) e **21 migrations** SQL idempotentes |
+| **Módulos de Domínio** | **18 services + 11 agent** | Arquitetura desacoplada em `Back-End/edubot/` |
+| **Provedores de IA Suportados** | **4 provedores** | `azure` (Azure AI Foundry `gpt-5-mini`), `bedrock` (AWS Claude), `anthropic` e `mock` determinístico |
+| **Capacidades de IA Validadas** | **5 de 5 (`mock=0`)** | 500 execuções reais ($N=100$ por capacidade) auditadas em `agent_decisions` |
 
-- **Recursos com vídeo e podcast (4.1)** — tabela `resources` com `resource_url` +
-  `media_type` (abstração de hospedagem: upload próprio ou embed externo) e tabela
-  `resource_progress` (% assistido, tempo de escuta, conclusão). Players separados em
-  `Front-End/files/js/components/` (`video-player.js`, `audio-player.js`), que recebem
-  qualquer URL.
-- **Autenticação e contexto do aluno (4.2)** — token assinado emitido no `/login`
-  (header `Authorization: Bearer`), decorator `require_auth` e `GET /student/me` com o
-  perfil completo (consumo, competências, inatividade, preferência de formato).
-  Defina `EDUBOT_SECRET` em produção.
-- **Agente de IA (4.3)** — módulo `Back-End/edubot_agent/` com o prompt do Claude
-  Sonnet (AWS Bedrock) já escrito e parametrizado e um cliente **mockado** que responde
-  no formato real da API. `GET /edubot/recommendation` gera e persiste a recomendação.
-  A chamada real ao Bedrock ainda **não** está conectada (por decisão de projeto).
-- **Painel do aluno (4.4)** — `http://localhost:8010/html/painel.html`: recursos
-  consumidos por OVA, status das competências e última recomendação do EduBot.
-- **OVA personalizada de reforço (agente de tool-use)** — o EduBot deixa de ser
-  uma chamada só e vira um **agente** com ferramentas: ele identifica a
-  competência em que o aluno foi pior (erro no quiz por competência), consulta o
-  **banco de conteúdo classificado por competência** (`resources.competency_id` +
-  questões) e **monta uma OVA de reforço** (tabelas `personalized_ova` /
-  `personalized_ova_item`). Disponível nos **dois frontends**: no React/Lovable
-  (`/app/`) há a aba **"Reforço"** na barra lateral; no clássico, o botão **"Gerar
-  OVA de reforço"** no painel abre `html/ova_personalizada.html?id=<id>`. Ambos
-  reaproveitam os mesmos players e o mesmo quiz (corrigido no servidor).
-  - O **loop de tool-use é real e definitivo**; só o "cérebro" (o modelo) é
-    mockado — o `_MockAgentClient` em
-    [Back-End/edubot_agent/personalized.py](Back-End/edubot_agent/personalized.py)
-    devolve o **mesmo envelope de tool-use da Anthropic Messages API**. Ligar a
-    LLM real = trocar o cliente (esqueleto comentado no fim do arquivo); as tools,
-    o loop e o parsing já são os definitivos.
+---
 
-## Endpoints novos
+## Benchmark Real de Latência e Custo do Agente ($N = 100$ por Capacidade)
 
-| Método | Rota | Auth | Descrição |
-|--------|------|------|-----------|
-| GET | `/ova/<id>/resources` | ✔ | Recursos do OVA + progresso do aluno logado |
-| POST | `/progress/ova` | ✔ | Upsert de leitura/scroll/conclusão do OVA |
-| POST | `/progress/resource` | ✔ | Upsert de consumo de um recurso (vídeo/podcast/atividade) |
-| GET | `/student/me` | ✔ | Perfil completo do aluno logado |
-| GET | `/edubot/recommendation` | ✔ | Recomendação do agente (mock Bedrock) |
-| POST | `/edubot/personalized-ova` | ✔ | **Agente de tool-use**: diagnostica o assunto fraco do aluno e monta uma OVA de reforço (recursos + questões do banco) |
-| GET | `/personalized-ova` | ✔ | Lista as OVAs de reforço do aluno logado |
-| GET | `/personalized-ova/<id>` | ✔ | Conteúdo de uma OVA de reforço (recursos + quiz) |
+Medições reais coletadas em produção (`Azure VM Chile Central` $\leftrightarrow$ `Azure AI Foundry East US 2`, modelo `gpt-5-mini-2025-08-07` com `reasoning_effort="low"`, tarifa oficial de `\$0,25/1M` tokens de entrada e `\$2,00/1M` tokens de saída):
 
-## Teste local sem Docker
+| Capacidade do Agente | `trigger_type` | Amostras ($N$) | Latência Média $\pm$ DP | Mediana (P50) | P95 | Tokens Entrada | Tokens Saída | Custo Médio / Uso (USD) | Custo / 1.000 Usos |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Coach Motivacional (Avatar)** | `coach` | 100 | **3,62 s** $\pm$ 0,72 s | 3,45 s | 4,93 s | 197 | 220 | **`$0,000489`** | `$0,49` |
+| **Redator Proativo de Intervenções** | `redactor` | 100 | **4,13 s** $\pm$ 0,75 s | 3,94 s | 5,46 s | 322 | 314 | **`$0,000708`** | `$0,71` |
+| **Chat Tutor Socrático** | `chat` | 100 | **4,91 s** $\pm$ 0,89 s | 4,82 s | 6,39 s | 187 | 442 | **`$0,000931`** | `$0,93` |
+| **Diagnóstico e Recomendação** | `on_demand` | 100 | **7,01 s** $\pm$ 1,02 s | 6,85 s | 8,67 s | 6.244 | 662 | **`$0,002884`** | `$2,88` |
+| **Agente OVA (Loop Tool-Use 4 tools)** | `personalized_ova` | 100 | **11,98 s** $\pm$ 1,41 s | 11,78 s | 14,10 s | 35.938 | 348 | **`$0,009680`** | `$9,68` |
 
-```powershell
+> **Unit Economics Fundamentado:** Para um estudante regular ativo em EaD/Híbrido (**12 sessões/mês**, **25 turnos de chat socrático**, **8 intervenções proativas**, **6 diagnósticos pós-quiz** e **3 OVAs personalizadas via tool-use**), o custo total de IA é de **`$0,0812 USD / aluno / mês`** (~**R\$ 0,46/mês**). Veja a fundamentação completa em [docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md](docs/RESULTADOS_HACKATHON_TAREFAS_1_2_3.md).
+
+---
+
+## Principais Capacidades da Plataforma
+
+1. **Telemetria Honesta e Eventos xAPI-lite:** Rastreamento de leitura ativa por seção (`ova_section_progress`, descontando aba oculta e ociosidade), consumo real de vídeo/podcast (`resource_progress`), tentativas de quiz corrigidas no servidor (`attempts`) e 20 verbos de eventos (`learning_events`), além de coletor externo via `edubot-tracker.js` (`POST /api/v1/collect`).
+2. **Modelo Cognitivo BKT com Esquecimento:** Estima o domínio contínuo ($0$ a $1$) por competência (`student_mastery`), com snapshots diários de tendência (`student_mastery_history`) e agendamento automático de revisão espaçada SM-2 (`review_schedule`).
+3. **Agente Híbrido (Regras Determinísticas + Loop de Tool-Use):**
+   - Motor determinístico avalia 6 regras pedagógicas a custo zero e decide *se* e *quando* intervir.
+   - Loop de *tool-use* ([Back-End/edubot/agent/loop.py](Back-End/edubot/agent/loop.py)) com 11 ferramentas classificadas por tier de autonomia (`read`, `auto`, `auto_capped`, `auto_or_queue`, `queue`), validação server-side de todos os IDs, circuit breaker, teto de orçamento diário e trilha de auditoria LGPD (`agent_decisions`).
+4. **Integração Externa (`/api/v1`):** API pública autenticada por chave com escopos granulares (`api_keys`) e coletor de eventos (`collected_events`) para integração com LMS parceiros e Canvas LTI 1.3.
+
+---
+
+## Executando a Suíte de Testes
+
+```bash
 cd Back-End
-pip install -r requirements.txt
-python tools/init_test_db.py   # cria dev_ova.db (SQLite) com dados de exemplo
-python api/api.py              # API em http://127.0.0.1:8090 (login RA 1 / senha 1)
+python -m pytest -q
+# 332 passed
 ```

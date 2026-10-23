@@ -46,14 +46,13 @@ Front-End/react-logic-demo/.env.local
 /platform_flowchart_en.png
 /modelo-EER.png
 
-# Materiais internos do Hackathon (não subir no git: viabilidade, roteiros de demo e gravações)
-CONTEXTO_GERAL_EDUBOT.md
-VALIDACAO_PESQUISAS_E_DADOS.md
-VIABILIDADE_ECONOMICA_DECK.md
-ROTEIRO_DEMO_8MIN_EN.md
-ROTEIRO_GRAVACAO_DEMO_RESERVA_2A3MIN.md
-PLANO_INTEGRACAO_CANVAS_LTI13.md
-Para Amsterdam/
+# Materiais internos do Hackathon (não subir no git: viabilidade, roteiros de demo e gravações da raiz)
+/CONTEXTO_GERAL_EDUBOT.md
+/VALIDACAO_PESQUISAS_E_DADOS.md
+/VIABILIDADE_ECONOMICA_DECK.md
+/ROTEIRO_DEMO_8MIN_EN.md
+/ROTEIRO_GRAVACAO_DEMO_RESERVA_2A3MIN.md
+/PLANO_INTEGRACAO_CANVAS_LTI13.md
 Para_Amsterdam.zip
 demo/
 *.mp4
