@@ -1,0 +1,13 @@
+Recurso,Cenario Atual (Hoje),Producao Otimizada (1.000 Alunos),Alta Concorrencia (1.000 Alunos Pico)
+Especificacao da VM,"Standard_B2as_v2 (2 vCPU, 8 GB)","Standard_B2as_v2 (2 vCPU, 8 GB)","Standard_B4as_v2 (4 vCPU, 16 GB)"
+Computacao da VM (730h/mes),$76.65,$76.65,$153.30
+Disco SSD (StandardSSD_LRS),$3.72 (30 GB),$6.72 (64 GB),$13.44 (128 GB)
+Backup / Snapshots,$0.00,$3.50,$6.00
+Operacoes de Disco (IOPS),$1.00,$3.00,$4.50
+IP Publico Estatico,$3.65,$3.65,$3.65
+Trafego de Saida (Bandwidth),$0.00 (ate 100 GB gratis),$4.00 (50 GB extras),$8.00 (100 GB extras)
+SUBTOTAL INFRAESTRUTURA VM,$85.02 / mes,$97.52 / mes,$188.89 / mes
+API de IA (gpt-5-mini),$0.00 - $30.00,$30.00 - $60.00,$60.00 - $100.00
+TOTAL GERAL (VM + IA),$85.02 - $115.02 / mes,$127.52 - $157.52 / mes,$248.89 - $288.89 / mes
+Custo Mensal por Aluno,-,$0.13 - $0.16 / aluno,$0.25 - $0.29 / aluno
+
