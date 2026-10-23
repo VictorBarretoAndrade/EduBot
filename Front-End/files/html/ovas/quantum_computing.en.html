@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module - Quantum Computing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        .carrousel-img {
+            max-width: 100%;
+        }
+
+        .section-content {
+            opacity: 0;
+            left: -100vw;
+        }
+
+        @media (min-width: 768px) {
+            .carrousel-img {
+                max-width: 50%;
+            }
+        }
+
+        @media (min-width: 992px) {
+            section > * {
+                max-width: 50vw;
+            }
+
+            div, h1 {
+                max-width: 100vw;
+            }
+
+            .carrousel-img,  .carrousel p {
+                width: 50%;
+            }
+
+            h1, h2, h3, p {
+                font-size: 1.5rem;
+            }
+
+            .carrousel p, label {
+                font-size: 1.5rem;
+            }
+
+            #introduction p {
+                max-width: 50%;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .main-img, .main-text {
+                width: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section id="introduction" class="text-light px-4 py-5" style="background-color: #04093b;">
+        <div class="d-flex flex-column justify-content-around align-items-center text-center">
+            <p class="fs-4 pt-5">Quantum Computing</p>
+            <p class="fs-5 pt-5">Hello, student! Your experience is about to begin, and a lot of content is at your disposal! Senai Cimatec offers you a true experience in the study of this subject, allowing you — beyond amazing content about quantum computing — to earn an extra certificate for your résumé! Keep going to learn more!</p>
+        </div>
+    </section>
+    <section id="journey">
+        <h1 class="title text-light bg-primary text-center py-5 w-100">The Quantum Journey Begins</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>Imagine a universe where information is not limited to zeros and ones, but can exist in multiple states at the same time. That is the world of quantum computing, which harnesses the principles of quantum mechanics to perform complex calculations unimaginable for classical computers.</p>
+                <div class="d-xxl-flex my-5 justify-content-between align-items-center">
+                    <img src="../../imagens/bit_vs_qubit.png" alt="" srcset="" class="w-100 main-img">
+                    <p class="main-text">Qubits are the key to the power of quantum computing. They allow quantum computers to perform calculations in parallel, exponentially faster than classical computers. To understand this better, think of a classical bit like a coin: it can land on either heads or tails. A qubit, the basic unit of information in quantum computing, is like a spinning coin that represents both heads and tails at the same time!</p>
+                </div>
+                <p>Two unique properties of qubits are superposition and entanglement.</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="qubits-prop">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="superposition text-center">
+                        <h2 class="my-4">Superposition</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/ondas.webp" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p class="ms-md-3">A qubit can be in a state of 0, 1, or a linear combination of both simultaneously. Think of a wave: it can be high, low, or a blend of the two. Superposition is like combining waves in the quantum world.</p>
+                        </div>
+                    </div>
+                    <div class="entanglement text-center">
+                        <h2 class="my-4">Quantum Entanglement</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/entrelaçamento.jpg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p class="md-ms-3">Imagine two special quantum coins. They are "entangled," meaning that measuring one coin instantaneously determines the state of the other, even when they are far apart, dramatically increasing processing capacity.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="applications">
+        <h1 class="title text-light bg-primary text-center py-5">Applications of Quantum Computing</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>Quantum computing opens up a new world of possibilities with algorithms that operate in a fundamentally different way from classical algorithms. This core difference translates into unmatched efficiency for solving complex problems across diverse fields.</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="applications">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="criptography text-center">
+                        <h2 class="my-4">Cryptography</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/criptografia-quântica.jpg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p>Shor's algorithm revolutionizes modern cryptography by breaking the security of widely used systems such as RSA and ECC, with profound implications for cybersecurity and e-commerce.</p>
+                        </div>
+                    </div>
+                    <div class="simulation text-center">
+                        <h2 class="my-4">Quantum Simulations</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/remedios_materiais.jpeg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p>Tackling complex physical and chemical problems, such as discovering new drugs and materials, becomes possible with quantum simulations that replicate the behavior of molecules and atomic systems with unprecedented accuracy.</p>
+                        </div>
+                    </div>
+                    <div class="optimization text-center">
+                        <h2 class="my-4">Optimization</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/carteira.jpeg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p>Optimizing delivery routes, investment portfolios, supply chains, and other large-scale problems finds a powerful ally in quantum computing to uncover more efficient and profitable solutions.</p>
+                        </div>
+                    </div>
+                    <div class="optimization text-center">
+                        <h2 class="my-4">Machine Learning</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <img src="../../imagens/ia.png" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
+                            <p>The development of smarter, more autonomous artificial intelligence systems is driven by quantum algorithms that accelerate machine learning and data analysis by leveraging superposition.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="differences">
+        <h1 class="title text-light bg-primary text-center py-5">Differences from Classical Computing</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <div class="accordion">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                          Programming Languages
+                        </button>
+                      </h2>
+                      <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>Quantum computing does not rely on conventional general-purpose code; instead, it centers on designing and implementing specialized quantum circuits and algorithms. Classical computing, by contrast, uses standardized languages such as Java, SQL, or Python, among many others.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                          Purpose and Use Cases
+                        </button>
+                      </h2>
+                      <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>A quantum computer is not meant for everyday consumer tasks like a personal computer (PC). These specialized machines are designed for high-complexity problems in enterprise, scientific, and technological research.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                          Architecture
+                        </button>
+                      </h2>
+                      <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>A quantum processor is structured very differently from a conventional computer and does not separate memory and CPU in the classical way. Instead, these systems operate directly on an array of qubits that serve as the foundation for computation.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+            </div>
+        </div>
+    </section>
+    <section id="challenges">
+        <h1 class="title text-light bg-primary text-center py-5">Challenges of Quantum Computing</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>Despite its enormous promise, quantum computing still faces major technical hurdles that must be overcome to reach its full potential. Among the main obstacles are:</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                          Decoherence
+                        </button>
+                      </h2>
+                      <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>Decoherence is the loss of quantum information caused by interaction with the surrounding environment, which limits how long qubits can maintain superposition — a crucial requirement for complex calculations.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                          Quantum Errors
+                        </button>
+                      </h2>
+                      <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>Quantum errors are faults that can occur during quantum computations, such as an unintended qubit state flip or loss of superposition. They can be triggered by thermal noise or decoherence itself, leading to failed calculations or inaccurate results.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                          Cryogenic Cooling
+                        </button>
+                      </h2>
+                      <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>To keep qubits in a stable state of superposition, they must be cooled to temperatures near absolute zero. This makes the cooling infrastructure complex and expensive, posing a major challenge for large-scale quantum computing.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+            </div>
+        </div>
+    </section>
+    <section id="conclusion">
+        <h1 class="title text-light bg-primary text-center py-5">Conclusion</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5 border-bottom">
+                <p>The future of quantum computing is bright, though much work still lies ahead. With sustained investment and global collaboration, we can turn this technology into a practical reality and share its benefits across society.</p>
+                <p>Below, you will find a quiz with questions about the previous topics. Answer carefully!</p>
+            </div>
+            <div class="questions py-4"></div>
+        </div>
+    </section>
+    <section id="resources">
+        <h1 class="title text-light bg-primary text-center py-5">Additional Resources</h1>
+        <div class="container p-5 section-content position-relative">
+            <!-- MELHORIA (4.1): os players de vídeo/podcast e as atividades práticas
+                 desta seção são renderizados dinamicamente pelo ova.js a partir da
+                 tabela "resources" (URL + tipo de mídia vindos do banco), usando os
+                 componentes js/components/video-player.js e audio-player.js.
+                 Os iframes do YouTube hardcoded foram removidos — nos OVAs de
+                 Cálculo eles eram, inclusive, os vídeos de Computação Quântica
+                 copiados por engano. -->
+            <p class="fs-5">If you want to go deeper into the subject, here are some resources for you. Enjoy!</p>
+        </div>
+    </section>
+</body>
+</html>

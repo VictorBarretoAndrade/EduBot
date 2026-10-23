@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module - Calculus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        .carrousel-img { max-width: 100%; }
+        .section-content { opacity: 0; left: -100vw; }
+        @media (min-width: 768px) { .carrousel-img { max-width: 50%; } }
+        @media (min-width: 992px) {
+            section > * { max-width: 50vw; }
+            div, h1 { max-width: 100vw; }
+            .carrousel-img, .carrousel p { width: 50%; }
+            h1, h2, h3, p { font-size: 1.5rem; }
+            .carrousel p, label { font-size: 1.5rem; }
+            #introduction p { max-width: 50%; }
+        }
+        @media (min-width: 1400px) { .main-img, .main-text { width: 50%; } }
+    </style>
+</head>
+<body>
+    <section id="introduction" class="text-light px-4 py-5" style="background-color: #04093b;">
+        <div class="d-flex flex-column justify-content-around align-items-center text-center">
+            <p class="fs-4 pt-5">Calculus</p>
+            <p class="fs-5 pt-5">Hello, student! Welcome to the Calculus module, where you will build the mathematical foundation essential for modeling dynamic phenomena in engineering. Throughout this study, we will explore limits, continuity, derivatives, antiderivatives, and maximum and minimum analysis with step-by-step worked examples!</p>
+        </div>
+    </section>
+
+    <section id="limits-fundamentals">
+        <h1 class="title text-light bg-primary text-center py-5 w-100">Concept of a Limit, One-Sided Limits, and Limits at Infinity</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>In engineering, we often need to know how a quantity behaves as a variable approaches a specific value, even if it never actually reaches that value. A <strong>limit</strong> describes this target behavior: we write <strong>lim x→a f(x) = L</strong> to indicate that f(x) gets arbitrarily close to L as x approaches a.</p>
+                <p>For the limit to exist at x = a, the <strong>one-sided limits</strong> from the left (x→a⁻, values less than a) and from the right (x→a⁺, values greater than a) must both exist and be equal: lim x→a⁻ f(x) = lim x→a⁺ f(x) = L. With <strong>limits at infinity</strong> (x→∞ or x→−∞), we analyze the long-term stability or asymptotic behavior of a system.</p>
+                <p><strong>Worked Example 1 (Direct substitution):</strong> Evaluate <strong>lim(x→2) (3x − 4)</strong>.<br>
+                Step 1: Since f(x) = 3x − 4 is a polynomial, it has no jumps or division by zero.<br>
+                Step 2: Substitute x = 2 directly into the expression: 3·(2) − 4 = 6 − 4 = <strong>2</strong>.<br>
+                Therefore, lim(x→2) (3x − 4) = <strong>2</strong>.</p>
+                <p><strong>Worked Example 2 (Behavior at infinity):</strong> Evaluate <strong>lim(x→∞) (1/x)</strong>.<br>
+                Step 1: Evaluate increasing values of x: for x = 10, 1/x = 0.1; for x = 1,000, 1/x = 0.001; for x = 1,000,000, 1/x = 0.000001.<br>
+                Step 2: Dividing the constant 1 by an increasingly large positive number produces a result closer and closer to zero.<br>
+                Therefore, lim(x→∞) (1/x) = <strong>0</strong>.</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="limits-fundamentals">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="direct-substitution text-center">
+                        <h2 class="my-4">Direct Substitution</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="ms-md-3 w-100">For polynomial functions and rational functions whose denominator is nonzero at the target point, the limit is found simply by plugging the target value into x. For instance, in lim(x→2)(3x − 4), we just compute 3(2) − 4 = 2.</p>
+                        </div>
+                    </div>
+                    <div class="one-sided-limits text-center">
+                        <h2 class="my-4">One-Sided Limits</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">Approaching a from smaller values (x→a⁻) or larger values (x→a⁺) lets us analyze piecewise functions, electrical switching, and step inputs. The two-sided limit lim x→a f(x) exists if and only if both one-sided limits are equal.</p>
+                        </div>
+                    </div>
+                    <div class="infinite-limits text-center">
+                        <h2 class="my-4">Limits at Infinity</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">As x grows without bound (x→∞), terms of the form k/xⁿ (with n &gt; 0) approach zero. That is why lim(x→∞)(1/x) = 0, revealing a horizontal asymptote at y = 0.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="continuity-indeterminacy">
+        <h1 class="title text-light bg-primary text-center py-5">Continuity and Resolving Indeterminate Forms</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>We say that a function f(x) is <strong>continuous at x = a</strong> when its graph has no holes, jumps, or vertical asymptotes at that point. Formally, three conditions must hold simultaneously: (1) f(a) is defined; (2) lim x→a f(x) exists; and (3) lim x→a f(x) = f(a).</p>
+                <p>In algebraic quotients where the denominator approaches zero as x→a (such as x→1 with a denominator of x − 1), we factor the polynomial or analyze the local rate of change to evaluate the limit.</p>
+                <p><strong>Worked Example (Difference quotients and behavior as x → 1):</strong> Analyze the limit as <strong>x approaches 1</strong> associated with the quadratic 3x² − 2x + 1 and the factor (x − 1).<br>
+                Step 1: When we evaluate the change in the quadratic f(x) = 3x² − 2x + 1 near x = 1, we have f(1) = 3(1)² − 2(1) + 1 = 2. The difference quotient [f(x) − f(1)] / (x − 1) becomes (3x² − 2x + 1 − 2)/(x − 1) = (3x² − 2x − 1)/(x − 1).<br>
+                Step 2: Factoring the numerator 3x² − 2x − 1, whose roots are x = 1 and x = −1/3, gives (3x + 1)(x − 1).<br>
+                Step 3: Canceling the common factor (x − 1) for x ≠ 1 leaves lim(x→1) (3x + 1) = 3(1) + 1 = <strong>4</strong> (which also matches the derivative of 3x² − 2x + 1 evaluated at x = 1, namely 6(1) − 2 = <strong>4</strong>).</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                The Three Conditions for Continuity
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Polynomials, exponentials (eˣ), sine, and cosine are continuous across the entire real line. Rational functions P(x)/Q(x) are continuous at every point where Q(x) ≠ 0.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Factoring and Cancellation as x → 1
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>When a rational expression with denominator (x − 1) models the rate of change of 3x² − 2x + 1 at x = 1, algebraic simplification yields 3x + 1 and a limit of 4 as x → 1.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Bridge Between Limits and Derivatives
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Every derivative calculation arises from a limit of the form lim(x→a) [f(x) − f(a)]/(x − a). Mastering limits with a denominator of (x − a) prepares you directly for differential calculus.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="derivative-rate-of-change">
+        <h1 class="title text-light bg-primary text-center py-5">The Derivative as a Rate of Change and Basic Rules</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>The <strong>derivative</strong> f′(x) measures the instantaneous rate of change of a function f(x) with respect to x, and geometrically represents the slope of the tangent line to its graph. By formal definition, <strong>f′(x) = lim(Δx→0) [f(x + Δx) − f(x)] / Δx</strong>.</p>
+                <p>In practice, we apply direct differentiation rules: the <strong>power rule</strong> states that for f(x) = xⁿ, we have <strong>f′(x) = n·xⁿ⁻¹</strong>; the derivative of a constant is 0; and the natural exponential function <strong>g(x) = eˣ</strong> has the unique property of being equal to its own derivative: <strong>g′(x) = eˣ</strong>. Furthermore, the reverse process of differentiation is the <strong>indefinite integral (antiderivative)</strong>: to integrate powers of x, we add 1 to the exponent, divide by the new exponent, and add the constant of integration C.</p>
+                <p><strong>Worked Example 1 (Polynomial derivative):</strong> Find the derivative of <strong>f(x) = 3x² + 2x + 1</strong>.<br>
+                Step 1: Differentiate term by term using the power rule (xⁿ)′ = n·xⁿ⁻¹.<br>
+                Step 2: The derivative of 3x² is 3·(2x¹) = 6x; the derivative of 2x is 2·(1x⁰) = 2; and the derivative of the constant 1 is 0.<br>
+                Step 3: Adding the terms together gives <strong>f′(x) = 6x + 2</strong>.</p>
+                <p><strong>Worked Example 2 (Exponential and Antiderivative):</strong> Find the derivative of <strong>g(x) = eˣ</strong> and the indefinite integral of <strong>f(x) = 4x³</strong>.<br>
+                Step 1: For g(x) = eˣ, the rate of growth at any point equals the value of the function itself, so <strong>g′(x) = eˣ</strong>.<br>
+                Step 2: To evaluate ∫ 4x³ dx, apply the power rule for integration: ∫ xⁿ dx = (xⁿ⁺¹)/(n + 1) + C.<br>
+                Step 3: We get 4 · (x³⁺¹)/(3 + 1) + C = 4 · (x⁴/4) + C = <strong>x⁴ + C</strong> (since the derivative of x⁴ + C is indeed 4x³).</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="derivative-rate-of-change">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="power-rule text-center">
+                        <h2 class="my-4">Power Rule and Polynomials</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="ms-md-3 w-100">To differentiate a polynomial, multiply each term by its exponent and subtract 1 from the exponent. Thus, for f(x) = 3x² + 2x + 1, we immediately obtain f′(x) = 6x + 2.</p>
+                        </div>
+                    </div>
+                    <div class="exponential-derivative text-center">
+                        <h2 class="my-4">Derivative of the Exponential Function</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">The natural exponential function g(x) = eˣ is unchanged under differentiation: its derivative is g′(x) = eˣ. That is why it naturally arises in RC circuits, radioactive decay, and heat transfer.</p>
+                        </div>
+                    </div>
+                    <div class="antiderivative-intro text-center">
+                        <h2 class="my-4">Inverse Operation: Indefinite Integral</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">Integrating means finding a function F(x) whose derivative is f(x). For f(x) = 4x³, we increase the exponent from 3 to 4 and divide by 4: ∫ 4x³ dx = x⁴ + C, where C is the constant of integration.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="differentiation-rules-extrema">
+        <h1 class="title text-light bg-primary text-center py-5">Differentiation Rules and Maximum and Minimum Analysis</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>For composite and combined functions, we rely on three essential tools: the <strong>Product Rule</strong>, where (u·v)′ = u′·v + u·v′; the <strong>Chain Rule</strong> for composite functions f(g(x)), where [f(g(x))]′ = f′(g(x))·g′(x); and <strong>trigonometric derivatives</strong>, especially (sin x)′ = cos x and (cos x)′ = −sin x.</p>
+                <p>One of the most important applications of derivatives is finding <strong>maximum and minimum points</strong>: at the peaks and valleys of a smooth curve, the tangent line is horizontal, so the first derivative equals zero (<strong>f′(x) = 0</strong>, called a <strong>critical point</strong>). If the graph is concave up (f″(x) &gt; 0, positive x² coefficient), the critical point is a <strong>minimum point</strong>; if the graph is concave down (f″(x) &lt; 0, negative x² coefficient), it is a <strong>maximum point</strong>.</p>
+                <p><strong>Worked Example 1 (Minimum point of f(x) = x²):</strong><br>
+                Step 1: Compute the derivative of f(x) = x²: f′(x) = 2x.<br>
+                Step 2: Set the derivative equal to zero to find the critical point: 2x = 0 ⇒ <strong>x = 0</strong>.<br>
+                Step 3: Since f″(x) = 2 &gt; 0 (a parabola opening upward), f(x) = x² has a <strong>minimum point at x = 0</strong>.</p>
+                <p><strong>Worked Example 2 (Maximum point of h(x) = −2x² + 4x and f(x) = −2x² + 4x + 1):</strong><br>
+                Step 1: Differentiate h(x) = −2x² + 4x: h′(x) = −4x + 4. Notice that f(x) = −2x² + 4x + 1 has the exact same derivative f′(x) = −4x + 4, since the constant term +1 has derivative zero.<br>
+                Step 2: Set the derivative equal to zero: −4x + 4 = 0 ⇒ 4x = 4 ⇒ <strong>x = 1</strong>.<br>
+                Step 3: Compute the second derivative: f″(x) = −4 &lt; 0. Because the second derivative is negative (concave down), the critical point at <strong>x = 1</strong> is a <strong>maximum point</strong> for both functions.</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleOne" aria-expanded="true" aria-controls="collapseRuleOne">
+                                Product Rule and Chain Rule
+                            </button>
+                        </h2>
+                        <div id="collapseRuleOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>With the Product Rule, differentiate the first factor times the second, plus the first factor times the derivative of the second: (x·eˣ)′ = 1·eˣ + x·eˣ. With the Chain Rule, differentiate the outer function and multiply by the derivative of the inner function: [(3x² + 1)⁵]′ = 5(3x² + 1)⁴ · 6x.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleTwo" aria-expanded="false" aria-controls="collapseRuleTwo">
+                                Fundamental Trigonometric Derivatives
+                            </button>
+                        </h2>
+                        <div id="collapseRuleTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>For oscillatory motion and periodic signals, always remember: the derivative of sin(x) is cos(x), and the derivative of cos(x) is −sin(x). Combined with the chain rule, [sin(ωx)]′ = ω·cos(ωx).</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleThree" aria-expanded="false" aria-controls="collapseRuleThree">
+                                Spotting Maxima and Minima Quickly
+                            </button>
+                        </h2>
+                        <div id="collapseRuleThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Find the critical point by solving f′(x) = 0. For f(x) = x², f′(x) = 2x = 0 gives a minimum at x = 0. For h(x) = −2x² + 4x and f(x) = −2x² + 4x + 1, f′(x) = −4x + 4 = 0 gives x = 1, which is a maximum point because the x² coefficient is negative (f″(x) = −4 &lt; 0).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="conclusion">
+        <h1 class="title text-light bg-primary text-center py-5">Conclusion</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5 border-bottom">
+                <p>In this Calculus module, you learned how to evaluate limits by direct substitution, limits at infinity such as lim(x→∞)(1/x) = 0, and limits of rational expressions, as well as how to compute polynomial and exponential derivatives, find antiderivatives of power functions, and identify critical maximum and minimum points.</p>
+                <p>Below, you will find a quiz with questions about the previous topics. Answer carefully!</p>
+            </div>
+            <div class="questions py-4"></div>
+        </div>
+    </section>
+
+    <section id="resources">
+        <h1 class="title text-light bg-primary text-center py-5">Additional Resources</h1>
+        <div class="container p-5 section-content position-relative">
+            <p class="fs-5">If you want to go deeper into the subject, here are some resources for you. Enjoy!</p>
+        </div>
+    </section>
+</body>
+</html>

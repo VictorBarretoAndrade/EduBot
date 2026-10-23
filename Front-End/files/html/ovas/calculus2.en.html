@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module - Calculus 2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <style>
+        .carrousel-img { max-width: 100%; }
+        .section-content { opacity: 0; left: -100vw; }
+        @media (min-width: 768px) { .carrousel-img { max-width: 50%; } }
+        @media (min-width: 992px) {
+            section > * { max-width: 50vw; }
+            div, h1 { max-width: 100vw; }
+            .carrousel-img, .carrousel p { width: 50%; }
+            h1, h2, h3, p { font-size: 1.5rem; }
+            .carrousel p, label { font-size: 1.5rem; }
+            #introduction p { max-width: 50%; }
+        }
+        @media (min-width: 1400px) { .main-img, .main-text { width: 50%; } }
+    </style>
+</head>
+<body>
+    <section id="introduction" class="text-light px-4 py-5" style="background-color: #04093b;">
+        <div class="d-flex flex-column justify-content-around align-items-center text-center">
+            <p class="fs-4 pt-5">Calculus 2</p>
+            <p class="fs-5 pt-5">Hello, student! In this Calculus 2 module, we will advance into integration, the Fundamental Theorem of Calculus, fundamental limits, and curve optimization using derivatives. Get ready to solidify each concept with practical, step-by-step worked examples!</p>
+        </div>
+    </section>
+
+    <section id="indefinite-integrals-trigonometric">
+        <h1 class="title text-light bg-primary text-center py-5 w-100">Indefinite Integrals, Trigonometric Functions, and Fundamental Limits</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>A function F(x) is called an <strong>antiderivative</strong> (or primitive) of f(x) when <strong>F′(x) = f(x)</strong>. The family of all antiderivatives is represented by the <strong>indefinite integral ∫ f(x) dx = F(x) + C</strong>, where C is the constant of integration. This duality between differentiation and integration is especially clear in trigonometric functions: since the derivative of <strong>f(x) = sin(x)</strong> is <strong>f′(x) = cos(x)</strong>, it follows immediately that the indefinite integral of <strong>f(x) = cos(x)</strong> is <strong>∫ cos(x) dx = sin(x) + C</strong>.</p>
+                <p>The very foundation of trigonometric and exponential derivatives rests on three classic 0/0 indeterminate limits, which can be evaluated through algebraic factoring, geometry, or L'Hôpital's Rule (differentiating the numerator and denominator):</p>
+                <p><strong>Worked Example 1 (Trigonometric Derivative and Integral):</strong><br>
+                Step 1: To find the derivative of <strong>f(x) = sin(x)</strong>, we use its rate of change on the unit circle: <strong>f′(x) = cos(x)</strong>.<br>
+                Step 2: To compute the indefinite integral of <strong>f(x) = cos(x)</strong>, we look for the function whose derivative is cos(x). Since (sin(x))′ = cos(x), we conclude that <strong>∫ cos(x) dx = sin(x) + C</strong>.</p>
+                <p><strong>Worked Example 2 (Three Classic 0/0 Limits):</strong><br>
+                • <strong>lim(x→0) sin(x)/x:</strong> This is the fundamental trigonometric limit. As x (in radians) approaches 0, sin(x) and x exhibit the same linear behavior (or, by L'Hôpital's Rule, lim(x→0) cos(x)/1 = cos(0) = 1). Therefore, <strong>lim(x→0) sin(x)/x = 1</strong>.<br>
+                • <strong>lim(x→0) (e^x − 1)/x:</strong> This is the fundamental exponential limit (which defines the derivative of e^x at x = 0). Applying L'Hôpital's Rule, we differentiate the numerator and denominator: lim(x→0) e^x / 1 = e⁰ = <strong>1</strong>.<br>
+                • <strong>lim(x→1) (x² − 1)/(x − 1):</strong> Factoring the difference of squares x² − 1 = (x − 1)(x + 1) and canceling (x − 1) for x ≠ 1 gives lim(x→1) (x + 1) = 1 + 1 = <strong>2</strong>.</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="indefinite-integrals-trigonometric">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="trig-duality text-center">
+                        <h2 class="my-4">Derivative of sin(x) and Integral of cos(x)</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="ms-md-3 w-100">Differentiation and integration are inverse operations: the derivative of f(x) = sin(x) is cos(x), and therefore the indefinite integral of f(x) = cos(x) is sin(x) + C. Never forget to add the constant C to indefinite integrals!</p>
+                        </div>
+                    </div>
+                    <div class="fundamental-limits text-center">
+                        <h2 class="my-4">Fundamental Limits as x → 0</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">Two remarkable limits appear throughout engineering: lim(x→0) sin(x)/x = 1 and lim(x→0) (e^x − 1)/x = 1. Both express the fact that very close to x = 0, sin(x) ≈ x and e^x − 1 ≈ x.</p>
+                        </div>
+                    </div>
+                    <div class="difference-of-squares text-center">
+                        <h2 class="my-4">Difference of Squares as x → 1</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">To evaluate lim(x→1) (x² − 1)/(x − 1), we factor the numerator as (x − 1)(x + 1). Canceling (x − 1), we simply evaluate x + 1 at x = 1, obtaining 1 + 1 = 2.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="definite-integrals-ftc">
+        <h1 class="title text-light bg-primary text-center py-5">Definite Integrals, the Fundamental Theorem of Calculus, and Substitution</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>While an indefinite integral returns a family of functions, the <strong>definite integral</strong> from a to b computes the total accumulation of a quantity — geometrically, the <strong>net signed area under the curve</strong> of f(x) over the interval [a, b]. The <strong>Fundamental Theorem of Calculus (FTC)</strong> connects the two concepts: if F(x) is an antiderivative of f(x), then <strong>∫ from a to b of f(x) dx = F(b) − F(a)</strong>.</p>
+                <p>When the integrand is a composite expression of the form f(g(x))·g′(x), we apply <strong>u-substitution</strong> (the chain rule in reverse): define the new variable <strong>u = g(x)</strong>, compute the differential <strong>du = g′(x) dx</strong>, and evaluate ∫ f(u) du.</p>
+                <p><strong>Worked Example 1 (Area under a curve via the FTC):</strong> Find the area under the curve of f(x) = 3x² over the interval from x = 0 to x = 2.<br>
+                Step 1: Find an antiderivative of f(x) = 3x²: F(x) = 3·(x³/3) = x³.<br>
+                Step 2: Apply the Fundamental Theorem of Calculus: Area = F(2) − F(0) = 2³ − 0³ = 8 − 0 = <strong>8 square units</strong>.</p>
+                <p><strong>Worked Example 2 (Integration by Substitution):</strong> Evaluate <strong>∫ 2x·cos(x²) dx</strong>.<br>
+                Step 1: Choose u = x². Differentiating gives du = 2x dx.<br>
+                Step 2: Substitute into the integral: ∫ cos(x²) · (2x dx) = ∫ cos(u) du.<br>
+                Step 3: We know that ∫ cos(u) du = sin(u) + C. Substituting back in terms of x, we obtain <strong>sin(x²) + C</strong>.</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                Fundamental Theorem of Calculus (FTC)
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>The FTC turns the limit of an infinite sum of rectangles (a Riemann sum) into the simple difference F(b) − F(a) between the antiderivative's values at the endpoints of the interval.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Integration by Substitution (u-Substitution)
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Whenever you spot an inner function u = g(x) multiplied by its derivative g′(x) dx inside an integral, rewrite the integral in terms of u and du. Once integrated, substitute the original variable x back in.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Geometric Interpretation: Area Under the Curve
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>If f(x) ≥ 0 throughout the interval [a, b], the definite integral gives the exact area between the graph of f(x) and the x-axis. In physics, the area under the velocity graph v(t) gives the total displacement.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="critical-points-derivative-tests">
+        <h1 class="title text-light bg-primary text-center py-5">Critical Points, Maxima, Minima, and the First and Second Derivative Tests</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>To analyze the behavior of quadratic and cubic polynomial curves, we first find the <strong>critical points</strong> by solving <strong>f′(x) = 0</strong>. Next, we classify each critical point using either the <strong>First Derivative Test</strong> (if f′ changes from negative to positive, we have a minimum; if it changes from positive to negative, we have a maximum) or the <strong>Second Derivative Test</strong>: we evaluate f″(x) at the critical point — if <strong>f″(x) &gt; 0</strong>, the curve is concave up and the point is a <strong>minimum point</strong>; if <strong>f″(x) &lt; 0</strong>, the curve is concave down and the point is a <strong>maximum point</strong>.</p>
+                <p><strong>Worked Example 1 (Minimum of f(x) = x² − 4x + 3):</strong><br>
+                Step 1: Differentiate the function: f′(x) = 2x − 4.<br>
+                Step 2: Set it equal to zero: 2x − 4 = 0 ⇒ 2x = 4 ⇒ <strong>x = 2</strong>.<br>
+                Step 3: Since f″(x) = 2 &gt; 0, the minimum point occurs at <strong>x = 2</strong>.</p>
+                <p><strong>Worked Example 2 (Maximum of f(x) = −x² + 6x − 9):</strong><br>
+                Step 1: Compute the first derivative: f′(x) = −2x + 6.<br>
+                Step 2: Set it equal to zero: −2x + 6 = 0 ⇒ 2x = 6 ⇒ <strong>x = 3</strong>.<br>
+                Step 3: Since f″(x) = −2 &lt; 0, the function has a maximum point at <strong>x = 3</strong>.</p>
+                <p><strong>Worked Example 3 (Cubic polynomial f(x) = x³ − 3x² + 2 at x = 2):</strong><br>
+                Step 1: Compute the first derivative: f′(x) = 3x² − 6x = 3x(x − 2). Setting it equal to zero gives the critical points x = 0 and x = 2.<br>
+                Step 2: Compute the second derivative: f″(x) = 6x − 6.<br>
+                Step 3: Evaluate at x = 2: f″(2) = 6(2) − 6 = 12 − 6 = <strong>6 &gt; 0</strong>. Because f″(2) &gt; 0, we conclude that <strong>x = 2 is a minimum point</strong> (whereas at x = 0, f″(0) = −6 &lt; 0, which is a maximum point).</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="critical-points-derivative-tests">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="quadratic-minimum text-center">
+                        <h2 class="my-4">Minimum of f(x) = x² − 4x + 3</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="ms-md-3 w-100">Differentiating f(x) = x² − 4x + 3 gives f′(x) = 2x − 4. Setting 2x − 4 = 0 yields x = 2. Since f″(2) = 2 &gt; 0, the minimum point occurs at x = 2 (where f(2) = −1).</p>
+                        </div>
+                    </div>
+                    <div class="quadratic-maximum text-center">
+                        <h2 class="my-4">Maximum of f(x) = −x² + 6x − 9</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">Differentiating f(x) = −x² + 6x − 9 gives f′(x) = −2x + 6. Solving −2x + 6 = 0 leads to x = 3. Since f″(3) = −2 &lt; 0, x = 3 is the maximum point of the function.</p>
+                        </div>
+                    </div>
+                    <div class="cubic-analysis text-center">
+                        <h2 class="my-4">Cubic Curve f(x) = x³ − 3x² + 2</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">For f(x) = x³ − 3x² + 2, we have f′(x) = 3x² − 6x and f″(x) = 6x − 6. At the critical point x = 2, f′(2) = 0 and f″(2) = 6 &gt; 0, confirming that x = 2 is a minimum point.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="optimization-problems">
+        <h1 class="title text-light bg-primary text-center py-5">Optimization Problems in Engineering</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>In engineering, <strong>optimizing</strong> means designing a system to achieve maximum performance (area, volume, profit, power output) or minimum expenditure (material cost, energy loss, response time). Differential calculus solves optimization problems by turning physical constraints into a single-variable function and finding its critical points.</p>
+                <p><strong>Worked Example (Optimizing the area of an industrial enclosure):</strong> An engineer has 120 meters of fencing to enclose a rectangular storage area against an existing wall along one side (so the fencing covers only 3 sides: two sides of width x and one side of length y). What dimensions maximize the enclosed area?<br>
+                Step 1 (Constraint and objective function): The total fencing length is 2x + y = 120 ⇒ y = 120 − 2x. The area is A(x) = x · y = x(120 − 2x) = <strong>−2x² + 120x</strong>.<br>
+                Step 2 (Critical point): Differentiate A(x) and set it equal to zero: A′(x) = −4x + 120 = 0 ⇒ 4x = 120 ⇒ <strong>x = 30 m</strong>.<br>
+                Step 3 (Verification via the Second Derivative Test): Since A″(x) = −4 &lt; 0, x = 30 m guarantees a <strong>maximum point</strong>. The other side measures y = 120 − 2(30) = <strong>60 m</strong>, resulting in a maximum area of A(30) = 30 × 60 = <strong>1,800 m²</strong>.</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOptOne" aria-expanded="true" aria-controls="collapseOptOne">
+                                1. Modeling the Objective Function
+                            </button>
+                        </h2>
+                        <div id="collapseOptOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Identify the quantity to be maximized or minimized and use the problem's constraint equation to express it as a function of a single variable f(x).</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOptTwo" aria-expanded="false" aria-controls="collapseOptTwo">
+                                2. Finding the Critical Points
+                            </button>
+                        </h2>
+                        <div id="collapseOptTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Differentiate the objective function and solve the equation f′(x) = 0 within the physically valid domain (for instance, positive lengths and times).</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOptThree" aria-expanded="false" aria-controls="collapseOptThree">
+                                3. Verification via the Second Derivative
+                            </button>
+                        </h2>
+                        <div id="collapseOptThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Confirm the nature of the extremum: f″(x) &lt; 0 proves you have found maximum performance, whereas f″(x) &gt; 0 proves minimum cost or waste.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="conclusion">
+        <h1 class="title text-light bg-primary text-center py-5">Conclusion</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5 border-bottom">
+                <p>In this Calculus 2 module, you explored the relationship between derivatives and indefinite integrals of trigonometric functions, evaluated fundamental limits such as lim(x→0) sin(x)/x = 1, lim(x→0) (e^x − 1)/x = 1, and lim(x→1) (x² − 1)/(x − 1) = 2, studied the Fundamental Theorem of Calculus and integration by substitution, and applied the First and Second Derivative Tests to classify maximum and minimum points and optimize engineering designs.</p>
+                <p>Below, you will find a quiz with questions about the previous topics. Answer carefully!</p>
+            </div>
+            <div class="questions py-4"></div>
+        </div>
+    </section>
+
+    <section id="resources">
+        <h1 class="title text-light bg-primary text-center py-5">Additional Resources</h1>
+        <div class="container p-5 section-content position-relative">
+            <p class="fs-5">If you want to go deeper into the subject, here are some resources for you. Enjoy!</p>
+        </div>
+    </section>
+</body>
+</html>

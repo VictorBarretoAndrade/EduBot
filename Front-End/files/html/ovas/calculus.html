@@ -3,139 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OVA - Rastreamento</title>
+    <title>OVA - Cálculo</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <style>
-        .carrousel-img {
-            max-width: 100%;
-        }
-
-        .section-content {
-            opacity: 0;
-            left: -100vw;
-        }
-
-        @media (min-width: 768px) {
-            .carrousel-img {
-                max-width: 50%;
-            }
-        }
-
+        .carrousel-img { max-width: 100%; }
+        .section-content { opacity: 0; left: -100vw; }
+        @media (min-width: 768px) { .carrousel-img { max-width: 50%; } }
         @media (min-width: 992px) {
-            section > * {
-                max-width: 50vw;
-            }
-
-            div, h1 {
-                max-width: 100vw;
-            }
-
-            .carrousel-img,  .carrousel p {
-                width: 50%;
-            }
-
-            h1, h2, h3, p {
-                font-size: 1.5rem;
-            }
-
-            .carrousel p, label {
-                font-size: 1.5rem;
-            }
-
-            #introduction p {
-                max-width: 50%;
-            }
+            section > * { max-width: 50vw; }
+            div, h1 { max-width: 100vw; }
+            .carrousel-img, .carrousel p { width: 50%; }
+            h1, h2, h3, p { font-size: 1.5rem; }
+            .carrousel p, label { font-size: 1.5rem; }
+            #introduction p { max-width: 50%; }
         }
-
-        @media (min-width: 1400px) {
-            .main-img, .main-text {
-                width: 50%;
-            }
-        }
+        @media (min-width: 1400px) { .main-img, .main-text { width: 50%; } }
     </style>
 </head>
 <body>
     <section id="introduction" class="text-light px-4 py-5" style="background-color: #04093b;">
         <div class="d-flex flex-column justify-content-around align-items-center text-center">
             <p class="fs-4 pt-5">Cálculo</p>
-            <p class="fs-5 pt-5">Olá, estudante! Sua experiência iniciará e muito conteúdo estará à sua disposição! O Senai Cimatec proporcionará a você uma verdadeira experiência no estudo dessa temática, possibilitando, além do uso de conteúdos incríveis sobre cálculo, um certificado extra para seu currículo! Prossiga para conhecer mais!</p>
+            <p class="fs-5 pt-5">Olá, estudante! Bem-vindo ao módulo de Cálculo, onde você construirá a base matemática indispensável para modelar fenômenos dinâmicos na engenharia. Ao longo deste estudo, vamos explorar limites, continuidade, derivadas, noções de antiderivadas e análise de máximos e mínimos com exemplos resolvidos passo a passo!</p>
         </div>
     </section>
-    <section id="journey">
-        <h1 class="title text-light bg-primary text-center py-5 w-100">A jornada Quântica Começa</h1>
+
+    <section id="limits-fundamentals">
+        <h1 class="title text-light bg-primary text-center py-5 w-100">Conceito de Limite, Limites Laterais e no Infinito</h1>
         <div class="container p-5 section-content position-relative">
             <div class="fs-5">
-                <p>Imagine um universo onde a informação não se limita a zeros e uns, mas pode existir em múltiplos estados ao mesmo tempo. Esse é o mundo da computação quântica, que utiliza os princípios da mecânica quântica para realizar cálculos complexos inimagináveis para os computadores tradicionais.</p>
-                <div class="d-xxl-flex my-5 justify-content-between align-items-center">
-                    <img src="../../imagens/bit_vs_qubit.png" alt="" srcset="" class="w-100 main-img">
-                    <p class="main-text">Os qubits são a chave para o poder da computação quântica. Eles permitem que os computadores quânticos realizem cálculos em paralelo, exponencialmente mais rápido do que os computadores tradicionais. Para entender melhor, pense em um dado tradicional, como uma moeda. Ela pode estar cara ou coroa. Já um qubit, a unidade básica de informação na computação quântica, pode ser como uma moeda quântica que gira em alta velocidade, representando cara e coroa ao mesmo tempo!</p>
-                </div>
-                <p>Duas propriedades únicas dos qubits são a superposição e o entrelaçamento.</p>
+                <p>Na engenharia, muitas vezes precisamos saber como uma grandeza se comporta quando uma variável se aproxima de um valor específico, mesmo que nunca o atinja exatamente. O <strong>limite</strong> descreve esse valor de tendência: escrevemos <strong>lim x→a f(x) = L</strong> para indicar que f(x) fica arbitrariamente próxima de L à medida que x se aproxima de a.</p>
+                <p>Para que o limite exista em x = a, os <strong>limites laterais</strong> pela esquerda (x→a⁻, valores menores que a) e pela direita (x→a⁺, valores maiores que a) devem existir e coincidir: lim x→a⁻ f(x) = lim x→a⁺ f(x) = L. Já nos <strong>limites no infinito</strong> (x→∞ ou x→−∞), analisamos a estabilidade ou o comportamento assintótico de um sistema no longo prazo.</p>
+                <p><strong>Exemplo resolvido passo a passo 1 (Substituição direta):</strong> Calcule <strong>lim(x→2) (3x − 4)</strong>.<br>
+                Passo 1: Como f(x) = 3x − 4 é um polinômio, ela não possui saltos nem divisões por zero.<br>
+                Passo 2: Substituímos x = 2 diretamente na expressão: 3·(2) − 4 = 6 − 4 = <strong>2</strong>.<br>
+                Logo, lim(x→2) (3x − 4) = <strong>2</strong>.</p>
+                <p><strong>Exemplo resolvido passo a passo 2 (Comportamento no infinito):</strong> Calcule <strong>lim(x→∞) (1/x)</strong>.<br>
+                Passo 1: Avaliamos valores crescentes de x: para x = 10, 1/x = 0,1; para x = 1.000, 1/x = 0,001; para x = 1.000.000, 1/x = 0,000001.<br>
+                Passo 2: Dividir a constante 1 por um número positivo cada vez maior produz um resultado cada vez mais próximo de zero.<br>
+                Portanto, lim(x→∞) (1/x) = <strong>0</strong>.</p>
             </div>
-            <div class="carrousel" data-carrousel-name="qubits-prop">
+            <div class="carrousel" data-carrousel-name="limits-fundamentals">
                 <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
-                    <div class="superposition text-center">
-                        <h2 class="my-4">Superposição</h2>
+                    <div class="direct-substitution text-center">
+                        <h2 class="my-4">Substituição Direta</h2>
                         <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/ondas.webp" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p class="ms-md-3">Um qubit pode estar em um estado de 0, 1 ou em uma combinação de ambos simultaneamente. Pense em uma onda: ela pode ser alta, baixa ou uma mistura das duas. Superposição é como a combinação de ondas no mundo quântico.</p>
+                            <p class="ms-md-3 w-100">Em funções polinomiais e em funções racionais cujo denominador não se anula no ponto, o limite é obtido trocando x pelo valor de tendência. Por exemplo, em lim(x→2)(3x − 4), basta calcular 3(2) − 4 = 2.</p>
                         </div>
                     </div>
-                    <div class="entanglement text-center">
-                        <h2 class="my-4">Entrelaçamento Quântico</h2>
+                    <div class="one-sided-limits text-center">
+                        <h2 class="my-4">Limites Laterais</h2>
                         <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/entrelaçamento.jpg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p class="md-ms-3">Imagine duas moedas quânticas especiais. Elas são "entrelaçadas", ou seja, a medição de uma moeda instantaneamente determina o estado da outra, mesmo que estejam distantes, aumentando drasticamente a capacidade de processamento.</p>
+                            <p class="w-100">Aproximar-se de a por valores menores (x→a⁻) ou maiores (x→a⁺) permite analisar funções definidas por partes, chaveamentos elétricos e degraus. O limite bilateral lim x→a f(x) só existe se os dois limites laterais forem iguais.</p>
                         </div>
                     </div>
-                </div>
-                <div class="arrows d-flex justify-content-between align-items-center px-3">
-                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
-                    <div class="dots d-flex justify-content-between align-items-center">
-                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
-                        <i class="bi bi-circle mx-1 text-primary"></i>
-                    </div>
-                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section id="applications">
-        <h1 class="title text-light bg-primary text-center py-5">Aplicações da Computação Quântica</h1>
-        <div class="container p-5 section-content position-relative">
-            <div class="fs-5">
-                <p>A computação quântica abre um novo mundo de possibilidades com algoritmos que operam de maneira fundamentalmente diferente dos algoritmos clássicos. Essa diferença fundamental se traduz em uma eficiência incomparável para resolver problemas complexos em diversas áreas</p>
-            </div>
-            <div class="carrousel" data-carrousel-name="applications">
-                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
-                    <div class="criptography text-center">
-                        <h2 class="my-4">Criptografia</h2>
+                    <div class="infinite-limits text-center">
+                        <h2 class="my-4">Limites no Infinito</h2>
                         <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/criptografia-quântica.jpg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p>O algoritmo de Shor revoluciona a criptografia moderna, quebrando facilmente a segurança de sistemas como RSA e ECC, com implicações profundas para a segurança cibernética e o comércio eletrônico.</p>
-                        </div>
-                    </div>
-                    <div class="simulation text-center">
-                        <h2 class="my-4">Simulações Quânticas</h2>
-                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/remedios_materiais.jpeg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p>Abordar problemas físicos e químicos complexos, como o desenvolvimento de novos medicamentos e materiais, torna-se possível com simulações quânticas que replicam o comportamento de moléculas e sistemas atômicos com precisão sem precedentes.</p>
-                        </div>
-                    </div>
-                    <div class="optimization text-center">
-                        <h2 class="my-4">Otimização</h2>
-                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/carteira.jpeg" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p>A otimização de rotas, carteiras de investimento, cadeias de suprimentos e outros problemas de grande escala encontra na computação quântica uma ferramenta poderosa para encontrar soluções mais eficientes e lucrativas.</p>
-                        </div>
-                    </div>
-                    <div class="optimization text-center">
-                        <h2 class="my-4">Aprendizado de Máquina</h2>
-                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
-                            <img src="../../imagens/ia.png" alt="" class="img-fluid rounded-3 mb-4 carrousel-img">
-                            <p>O desenvolvimento de sistemas de inteligência artificial mais inteligentes e autônomos é impulsionado por algoritmos quânticos que aceleram o aprendizado de máquina e a análise de dados fazendo uso da propriedade da superposição.</p>
+                            <p class="w-100">Quando x cresce ilimitadamente (x→∞), termos da forma k/xⁿ (com n &gt; 0) tendem a zero. É por isso que lim(x→∞)(1/x) = 0, revelando uma assíntota horizontal em y = 0.</p>
                         </div>
                     </div>
                 </div>
@@ -145,6 +72,106 @@
                         <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
                         <i class="bi bi-circle mx-1 text-primary"></i>
                         <i class="bi bi-circle mx-1 text-primary"></i>
+                    </div>
+                    <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="continuity-indeterminacy">
+        <h1 class="title text-light bg-primary text-center py-5">Continuidade e Levantamento de Indeterminações</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>Dizemos que uma função f(x) é <strong>contínua em x = a</strong> quando seu gráfico não apresenta buracos, saltos ou assíntotas verticais naquele ponto. Formalmente, três condições precisam ser satisfeitas simultaneamente: (1) f(a) existe; (2) lim x→a f(x) existe; e (3) lim x→a f(x) = f(a).</p>
+                <p>Em quocientes algébricos nos quais o denominador tende a zero quando x→a (como em x→1 para um denominador x − 1), precisamos fatorar o polinômio ou analisar a taxa de variação local para determinar o limite.</p>
+                <p><strong>Exemplo resolvido passo a passo (Quocientes e comportamento em x → 1):</strong> Analise o limite quando <strong>x tende a 1</strong> associado à quadrática 3x² − 2x + 1 e ao fator (x − 1).<br>
+                Passo 1: Quando avaliamos a variação da quadrática f(x) = 3x² − 2x + 1 em torno de x = 1, f(1) = 3(1)² − 2(1) + 1 = 2. O quociente incremental [f(x) − f(1)] / (x − 1) resulta em (3x² − 2x + 1 − 2)/(x − 1) = (3x² − 2x − 1)/(x − 1).<br>
+                Passo 2: Fatorando o numerador 3x² − 2x − 1, cujas raízes são x = 1 e x = −1/3, obtemos (3x + 1)(x − 1).<br>
+                Passo 3: Simplificando o fator comum (x − 1) para x ≠ 1, resta lim(x→1) (3x + 1) = 3(1) + 1 = <strong>4</strong> (que também coincide com a derivada de 3x² − 2x + 1 avaliada em x = 1, isto é, 6(1) − 2 = <strong>4</strong>).</p>
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                As três condições de continuidade
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Polinômios, exponenciais (eˣ), seno e cosseno são contínuos em toda a reta real. Já funções racionais P(x)/Q(x) são contínuas em todos os pontos onde Q(x) ≠ 0.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                Fatoração e cancelamento em x → 1
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Quando uma expressão racional com denominador (x − 1) modela a razão de variação de 3x² − 2x + 1 em x = 1, a simplificação algébrica conduz a 3x + 1 e ao valor limite igual a 4 quando x → 1.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                Ponte entre limite e derivada
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Todo cálculo de derivada nasce de um limite do tipo lim(x→a) [f(x) − f(a)]/(x − a). Dominar limites com denominador (x − a) prepara você diretamente para o cálculo diferencial.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="derivative-rate-of-change">
+        <h1 class="title text-light bg-primary text-center py-5">A Derivada como Taxa de Variação e Regras Básicas</h1>
+        <div class="container p-5 section-content position-relative">
+            <div class="fs-5">
+                <p>A <strong>derivada</strong> f′(x) mede a taxa de variação instantânea de uma função f(x) em relação a x e representa geometricamente o coeficiente angular da reta tangente ao gráfico. Pela definição formal, temos: <strong>f′(x) = lim(Δx→0) [f(x + Δx) − f(x)] / Δx</strong>.</p>
+                <p>Na prática, aplicamos regras diretas de derivação: a <strong>regra da potência</strong> diz que para f(x) = xⁿ, vale <strong>f′(x) = n·xⁿ⁻¹</strong>; a derivada de uma constante é 0; e a função exponencial natural <strong>g(x) = eˣ</strong> tem a propriedade única de ser igual à sua própria derivada: <strong>g′(x) = eˣ</strong>. Além disso, o processo inverso da derivação é a <strong>integral indefinida (antiderivada)</strong>: para integrar potências, somamos 1 ao expoente e dividimos pelo novo expoente, acrescentando a constante C.</p>
+                <p><strong>Exemplo resolvido passo a passo 1 (Derivada polinomial):</strong> Calcule a derivada de <strong>f(x) = 3x² + 2x + 1</strong>.<br>
+                Passo 1: Derivamos termo a termo usando a regra da potência (xⁿ)′ = n·xⁿ⁻¹.<br>
+                Passo 2: A derivada de 3x² é 3·(2x¹) = 6x; a derivada de 2x é 2·(1x⁰) = 2; e a derivada da constante 1 é 0.<br>
+                Passo 3: Somando os resultados, obtemos <strong>f′(x) = 6x + 2</strong>.</p>
+                <p><strong>Exemplo resolvido passo a passo 2 (Exponencial e Antiderivada):</strong> Determine a derivada de <strong>g(x) = eˣ</strong> e a integral indefinida de <strong>f(x) = 4x³</strong>.<br>
+                Passo 1: Para g(x) = eˣ, a taxa de crescimento em qualquer ponto é igual ao próprio valor da função, logo <strong>g′(x) = eˣ</strong>.<br>
+                Passo 2: Para calcular ∫ 4x³ dx, aplicamos a regra inversa da potência: ∫ xⁿ dx = (xⁿ⁺¹)/(n + 1) + C.<br>
+                Passo 3: Temos 4 · (x³⁺¹)/(3 + 1) + C = 4 · (x⁴/4) + C = <strong>x⁴ + C</strong> (pois a derivada de x⁴ + C é justamente 4x³).</p>
+            </div>
+            <div class="carrousel" data-carrousel-name="derivative-rate-of-change">
+                <div class="parts border border-4 border-primary rounded-4 px-3 pb-3">
+                    <div class="power-rule text-center">
+                        <h2 class="my-4">Regra da Potência e Polinômios</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="ms-md-3 w-100">Para derivar polinômios, multiplique pelo expoente e subtraia 1 do expoente em cada termo. Assim, em f(x) = 3x² + 2x + 1, obtemos imediatamente f′(x) = 6x + 2.</p>
+                        </div>
+                    </div>
+                    <div class="exponential-derivative text-center">
+                        <h2 class="my-4">Derivada da Função Exponencial</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">A função exponencial de base natural g(x) = eˣ é invariante sob derivação: sua derivada é g′(x) = eˣ. Por isso ela aparece na solução de circuitos RC, decaimento e transferência de calor.</p>
+                        </div>
+                    </div>
+                    <div class="antiderivative-intro text-center">
+                        <h2 class="my-4">Operação Inversa: Integral Indefinida</h2>
+                        <div class="d-flex flex-column flex-md-row align-items-center justify-content-between">
+                            <p class="w-100">Integrar é descobrir qual função F(x) tem f(x) como derivada. Para f(x) = 4x³, aumentamos o expoente de 3 para 4 e dividimos por 4: ∫ 4x³ dx = x⁴ + C, onde C é a constante de integração.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows d-flex justify-content-between align-items-center px-3">
+                    <i class="arrow-left bi bi-arrow-left-circle-fill fs-1 text-primary"></i>
+                    <div class="dots d-flex justify-content-between align-items-center">
+                        <i class="bi bi-circle-fill mx-1 text-primary fs-5"></i>
+                        <i class="bi bi-circle mx-1 text-primary"></i>
                         <i class="bi bi-circle mx-1 text-primary"></i>
                     </div>
                     <i class="arrow-right bi bi-arrow-right-circle-fill fs-1 text-primary"></i>
@@ -152,117 +179,77 @@
             </div>
         </div>
     </section>
-    <section id="differences">
-        <h1 class="title text-light bg-primary text-center py-5">Diferenças da Computação Tradicional</h1>
+
+    <section id="differentiation-rules-extrema">
+        <h1 class="title text-light bg-primary text-center py-5">Regras de Derivação e Análise de Máximos e Mínimos</h1>
         <div class="container p-5 section-content position-relative">
             <div class="fs-5">
+                <p>Para funções compostas e combinadas, contamos com três ferramentas fundamentais: a <strong>Regra do Produto</strong>, onde (u·v)′ = u′·v + u·v′; a <strong>Regra da Cadeia</strong> para funções compostas f(g(x)), onde [f(g(x))]′ = f′(g(x))·g′(x); e as <strong>derivadas trigonométricas</strong>, em especial (sen x)′ = cos x e (cos x)′ = −sen x.</p>
+                <p>Uma das aplicações mais importantes da derivada é localizar <strong>pontos de máximo e de mínimo</strong>: nos extremos de uma curva suave, a reta tangente é horizontal, logo a primeira derivada se anula (<strong>f′(x) = 0</strong>, chamado de <strong>ponto crítico</strong>). Se a concavidade é voltada para cima (f″(x) &gt; 0, coeficiente de x² positivo), o ponto crítico é um <strong>ponto de mínimo</strong>; se a concavidade é voltada para baixo (f″(x) &lt; 0, coeficiente de x² negativo), é um <strong>ponto de máximo</strong>.</p>
+                <p><strong>Exemplo resolvido passo a passo 1 (Ponto de mínimo em f(x) = x²):</strong><br>
+                Passo 1: Calculamos a derivada de f(x) = x²: f′(x) = 2x.<br>
+                Passo 2: Igualamos a zero para achar o ponto crítico: 2x = 0 ⇒ <strong>x = 0</strong>.<br>
+                Passo 3: Como f″(x) = 2 &gt; 0 (parábola com concavidade para cima), f(x) = x² tem um <strong>ponto de mínimo em x = 0</strong>.</p>
+                <p><strong>Exemplo resolvido passo a passo 2 (Ponto de máximo em h(x) = −2x² + 4x e f(x) = −2x² + 4x + 1):</strong><br>
+                Passo 1: Derivamos h(x) = −2x² + 4x: h′(x) = −4x + 4. Note que f(x) = −2x² + 4x + 1 possui exatamente a mesma derivada f′(x) = −4x + 4, pois a constante +1 tem derivada zero.<br>
+                Passo 2: Igualamos a derivada a zero: −4x + 4 = 0 ⇒ 4x = 4 ⇒ <strong>x = 1</strong>.<br>
+                Passo 3: Calculamos a segunda derivada: f″(x) = −4 &lt; 0. Como a segunda derivada é negativa (concavidade para baixo), o ponto crítico em <strong>x = 1</strong> é um <strong>ponto máximo</strong> para ambas as funções.</p>
                 <div class="accordion">
                     <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                          Linguagem de Programação
-                        </button>
-                      </h2>
-                      <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>A computação quântica não tem um código próprio para programação e utiliza o desenvolvimento e implementação de algoritmos muito específicos. Porém, a informática tradicional possui linguagens padronizadas como Java, SQL ou Python, entre muitas outras.</p>
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleOne" aria-expanded="true" aria-controls="collapseRuleOne">
+                                Regra do Produto e Regra da Cadeia
+                            </button>
+                        </h2>
+                        <div id="collapseRuleOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Na Regra do Produto, derivamos o primeiro fator e multiplicamos pelo segundo, somando o primeiro vezes a derivada do segundo: (x·eˣ)′ = 1·eˣ + x·eˣ. Na Regra da Cadeia, derivamos a função externa e multiplicamos pela derivada da interna: [(3x² + 1)⁵]′ = 5(3x² + 1)⁴ · 6x.</p>
+                            </div>
                         </div>
-                      </div>
                     </div>
                     <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                          Funcionalidade
-                        </button>
-                      </h2>
-                      <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>Um computador quântico não é uma ferramenta para uso popular ou cotidiano, como um computador pessoal (PC). Estes supercomputadores são tão complexos que só têm cabida no âmbito corporativo, científico e tecnológico.</p>
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleTwo" aria-expanded="false" aria-controls="collapseRuleTwo">
+                                Derivadas Trigonométricas Fundamentais
+                            </button>
+                        </h2>
+                        <div id="collapseRuleTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Para movimentos oscilatórios e sinais periódicos, lembre-se sempre: a derivada de sen(x) é cos(x), e a derivada de cos(x) é −sen(x). Combinadas com a regra da cadeia, [sen(ωx)]′ = ω·cos(ωx).</p>
+                            </div>
                         </div>
-                      </div>
                     </div>
                     <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                          Arquitetura
-                        </button>
-                      </h2>
-                      <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>A composição de um computador quântico é mais simples que a de um convencional e não tem memória nem processador. Estes equipamentos se limitam a um conjunto de qubits que servem de base para seu funcionamento.</p>
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRuleThree" aria-expanded="false" aria-controls="collapseRuleThree">
+                                Identificando Máximo e Mínimo rapidamente
+                            </button>
+                        </h2>
+                        <div id="collapseRuleThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
+                            <div class="accordion-body">
+                                <p>Ache o ponto crítico resolvendo f′(x) = 0. Em f(x) = x², f′(x) = 2x = 0 dá mínimo em x = 0. Já em h(x) = −2x² + 4x e em f(x) = −2x² + 4x + 1, f′(x) = −4x + 4 = 0 dá x = 1, que é ponto máximo porque o coeficiente de x² é negativo (f″(x) = −4 &lt; 0).</p>
+                            </div>
                         </div>
-                      </div>
                     </div>
-                  </div>
+                </div>
             </div>
         </div>
     </section>
-    <section id="challenges">
-        <h1 class="title text-light bg-primary text-center py-5">Desafios da Computação Quântica</h1>
-        <div class="container p-5 section-content position-relative">
-            <div class="fs-5">
-                <p>A computação quântica, apesar de seu enorme potencial, ainda enfrenta diversos desafios técnicos que precisam ser superados para alcançar seu pleno potencial. Entre os principais obstáculos, podemos destacar:</p>
-                <div class="accordion">
-                    <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                          Decoerência
-                        </button>
-                      </h2>
-                      <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>A decoerência é a perda de informação quântica devido à interação com o ambiente, visto que a mesma limita o tempo que os qubits podem manter a superposição, crucial para cálculos complexos.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                          Erros Quânticos
-                        </button>
-                      </h2>
-                      <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>Erros quânticos são falhas que podem ocorrer em cálculos quânticos, como a mudança de estado de um qubit ou a perda de superposição. Podem ser causados por ruído térmico, até pela própria decoerência. Os erros quânticos podem levar à falha completa de um cálculo ou a resultados incorretos.</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="accordion-item">
-                      <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                          Refrigeração
-                        </button>
-                      </h2>
-                      <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample">
-                        <div class="accordion-body">
-                          <p>Para manter os qubits em um estado de superposição, é necessário refrigerá-los a temperaturas próximas do zero absoluto, o que torna essa refrigeração complexa e cara, representando um desafio para a viabilidade da computação quântica em larga escala.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-            </div>
-        </div>
-    </section>
+
     <section id="conclusion">
         <h1 class="title text-light bg-primary text-center py-5">Conclusão</h1>
         <div class="container p-5 section-content position-relative">
             <div class="fs-5 border-bottom">
-                <p>O futuro da computação quântica é promissor, mas ainda há muito trabalho a ser feito. Com um investimento contínuo e uma colaboração global, podemos tornar essa tecnologia uma realidade e colher seus benefícios para toda a humanidade.</p>
+                <p>Neste módulo de Cálculo, você aprendeu a avaliar limites por substituição direta, limites no infinito como lim(x→∞)(1/x) = 0 e limites de expressões racionais, além de dominar o cálculo de derivadas polinomiais e exponenciais, a antiderivada de potências e a identificação de pontos críticos de máximo e mínimo.</p>
                 <p>Abaixo, você irá encontrar um questionário com perguntas sobre os tópicos anteriores. Responda com atenção!</p>
             </div>
             <div class="questions py-4"></div>
         </div>
     </section>
+
     <section id="resources">
         <h1 class="title text-light bg-primary text-center py-5">Recursos Adicionais</h1>
         <div class="container p-5 section-content position-relative">
-            <!-- MELHORIA (4.1): os players de vídeo/podcast e as atividades práticas
-                 desta seção são renderizados dinamicamente pelo ova.js a partir da
-                 tabela "resources" (URL + tipo de mídia vindos do banco), usando os
-                 componentes js/components/video-player.js e audio-player.js.
-                 Os iframes do YouTube hardcoded foram removidos — nos OVAs de
-                 Cálculo eles eram, inclusive, os vídeos de Computação Quântica
-                 copiados por engano. -->
             <p class="fs-5">Caso queira se aprofundar no assunto, aqui estão alguns recursos para você. Aproveite!</p>
         </div>
     </section>
