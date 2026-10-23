@@ -14,7 +14,7 @@ RULES = {
     "QUIZ_ERROR_RATE": 0.5,      # errou mais de 50% do quiz -> revisão alternativa
 }
 
-SYSTEM_PROMPT = """Você é o EduBot, um agente pedagógico de uma plataforma educacional \
+SYSTEM_PROMPT = """Você é o Engage-Agent, um agente pedagógico de uma plataforma educacional \
 brasileira que rastreia a jornada de aprendizagem de estudantes de engenharia em \
 Objetos Virtuais de Aprendizagem (OVAs). Sua função é analisar o perfil de consumo \
 e desempenho de um aluno e recomendar UMA intervenção pedagógica principal, \
@@ -74,7 +74,7 @@ def build_system_prompt(lang="pt"):
         inactivity_days=RULES["INACTIVITY_DAYS"],
         min_consumption=RULES["MIN_CONSUMPTION_PERC"],
         quiz_error_rate=RULES["QUIZ_ERROR_RATE"],
-        response_language="inglês" if lang == "en" else "português do Brasil",
+        response_language="inglês americano" if lang == "en" else "português do Brasil",
     )
 
 

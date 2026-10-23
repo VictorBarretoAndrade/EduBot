@@ -22,8 +22,11 @@ class PersonalizedOVA(BaseModel):
     target_competency_id = ForeignKeyField(Competencies, backref="personalized_ovas",
                                            null=True, on_delete="set null", on_update="cascade")
     title = CharField(max_length=255)
+    # Plano 6 (migration_024): título e mensagem em inglês (fallback PT).
+    title_en = CharField(max_length=255, null=True)
     # Mensagem motivacional dirigida ao aluno (escrita pelo agente/LLM).
     message = TextField(null=True)
+    message_en = TextField(null=True)
     # Justificativa para o professor (qual diagnóstico disparou a OVA).
     rationale = TextField(null=True)
     # "ativa" | "concluida" | "arquivada"

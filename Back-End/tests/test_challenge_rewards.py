@@ -104,4 +104,4 @@ def test_title_translated_and_id_exposed(client, auth, seeded_db):
     en = json.loads(client.get("/gamification/me?lang=en", headers=auth(1)).data)
     assert pt["title_id"] == en["title_id"] == "revisor_pontual"
     assert pt["title"] == "Revisor Pontual"
-    assert en["title"] == "On-time Reviewer"
+    assert en["title"] == "On-Time Reviewer"

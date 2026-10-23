@@ -37,6 +37,8 @@ from edubot.api.routes.goalsRoute import app_goals
 from edubot.api.routes.publicApiRoute import app_public_api
 # INTEGRACAO EXTERNA: coleta de eventos do edubot-tracker.js (/api/v1/collect)
 from edubot.api.routes.collectRoute import app_collect
+# Plano 6: cursos externos com certificado (Cisco NetAcad).
+from edubot.api.routes.certificateRoute import app_certificate
 
 # Create the Flask app and configure CORS
 # A.3: CORS restrito à(s) origem(ns) do frontend por env (antes liberava
@@ -97,6 +99,7 @@ app.register_blueprint(app_gamification)
 app.register_blueprint(app_goals)
 app.register_blueprint(app_public_api)
 app.register_blueprint(app_collect)
+app.register_blueprint(app_certificate)
 
 # Start the application
 if __name__ == "__main__":

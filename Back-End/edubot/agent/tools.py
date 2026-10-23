@@ -217,7 +217,8 @@ def listar_questoes_reforco(ctx, competency_id=None, **_):
 
 def criar_ova_personalizada(ctx, target_competency_id=None, titulo="OVA de reforço",
                             mensagem_aluno="", justificativa="",
-                            resource_ids=None, question_ids=None, **_):
+                            resource_ids=None, question_ids=None,
+                            titulo_en=None, mensagem_aluno_en=None, **_):
     student = ctx["student"]
     resource_ids = resource_ids or []
     question_ids = question_ids or []
@@ -246,7 +247,10 @@ def criar_ova_personalizada(ctx, target_competency_id=None, titulo="OVA de refor
         student_id=student,
         target_competency_id=target_competency_id,
         title=titulo,
+        # Plano 6: versões EN (o mock preenche; o LLM real escreve num idioma só).
+        title_en=titulo_en,
         message=mensagem_aluno,
+        message_en=mensagem_aluno_en,
         rationale=justificativa,
         status="ativa",
         created_at=datetime.datetime.now(),

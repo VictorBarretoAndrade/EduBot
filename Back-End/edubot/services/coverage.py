@@ -12,6 +12,7 @@ editorial, não de código.
 """
 from peewee import JOIN, fn
 
+from edubot.i18n import tr
 from edubot.data.models.competencies import Competencies
 from edubot.data.models.offerings import Offerings
 from edubot.data.models.questions import Questions
@@ -23,7 +24,7 @@ MIN_QUESTIONS = 3   # abaixo disso o BKT converge mal e o reforço repete quest�
 MIN_FORMATS = 2     # sem 2 formatos não há o que personalizar por preferência
 
 
-def competency_coverage(course_id=None):
+def competency_coverage(course_id=None, lang="pt"):
     """Cobertura por competência: questões e formatos de remediação disponíveis.
 
     `course_id` restringe às competências ofertadas no curso (é o recorte que o
@@ -50,7 +51,9 @@ def competency_coverage(course_id=None):
 
     query = (Competencies
              .select(Competencies.competency_id, Competencies.competency_description,
-                     Subjects.subject_name.alias("assunto"))
+                     Competencies.competency_description_en,
+                     Subjects.subject_name.alias("assunto"),
+                     Subjects.subject_name_en.alias("assunto_en"))
              .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id)))
     if course_id is not None:
         query = (query
@@ -64,8 +67,8 @@ def competency_coverage(course_id=None):
         formatos = sorted(formatos_por_comp.get(competency_id, set()))
         cobertura.append({
             "competency_id": competency_id,
-            "nome": row["competency_description"],
-            "assunto": row["assunto"],
+            "nome": tr(row["competency_description"], row["competency_description_en"], lang),
+            "assunto": tr(row["assunto"], row["assunto_en"], lang),
             "questoes": questoes,
             "formatos": formatos,
             "ok": questoes >= MIN_QUESTIONS and len(formatos) >= MIN_FORMATS,
@@ -74,6 +77,6 @@ def competency_coverage(course_id=None):
     return cobertura
 
 
-def coverage_gaps(course_id=None):
+def coverage_gaps(course_id=None, lang="pt"):
     """Só as competências que violam o invariante — o que o gestor precisa agir."""
-    return [item for item in competency_coverage(course_id) if not item["ok"]]
+    return [item for item in competency_coverage(course_id, lang) if not item["ok"]]

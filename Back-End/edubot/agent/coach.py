@@ -34,7 +34,7 @@ def _profile_digest(profile):
 
 
 _SYSTEM = (
-    "Você é o EduBot, um tutor virtual simpático e encorajador de uma plataforma "
+    "Você é o Engage-Agent, um tutor virtual simpático e encorajador de uma plataforma "
     "educacional. Fale DIRETAMENTE com o aluno, em tom caloroso, humano e "
     "motivador — como um mentor que acompanha o progresso dele. Seja específico "
     "usando os dados fornecidos (percentual consumido, competências, dificuldade). "
@@ -58,11 +58,11 @@ def coach_message(profile, lang="pt", persona=None):
         if not has_consent(student_id, "ia_sobre_dados"):
             return None
 
-    idioma = "inglês" if lang == "en" else "português do Brasil"
+    idioma = "inglês americano" if lang == "en" else "português do Brasil"
     user = (
         f"Idioma da resposta: {idioma}.\n"
         f"Dados do aluno (JSON): {json.dumps(_profile_digest(profile), ensure_ascii=False)}\n"
-        "Gere a fala do EduBot sobre o progresso deste aluno."
+        "Gere a fala do Engage-Agent sobre o progresso deste aluno."
     )
     # CP.4: estilo da persona anexado ao system (tom; sem mudar o que é dito).
     from edubot.agent.persona import style_prompt

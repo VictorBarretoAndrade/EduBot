@@ -52,7 +52,7 @@ def ova_resources(ova_id):
                 "resource_id": resource.resource_id,
                 "resource_type": resource.resource_type,
                 "resource_title": tr(resource.resource_title, resource.resource_title_en, lang),
-                "resource_url": resource.resource_url,
+                "resource_url": tr(resource.resource_url, resource.resource_url_en, lang),
                 "media_type": resource.media_type,
                 "duration_seconds": resource.duration_seconds,
                 "perc_consumed": rp.perc_consumed if rp else 0,

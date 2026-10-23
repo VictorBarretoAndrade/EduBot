@@ -29,7 +29,7 @@ MAX_PASSAGES = 2
 MAX_CONTEXT_CHARS = 20000
 
 
-SYSTEM_PROMPT_TEMPLATE = """Você é o EduBot Tutor, um tutor pedagógico da plataforma \
+SYSTEM_PROMPT_TEMPLATE = """Você é o Engage-Agent, um tutor pedagógico da plataforma \
 educacional. Você está ajudando o aluno a tirar dúvidas sobre UM objeto virtual de \
 aprendizagem (OVA) específico, intitulado "{titulo}".
 
@@ -141,14 +141,14 @@ class _MockTutorClient:
         if not relevant:
             sugeridos = headings[:3]
             dicas = ("; ".join(sugeridos)) if sugeridos else T(
-                "os tópicos apresentados", "the topics presented")
+                "os tópicos apresentados", "the topics covered")
             text = T(
                 f"Essa pergunta parece fora do conteúdo deste OVA (\"{titulo}\"). "
                 f"Como tutor deste material, posso te ajudar com temas como: {dicas}. "
                 "Sobre o que desse conteúdo você gostaria de saber mais?",
-                f"That question seems outside the content of this OVA (\"{titulo}\"). "
-                f"As the tutor for this material, I can help you with topics such as: {dicas}. "
-                "What would you like to know more about from this content?")
+                f"That question seems to be outside the scope of this module (\"{titulo}\"). "
+                f"As your tutor for this material, I can help you with topics like: {dicas}. "
+                "Which part of this material would you like to explore?")
             return _text_envelope(pre + text)
 
         citacoes = " ".join(f"\"{p['text']}\"" for p in relevant)
@@ -157,9 +157,9 @@ class _MockTutorClient:
             f"Boa pergunta! No material deste OVA, na parte sobre \"{secao}\", "
             f"o conteúdo aponta que: {citacoes} "
             "Se quiser, posso aprofundar esse ponto ou relacioná-lo com outro tópico do OVA.",
-            f"Good question! In this OVA's material, in the section about \"{secao}\", "
-            f"the content states that: {citacoes} "
-            "If you'd like, I can go deeper into this point or relate it to another topic in the OVA.")
+            f"Great question! In this module's material, under \"{secao}\", "
+            f"it says: {citacoes} "
+            "If you'd like, I can dive deeper into this point or connect it to another topic in the module.")
         return _text_envelope(pre + text)
 
 
@@ -191,9 +191,9 @@ def tutor_reply(titulo, context, messages, lang="pt", persona=None):
     context = (context or "")[:MAX_CONTEXT_CHARS]
     passages, headings = _parse_context(context)
     system = SYSTEM_PROMPT_TEMPLATE.format(
-        titulo=titulo or ("this OVA" if lang == "en" else "este OVA"),
+        titulo=titulo or ("this module" if lang == "en" else "este OVA"),
         contexto=context,
-        idioma="inglês" if lang == "en" else "português do Brasil")
+        idioma="inglês americano" if lang == "en" else "português do Brasil")
     # CP.4: parágrafo de estilo da persona no system prompt (tom, não regras).
     estilo = style_prompt(persona, lang)
     if estilo:
@@ -234,7 +234,7 @@ def tutor_reply(titulo, context, messages, lang="pt", persona=None):
 
     response = _client.invoke(
         system=system, messages=messages,
-        titulo=titulo or ("this OVA" if lang == "en" else "este OVA"),
+        titulo=titulo or ("this module" if lang == "en" else "este OVA"),
         passages=passages, headings=headings, lang=lang, persona=persona)
 
     reply = "".join(b.get("text", "") for b in response.get("content", [])

@@ -122,6 +122,7 @@ def _competency_rows(student, course_id, lang="pt"):
     # MAX é seguro/determinístico e satisfaz o ONLY_FULL_GROUP_BY do MySQL.
     subject_id = fn.MAX(Subjects.subject_id).alias("subject_id")
     subject_nome = fn.MAX(Subjects.subject_name).alias("subject_nome")
+    subject_nome_en = fn.MAX(Subjects.subject_name_en).alias("subject_nome_en")
 
     sid = _student_id(student)
     rows = (Competencies
@@ -129,7 +130,7 @@ def _competency_rows(student, course_id, lang="pt"):
                     Competencies.competency_description,
                     Competencies.competency_description_en,
                     total_q, acertos, tentativas, erros, p_mastery,
-                    subject_id, subject_nome)
+                    subject_id, subject_nome, subject_nome_en)
             .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
             .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
             .switch(Competencies)
@@ -180,10 +181,10 @@ def _competency_rows(student, course_id, lang="pt"):
             "nome": tr(row["competency_description"],
                        row["competency_description_en"], lang),
             # Plano 5 (17.1): assunto/disciplina — permite agrupar acertos/erros
-            # "por assunto" no front (aluno, professor e gestor). subject_name é PT
-            # (course_subjects não tem coluna _en); o nome vai direto, sem tr().
+            # "por assunto" no front (aluno, professor e gestor). Plano 6: o nome
+            # da matéria passou a ter coluna _en (migration_024).
             "subject_id": row.get("subject_id"),
-            "subject_nome": row.get("subject_nome"),
+            "subject_nome": tr(row.get("subject_nome"), row.get("subject_nome_en"), lang),
             "acertos": correct,
             "total_questoes": total,
             "status": status,
@@ -209,7 +210,8 @@ def _resource_state(res_row, ova_prog, has_quiz_attempt, lang="pt"):
     seconds = 0
     completed = False
 
-    if rtype in ("video", "podcast", "atividade"):
+    # Plano 6: curso externo conclui pelo certificado aprovado (mesma linha de progresso).
+    if rtype in ("video", "podcast", "atividade", "curso_externo"):
         if res_row["rp_exists"]:
             perc = res_row["rp_perc"] or 0
             seconds = res_row["rp_seconds"] or 0
@@ -230,7 +232,7 @@ def _resource_state(res_row, ova_prog, has_quiz_attempt, lang="pt"):
         "resource_id": res_row["resource_id"],
         "titulo": tr(res_row["resource_title"], res_row["resource_title_en"], lang),
         "tipo": rtype,
-        "url": res_row["resource_url"],
+        "url": tr(res_row["resource_url"], res_row.get("resource_url_en"), lang),
         "media_type": res_row["media_type"],
         "perc_consumido": perc,
         "segundos_consumidos": seconds,
@@ -260,6 +262,9 @@ def build_student_profile(student, lang="pt"):
     # --- OVAs do curso + progresso do aluno (1 query, LEFT JOIN) -------------
     ova_rows = (OVAs
                 .select(OVAs.ova_id, OVAs.ova_name, OVAs.ova_name_en, OVAs.link,
+                        Subjects.subject_id.alias("subject_id"),
+                        Subjects.subject_name.alias("subject_name"),
+                        Subjects.subject_name_en.alias("subject_name_en"),
                         OVAProgress.progress_id.alias("progress_id"),
                         OVAProgress.read_time.alias("read_time"),
                         OVAProgress.perc_scrolled.alias("perc_scrolled"),
@@ -272,7 +277,9 @@ def build_student_profile(student, lang="pt"):
                       on=((OVAProgress.ova_id == OVAs.ova_id) &
                           (OVAProgress.student_id == sid)))
                 .where(Offerings.course_id == course_id)
-                .order_by(OVAs.ova_id)
+                # Plano 6: agrupado por matéria (modelo Canvas) e, dentro dela, na
+                # ordem de cadastro dos módulos.
+                .order_by(Subjects.subject_id, OVAs.ova_id)
                 .dicts())
     ova_rows = list(ova_rows)
 
@@ -291,6 +298,7 @@ def build_student_profile(student, lang="pt"):
                 .select(Resources.resource_id, Resources.ova_id,
                         Resources.resource_type, Resources.resource_title,
                         Resources.resource_title_en, Resources.resource_url,
+                        Resources.resource_url_en,
                         Resources.media_type,
                         ResourceProgress.resource_progress_id.alias("rp_id"),
                         ResourceProgress.perc_consumed.alias("rp_perc"),
@@ -348,6 +356,10 @@ def build_student_profile(student, lang="pt"):
         ovas_data.append({
             "ova_id": ova_id,
             "ova_name": tr(ova["ova_name"], ova["ova_name_en"], lang),
+            # Plano 6 (B.4): matéria do módulo — o front agrupa os módulos por
+            # matéria (Minhas matérias → Matéria → Módulo).
+            "subject_id": ova["subject_id"],
+            "subject_nome": tr(ova["subject_name"], ova["subject_name_en"], lang),
             # link da página HTML do OVA — usado pelo frontend React para abrir
             # o leitor clássico (iframe.html) com o conteúdo de texto
             "link": ova["link"],
@@ -403,7 +415,7 @@ def build_student_profile(student, lang="pt"):
         historico.append({
             "data": str(it.date),
             "tipo": it.type,
-            "descricao": it.description,
+            "descricao": tr(it.description, it.description_en, lang),
             "resultado": it.result
         })
 
@@ -412,7 +424,7 @@ def build_student_profile(student, lang="pt"):
             "student_id": student.student_id,
             "nome": student.student_name,
             "ra": student.ra,
-            "curso": course.course_name if course else None,
+            "curso": tr(course.course_name, course.course_name_en, lang) if course else None,
             # MELHORIA (Cena 4): papel do usuário, para o frontend liberar o painel
             "role": getattr(student, "role", "aluno") or "aluno",
             # AV.2 (Plano 3): persona do companheiro (a linha do aluno já está

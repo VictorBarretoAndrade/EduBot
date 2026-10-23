@@ -9,4 +9,6 @@ class Interventions(BaseModel):
     date = DateField()
     type = CharField(max_length=50)
     description = TextField(null=True)
+    # Plano 6 (migration_024): mesma mensagem em inglês (lida com tr(), fallback PT).
+    description_en = TextField(null=True)
     result = CharField(max_length=50, null=True)

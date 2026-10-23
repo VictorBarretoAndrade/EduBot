@@ -49,10 +49,10 @@ PERSONA_IDS = ["einstein", "curie"]
 # R.2 (Plano 2) — títulos concedidos por conquista (id -> rótulo pt/en). O aluno
 # escolhe o título ativo entre os que ganhou (students.title).
 TITLE_BY_ACHIEVEMENT = {
-    "revisor_pontual": ("Revisor Pontual", "On-time Reviewer"),
+    "revisor_pontual": ("Revisor Pontual", "On-Time Reviewer"),
     "mestre_competencia": ("Mestre", "Master"),
     "sequencia_7": ("Consistente", "Consistent"),
-    "trilha_completa": ("Trilha Completa", "Track Finisher"),
+    "trilha_completa": ("Trilha Completa", "Path Finisher"),
     "curioso": ("Curioso", "Curious Mind"),
 }
 
@@ -313,11 +313,11 @@ ACHIEVEMENTS = {
                         lambda sid: _count_xp_rule(sid, "revisao_em_dia") >= 5),
     "sequencia_7":     ("Semana perfeita", "Perfect week",
                         lambda sid: _best_streak(sid) >= 7),
-    "mestre_competencia": ("Mestre de competência", "Competency master",
+    "mestre_competencia": ("Mestre de competência", "Learning outcome master",
                            _has_mastered_any),
     "curioso":         ("Curioso", "Curious",
                         lambda sid: _asked_tutor_count(sid) >= 5),
-    "trilha_completa": ("Trilha completa", "Full track",
+    "trilha_completa": ("Trilha completa", "Full path",
                         _completed_all_course_ovas),
     "no_seu_formato":  ("Do seu jeito", "Your way",
                         _completed_personalized_ova),

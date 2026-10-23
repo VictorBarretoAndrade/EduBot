@@ -17,7 +17,7 @@ from edubot.i18n import tr
 from edubot.services.proactivity import trigger_evaluation
 # A.6: _alternatives_list era duplicada aqui e em personalizedOvaRoute; agora vem
 # da fonte única edubot.services.quiz. U.1: gate de liberação do quiz.
-from edubot.services.quiz import (alternatives_list as _alternatives_list, quiz_unlocked,
+from edubot.services.quiz import (alternatives_list as _alternatives_list, quiz_unlocked, in_practice_path,
                                   adaptive_pool, difficulty_overrides_for, challenge_pool)
 # D.1: evento de aprendizado (answered). D.2: mastery por competência (BKT).
 from edubot.services.events import emit as emit_event
@@ -184,8 +184,10 @@ def answer_question():
 
             # U.1: gate também na correção (defesa em profundidade) — não adianta
             # bloquear a listagem se o /answer aceitar respostas de quiz travado.
+            # Plano 6: questão da prática personalizada do aluno não passa pelo gate
+            # do módulo de origem (ver services/quiz.in_practice_path).
             ova = OVAs.get_or_none(OVAs.ova_id == question.ova_id)
-            if ova is not None:
+            if ova is not None and not in_practice_path(student, question.question_id):
                 unlocked, info = quiz_unlocked(student, ova)
                 if not unlocked:
                     return json.dumps({"error": "quiz_locked", **info}), 403

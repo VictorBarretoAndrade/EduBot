@@ -27,6 +27,7 @@ from edubot.services.student_context import build_student_profile
 from edubot.services.decisions import record_decision, budget_exceeded
 from edubot.services.events import emit
 from edubot.services.consents import has_consent
+from edubot.i18n import norm_lang
 
 logger = logging.getLogger("edubot.proactivity")
 
@@ -145,6 +146,16 @@ def evaluate_student(student, *, create_alert=True, lang="pt", trigger_type="swe
         if redigido:
             mensagem = redigido
 
+    # Plano 6 (T4): a mensagem é gravada nos DOIS idiomas, para quem lê em EN não
+    # receber o texto do idioma de quem disparou (a varredura roda em PT). O outro
+    # idioma vem do template determinístico da mesma regra — sem LLM, sem custo.
+    lang = norm_lang(lang)
+    other = "en" if lang == "pt" else "pt"
+    rec_other = get_recommendation(build_student_profile(student, lang=other),
+                                   lang=other, allow_llm=False)
+    textos = {lang: mensagem, other: rec_other["mensagem_aluno"]}
+    titulos = {lang: rec["titulo"], other: rec_other["titulo"]}
+
     today = datetime.date.today()
 
     # Intervenção para o aluno — dedup por (aluno, tipo, dia) ainda pendente.
@@ -158,7 +169,7 @@ def evaluate_student(student, *, create_alert=True, lang="pt", trigger_type="swe
     if not has_intervention:
         created_it = Interventions.create(
             student_id=student, date=today, type=rec["tipo"],
-            description=mensagem, result="pendente")
+            description=textos["pt"], description_en=textos["en"], result="pendente")
         # D.1 — o EduBot "falou primeiro": registra o evento de intervenção
         # recebida (matéria-prima do outcome em B.6 e da contagem por verbo).
         emit(student, "received_intervention", "intervention",
@@ -175,7 +186,8 @@ def evaluate_student(student, *, create_alert=True, lang="pt", trigger_type="swe
         if not has_alert:
             Alerts.create(
                 student_id=student, type=rec["tipo"],
-                message=f"{student.student_name}: {rec['titulo']}",
+                message=f"{student.student_name}: {titulos['pt']}",
+                message_en=f"{student.student_name}: {titulos['en']}",
                 severity=rec["prioridade"],
                 created_at=datetime.datetime.now(), read=False)
 
@@ -270,12 +282,14 @@ def create_due_review_interventions(today=None):
                .exists())
         if has:
             continue
-        nomes = [c.competency_description for c in
-                 Competencies.select().where(Competencies.competency_id.in_(comp_ids))]
-        lista = ", ".join(nomes) if nomes else "seus tópicos em revisão"
+        comps = list(Competencies.select().where(Competencies.competency_id.in_(comp_ids)))
+        lista = ", ".join(c.competency_description for c in comps) or "seus tópicos em revisão"
+        lista_en = ", ".join(c.competency_description_en or c.competency_description
+                             for c in comps) or "your review topics"
         Interventions.create(
             student_id=sid, date=today, type="revisao_espacada",
             description=f"Hora de revisar: {lista}. Uma revisão curta agora consolida o que você já aprendeu.",
+            description_en=f"Time to review: {lista_en}. A short review now locks in what you've already learned.",
             result="pendente")
         emit(sid, "received_intervention", "intervention", None,
              tipo="revisao_espacada", trigger="review_sweep")
@@ -320,6 +334,8 @@ def create_weekly_goal_nudges(today=None):
             student_id=sid, date=today, type="meta_semanal",
             description="Ainda dá tempo de cumprir suas metas desta semana! "
                         "Que tal 15 minutos de estudo agora?",
+            description_en="There's still time to hit this week's goals! "
+                           "How about 15 minutes of study right now?",
             result="pendente")
         emit(sid, "received_intervention", "intervention", None,
              tipo="meta_semanal", trigger="goal_nudge")

@@ -78,7 +78,7 @@ def test_tutor_mock_responds_in_lang():
     pt = tutor_reply("OVA Q", context, messages, lang="pt")
     en = tutor_reply("OVA Q", context, messages, lang="en")
     assert "Boa pergunta" in pt["reply"]
-    assert "Good question" in en["reply"]
+    assert "Great question" in en["reply"]
 
 
 def test_event_intervention_created_in_request_lang(client, auth, seeded_db):
@@ -88,5 +88,40 @@ def test_event_intervention_created_in_request_lang(client, auth, seeded_db):
                 data=json.dumps({"question_id": 1, "selected": "a"}))
     it = Interventions.select().where(Interventions.student_id == 1).first()
     assert it is not None
-    # Regra 2 (trilha mínima) dispara para perfil zerado — mensagem em EN
-    assert "resources" in it.description or "you" in it.description.lower()
+    # Regra 2 (trilha mínima) dispara para perfil zerado. Plano 6: a mensagem é
+    # gravada nos dois idiomas — EN na coluna _en, PT na original.
+    assert "resources" in it.description_en or "you" in it.description_en.lower()
+    assert it.description and it.description != it.description_en
+
+    # E a API devolve cada idioma a quem pede.
+    en = json.loads(client.get("/edubot/interventions?lang=en", headers=auth(1)).data)
+    pt = json.loads(client.get("/edubot/interventions?lang=pt", headers=auth(1)).data)
+    assert en["interventions"][0]["descricao"] == it.description_en
+    assert pt["interventions"][0]["descricao"] == it.description
+
+
+def test_profile_groups_modules_by_subject_in_lang(seeded_db):
+    """Plano 6 (B.4): cada módulo do perfil traz a matéria, traduzida."""
+    from edubot.data.models.students import Students
+    from edubot.data.models.subjects import Subjects
+    from edubot.services.student_context import build_student_profile
+    Subjects.update(subject_name_en="Topic").execute()
+    student = Students.get_by_id(1)
+    en = build_student_profile(student, lang="en")
+    pt = build_student_profile(student, lang="pt")
+    assert {o["subject_nome"] for o in en["ovas"]} == {"Topic"}
+    assert all(o["subject_id"] is not None for o in en["ovas"])
+    assert pt["ovas"][0]["subject_nome"] != "Topic"           # PT continua PT
+    assert {c["subject_nome"] for c in en["competencias"]} == {"Topic"}
+
+
+def test_tutor_alert_message_follows_lang(client, auth, seeded_db):
+    """Plano 6 (T4): o alerta ao professor é gravado em PT e EN e servido no idioma pedido."""
+    import datetime
+    from edubot.data.models.alerts import Alerts
+    Alerts.create(student_id=1, type="inatividade", message="Ana sumiu", message_en="Ana is inactive",
+                  severity="alta", created_at=datetime.datetime.now(), read=False)
+    en = json.loads(client.get("/tutor/alerts?lang=en", headers=auth(9)).data)
+    pt = json.loads(client.get("/tutor/alerts?lang=pt", headers=auth(9)).data)
+    assert en["alertas"][0]["message"] == "Ana is inactive"
+    assert pt["alertas"][0]["message"] == "Ana sumiu"

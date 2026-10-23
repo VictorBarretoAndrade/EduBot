@@ -15,6 +15,8 @@ class Alerts(BaseModel):
     student_id = ForeignKeyField(Students, backref="alerts", on_delete="cascade", on_update="cascade")
     type = CharField(max_length=50)
     message = TextField()
+    # Plano 6 (migration_024): mesma mensagem em inglês (fallback PT).
+    message_en = TextField(null=True)
     severity = CharField(max_length=20)        # alta | media | baixa
     created_at = DateTimeField()
     read = BooleanField(default=False)

@@ -45,19 +45,19 @@ def _apply_rules(profile, lang="pt"):
         return {
             "tipo": "plano_retomada",
             "prioridade": "alta",
-            "titulo": T("Plano de retomada dos estudos", "Study comeback plan"),
+            "titulo": T("Plano de retomada dos estudos", "Plan to get back on track"),
             "mensagem_aluno": T(
                 f"Oi, {primeiro_nome}! Sentimos sua falta — já são {dias} dias sem "
                 "acessar a plataforma. Que tal retomar aos poucos? Separei um plano "
                 "leve para os próximos 3 dias.",
                 f"Hi, {primeiro_nome}! We've missed you — it's been {dias} days since "
-                "you last accessed the platform. How about easing back in? I've put "
+                "you last visited the platform. How about easing back in? I've put "
                 "together a light plan for the next 3 days."),
             "acoes": [
                 T("Dia 1: revisitar por 10 minutos o último OVA acessado",
-                  "Day 1: revisit the last OVA you accessed for 10 minutes"),
+                  "Day 1: spend 10 minutes reviewing the last module you opened"),
                 T("Dia 2: assistir/ouvir um recurso curto do OVA em andamento",
-                  "Day 2: watch/listen to a short resource from the OVA in progress"),
+                  "Day 2: watch or listen to a short resource from your current module"),
                 T("Dia 3: responder 2 questões do quiz para reativar a memória",
                   "Day 3: answer 2 quiz questions to refresh your memory"),
             ],
@@ -73,21 +73,21 @@ def _apply_rules(profile, lang="pt"):
             "tipo": "trilha_minima",
             "prioridade": "alta",
             "titulo": T("Trilha mínima de recursos essenciais",
-                        "Minimum track of essential resources"),
+                        "Essentials path: key resources"),
             "mensagem_aluno": T(
                 f"{primeiro_nome}, você consumiu {consumo}% dos recursos disponíveis. "
                 "Para não perder o fio da disciplina, foque primeiro nos itens "
                 "essenciais desta trilha mínima.",
-                f"{primeiro_nome}, you've consumed {consumo}% of the available "
-                "resources. To keep up with the course, focus first on the essential "
-                "items of this minimum track."),
+                f"{primeiro_nome}, you've gone through {consumo}% of the available "
+                "resources. To keep up with the course, start with the core "
+                "items in this essentials path."),
             "acoes": [
                 T("Ler a seção de texto principal do OVA em andamento",
-                  "Read the main text section of the OVA in progress"),
+                  "Read the main text section of your current module"),
                 T("Assistir ao vídeo introdutório do OVA",
-                  "Watch the OVA's introductory video"),
+                  "Watch the module's introductory video"),
                 T("Fazer o quiz ao final para consolidar",
-                  "Take the quiz at the end to consolidate"),
+                  "Take the quiz at the end to reinforce what you learned"),
             ],
             "formato_preferido": preferencia,
             "justificativa": (
@@ -107,11 +107,11 @@ def _apply_rules(profile, lang="pt"):
                 "tentativas no quiz não foram bem. Acontece! Vamos revisar os mesmos "
                 "tópicos por um caminho diferente — com analogias e exemplos visuais.",
                 f"{primeiro_nome}, I noticed {round(taxa_erro * 100)}% of your quiz "
-                "attempts didn't go well. It happens! Let's review the same topics "
-                "through a different path — with analogies and visual examples."),
+                "attempts didn't go as planned. That happens! Let's review the same topics "
+                "from a different angle — with analogies and visual examples."),
             "acoes": [
                 T("Revisar as competências com mais erros usando o material em outro formato",
-                  "Review the competencies with the most mistakes using material in another format"),
+                  "Review the learning outcomes with the most mistakes using material in another format"),
                 T("Assistir à explicação alternativa em vídeo (ou podcast) do tópico",
                   "Watch the alternative video (or podcast) explanation of the topic"),
                 T("Refazer apenas as questões erradas após a revisão",
@@ -135,11 +135,11 @@ def _apply_rules(profile, lang="pt"):
                 f"{pendentes} OVA(s) começado(s) e não concluído(s). Um checklist "
                 "curto ajuda a fechar o ciclo!",
                 f"{primeiro_nome}, you've already made good progress, but you have "
-                f"{pendentes} OVA(s) started and not finished. A short checklist "
-                "helps close the loop!"),
+                f"{pendentes} module(s) started and not yet finished. A quick checklist "
+                "will help you wrap them up!"),
             "acoes": [
                 T("Abrir o OVA pendente e ir direto à última seção lida",
-                  "Open the pending OVA and go straight to the last section you read"),
+                  "Open the unfinished module and go straight to the last section you read"),
                 T("Concluir a atividade prática pendente",
                   "Complete the pending practical activity"),
                 T("Marcar o recurso como concluído ao terminar",
@@ -161,13 +161,13 @@ def _apply_rules(profile, lang="pt"):
             "mensagem_aluno": T(
                 f"Parabéns, {primeiro_nome}! Você desenvolveu a competência "
                 f"\"{comp}\". Que tal um desafio avançado para ir além?",
-                f"Congratulations, {primeiro_nome}! You've developed the competency "
-                f"\"{comp}\". How about an advanced challenge to go further?"),
+                f"Congratulations, {primeiro_nome}! You've mastered the learning outcome "
+                f"\"{comp}\". Ready for an advanced challenge to take it further?"),
             "acoes": [
                 T(f"Explorar material de aprofundamento sobre: {comp}",
                   f"Explore advanced material on: {comp}"),
                 T("Tentar o desafio avançado relacionado à competência",
-                  "Try the advanced challenge related to the competency"),
+                  "Try the advanced challenge for this learning outcome"),
                 T("Compartilhar o resultado com o professor",
                   "Share the result with your teacher"),
             ],
@@ -189,13 +189,13 @@ def _apply_rules(profile, lang="pt"):
             f"conteúdo em {formato}. Selecionei os próximos OVAs priorizando esse "
             "formato.",
             f"{primeiro_nome}, you're all caught up! I noticed you engage more with "
-            f"{formato} content. I've selected the next OVAs prioritizing that "
+            f"{formato} content, so I've selected the next modules prioritizing that "
             "format."),
         "acoes": [
             T(f"Continuar a trilha priorizando recursos em {formato}",
-              f"Continue the track prioritizing {formato} resources"),
+              f"Continue your path prioritizing {formato} resources"),
             T("Manter o ritmo de acesso para não perder a constância",
-              "Keep up your access rhythm to stay consistent"),
+              "Keep a steady study pace to stay consistent"),
         ],
         "formato_preferido": formato,
         "justificativa": (

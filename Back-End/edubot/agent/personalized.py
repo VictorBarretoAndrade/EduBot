@@ -167,10 +167,22 @@ class _MockAgentClient:
                 f"Competência \"{comp_nome}\" (id {comp_id}) com status "
                 f"'{target.get('status') if target else 'desconhecido'}'"
                 + (f" e taxa de erro {taxa} no quiz." if taxa is not None else "."))
+            # Plano 6 (T4): o mock grava também a versão EN (nome da competência
+            # vindo da coluna _en), para a trilha aparecer em inglês a quem usa EN.
+            from edubot.data.models.competencies import Competencies
+            comp_row = Competencies.get_or_none(Competencies.competency_id == comp_id) if comp_id else None
+            comp_nome_en = ((comp_row.competency_description_en or comp_row.competency_description)
+                            if comp_row else "this topic")
+            mensagem_en = (
+                f"{primeiro}, I put together a practice path on \"{comp_nome_en}\", "
+                "where you struggled the most. Start with the videos and readings, then "
+                "retake the questions at the end to lock in what you learned.")
             return _tool_use_envelope("criar_ova_personalizada", {
                 "target_competency_id": comp_id,
                 "titulo": f"Reforço: {comp_nome}",
+                "titulo_en": f"Practice: {comp_nome_en}",
                 "mensagem_aluno": mensagem,
+                "mensagem_aluno_en": mensagem_en,
                 "justificativa": justificativa,
                 "resource_ids": [r["resource_id"] for r in recursos],
                 "question_ids": [q["question_id"] for q in questoes],

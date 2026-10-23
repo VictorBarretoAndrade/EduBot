@@ -72,6 +72,9 @@ def edubot_recommendation():
                 date=today,
                 type=recommendation["tipo"],
                 description=recommendation["mensagem_aluno"],
+                # Plano 6: o pedido sob demanda vem num idioma só; em EN a mesma
+                # frase também ocupa a coluna _en (o leitor EN não cai no PT).
+                description_en=recommendation["mensagem_aluno"] if lang == "en" else None,
                 result="pendente"
             )
 
@@ -235,6 +238,7 @@ def edubot_coach_message():
 @require_auth
 def edubot_interventions():
     try:
+        lang = get_lang()
         rows = (Interventions
                 .select()
                 .where((Interventions.student_id == g.student) &
@@ -245,7 +249,7 @@ def edubot_interventions():
             "intervention_id": it.intervention_id,
             "data": str(it.date),
             "tipo": it.type,
-            "descricao": it.description,
+            "descricao": tr(it.description, it.description_en, lang),
             "resultado": it.result,
         } for it in rows]
         return json.dumps({"interventions": out}, default=str), 200

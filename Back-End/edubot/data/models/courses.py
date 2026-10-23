@@ -8,3 +8,5 @@ class Courses(BaseModel):
     course_id = IntegerField(primary_key=True)
     # Name of the course as a text field
     course_name = TextField()
+    # Plano 6 (migration_024): nome do curso em inglês (fallback PT).
+    course_name_en = TextField(null=True)

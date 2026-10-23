@@ -9,6 +9,8 @@ class Subjects(BaseModel):
     subject_id = IntegerField(primary_key=True)
     # Name of the subject
     subject_name = TextField()
+    # Plano 6 (migration_024): nome da matéria em inglês (fallback PT).
+    subject_name_en = TextField(null=True)
     
     class Meta:
         # Specifies the table name in the database

@@ -133,7 +133,7 @@ def _paged(rows, id_field, limit):
 def ping():
     return _ok({
         "ok": True,
-        "service": "EduBot Public API",
+        "service": "Engage-Agent Public API",
         "version": "v1",
         "server_time": datetime.datetime.now().isoformat(timespec="seconds"),
         "key_name": g.api_key.name,

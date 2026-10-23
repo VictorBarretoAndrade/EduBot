@@ -119,7 +119,9 @@
           "titulo": "Quiz A",
           "url": null
         }
-      ]
+      ],
+      "subject_id": 1,
+      "subject_nome": "Assunto"
     },
     {
       "completed": false,
@@ -141,7 +143,9 @@
           "titulo": "Video B",
           "url": null
         }
-      ]
+      ],
+      "subject_id": 1,
+      "subject_nome": "Assunto"
     }
   ],
   "preferencia_formato": "video",

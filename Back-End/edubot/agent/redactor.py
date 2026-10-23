@@ -28,7 +28,7 @@ MAX_TOKENS = int(os.getenv("EDUBOT_REDACTOR_MAX_TOKENS", "250"))
 
 # System fixo e estável -> bom candidato a prompt caching (cache_control abaixo).
 _SYSTEM = (
-    "Você é o EduBot, um tutor virtual acolhedor de uma plataforma educacional "
+    "Você é o Engage-Agent, um tutor virtual acolhedor de uma plataforma educacional "
     "brasileira. Reescreva a mensagem de uma intervenção pedagógica para ESTE "
     "aluno específico, em 2 a 3 frases curtas, calorosas e diretas (sem listas, "
     "sem markdown, sem emojis). Use o primeiro nome e, se houver, cite a dúvida "
@@ -50,7 +50,7 @@ def redigir_intervencao(digest, rec, lang="pt"):
     regra (tipo, prioridade, mensagem_aluno template, justificativa)."""
     if not llm.is_real():
         return None
-    idioma = "inglês" if lang == "en" else "português do Brasil"
+    idioma = "inglês americano" if lang == "en" else "português do Brasil"
     payload = {
         "idioma": idioma,
         "regra": rec.get("tipo"),

@@ -23,6 +23,8 @@ class Resources(BaseModel):
     resource_title_en = CharField(max_length=255, null=True)
     # Where the media lives (null for texto/quiz/atividade embedded in the OVA page)
     resource_url = TextField(null=True)
+    # Plano 6 (migration_024): link equivalente em inglês para leituras externas.
+    resource_url_en = TextField(null=True)
     # How the URL should be interpreted by the player: "upload" (direct file),
     # "youtube", "spotify", ... Extensible without migration (free-form string).
     media_type = CharField(max_length=30, null=True)

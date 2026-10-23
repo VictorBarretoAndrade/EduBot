@@ -140,6 +140,7 @@ def tutor_alerts():
     if not _is_tutor():
         return json.dumps({"Error": "Acesso restrito a tutores."}), 403
     try:
+        lang = get_lang()
         course_id = g.student.course_id
         rows = (Alerts
                 .select(Alerts, Students)
@@ -155,7 +156,7 @@ def tutor_alerts():
             "student_id": a.student_id.student_id,
             "aluno": a.student_id.student_name,
             "type": a.type,
-            "message": a.message,
+            "message": tr(a.message, a.message_en, lang),
             "severity": a.severity,
             "created_at": str(a.created_at),
             "read": bool(a.read),
@@ -220,7 +221,8 @@ def tutor_mastery():
                              Competencies.competency_description,
                              Competencies.competency_description_en,
                              Subjects.subject_id.alias("subject_id"),
-                             Subjects.subject_name.alias("subject_nome"))
+                             Subjects.subject_name.alias("subject_nome"),
+                             Subjects.subject_name_en.alias("subject_nome_en"))
                      .join(Subjects, on=(Competencies.subject_id == Subjects.subject_id))
                      .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
                      .where(Offerings.course_id == course_id)
@@ -229,7 +231,7 @@ def tutor_mastery():
                      .dicts())
         comp_meta = [{"competency_id": c["competency_id"],
                       "subject_id": c["subject_id"],
-                      "subject_nome": c["subject_nome"],
+                      "subject_nome": tr(c["subject_nome"], c["subject_nome_en"], lang),
                       "nome": tr(c["competency_description"], c["competency_description_en"], lang)}
                      for c in comps]
 
@@ -321,6 +323,7 @@ def tutor_queue():
     if not _is_tutor():
         return json.dumps({"Error": "Acesso restrito a tutores."}), 403
     try:
+        lang = get_lang()
         rows = (Alerts
                 .select(Alerts, Students)
                 .join(Students)
@@ -333,7 +336,7 @@ def tutor_queue():
             "student_id": a.student_id.student_id,
             "aluno": a.student_id.student_name,
             "type": a.type,
-            "message": a.message,
+            "message": tr(a.message, a.message_en, lang),
             "severity": a.severity,
             "proposed_action": a.proposed_action,
             "created_at": str(a.created_at),
@@ -628,7 +631,7 @@ def tutor_student_detail(student_id):
 HARD_SECTIONS_LIMIT = 8
 
 
-def _hard_sections(sids):
+def _hard_sections(sids, lang="pt"):
     """Fase 2 — "onde a turma trava": seções com maior tempo médio de leitura e
     releitura. Uma agregação SQL sobre ova_section_progress (sem N+1).
 
@@ -640,6 +643,7 @@ def _hard_sections(sids):
                     OVASectionProgress.section_id,
                     OVASectionProgress.section_index,
                     OVAs.ova_name.alias("ova_nome"),
+                    fn.MAX(OVAs.ova_name_en).alias("ova_nome_en"),
                     fn.COUNT(OVASectionProgress.section_progress_id).alias("alunos"),
                     fn.AVG(OVASectionProgress.active_seconds).alias("segundos_medios"),
                     fn.SUM(OVASectionProgress.visits).alias("visitas"))
@@ -655,7 +659,7 @@ def _hard_sections(sids):
         visitas = int(r["visitas"] or 0)
         secoes.append({
             "ova_id": r["ova_id"],
-            "ova_nome": r["ova_nome"],
+            "ova_nome": tr(r["ova_nome"], r["ova_nome_en"], lang),
             "section_id": r["section_id"],
             "section_index": r["section_index"],
             "alunos": alunos,
@@ -700,6 +704,7 @@ def tutor_overview():
     if not _is_tutor():
         return json.dumps({"Error": "Acesso restrito a tutores."}), 403
     try:
+        lang = get_lang()
         course = g.student.course_id
         course_id = course.course_id if course else None
         sids = [s.student_id for s in _turma_students()]
@@ -745,7 +750,7 @@ def tutor_overview():
         # a cobertura aparecer mesmo em assunto sem nenhuma tentativa).
         by_subject = {}
         for r in (Subjects
-                  .select(Subjects.subject_id, Subjects.subject_name,
+                  .select(Subjects.subject_id, Subjects.subject_name, Subjects.subject_name_en,
                           fn.COUNT(Questions.question_id.distinct()).alias("total_q"))
                   .join(Offerings, on=(Offerings.subject_id == Subjects.subject_id))
                   .switch(Subjects)
@@ -759,7 +764,7 @@ def tutor_overview():
                   .dicts()):
             by_subject[r["subject_id"]] = {
                 "subject_id": r["subject_id"],
-                "subject_nome": r["subject_name"],
+                "subject_nome": tr(r["subject_name"], r["subject_name_en"], lang),
                 "acertos": 0, "erros": 0, "tentativas": 0,
                 "total_questoes": r["total_q"] or 0,
                 "taxa_erro": None, "dominio_medio": None,
@@ -834,12 +839,12 @@ def tutor_overview():
             "quiz": {"acertos": acertos, "erros": erros, "tentativas": tentativas, "taxa_erro": taxa_erro},
             "consumo": {"percentual_medio": consumo_medio},
             "por_assunto": por_assunto,
-            "secoes_dificeis": _hard_sections(sids),
+            "secoes_dificeis": _hard_sections(sids, lang),
             "video": _video_stats(sids),
             # Fase 4 (§6.2): competências que o reforço NÃO consegue atender bem
             # (poucas questões ou formato único). É lacuna de conteúdo, e o
             # gestor é quem pode resolvê-la.
-            "lacunas_conteudo": coverage_gaps(course_id),
+            "lacunas_conteudo": coverage_gaps(course_id, lang),
             "rastreamento": rastreamento,
         }, default=str), 200
     except PeeweeException as err:

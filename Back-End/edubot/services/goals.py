@@ -18,9 +18,9 @@ logger = logging.getLogger("edubot.goals")
 
 # tipo -> (rótulo pt, en, regra de XP que mede o progresso)
 GOAL_KINDS = {
-    "dias_de_estudo":   ("Estudar em {target} dias", "Study on {target} days", "dia_de_estudo"),
-    "concluir_modulos": ("Concluir {target} módulo(s)", "Finish {target} module(s)", "modulo_concluido"),
-    "revisoes_em_dia":  ("Fazer {target} revisão(ões) em dia", "Do {target} review(s) on time", "revisao_em_dia"),
+    "dias_de_estudo":   ("Estudar em {target} dias", "Study {target} days", "dia_de_estudo"),
+    "concluir_modulos": ("Concluir {target} módulo(s)", "Complete {target} module(s)", "modulo_concluido"),
+    "revisoes_em_dia":  ("Fazer {target} revisão(ões) em dia", "Complete {target} review(s) on time", "revisao_em_dia"),
 }
 
 

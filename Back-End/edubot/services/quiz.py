@@ -118,3 +118,21 @@ def quiz_unlocked(student, ova):
         (OVAProgress.student_id == student) & (OVAProgress.ova_id == ova))
     perc = (progress.perc_scrolled or 0) if progress else 0
     return perc >= gate, {"gate": gate, "perc": perc}
+
+
+def in_practice_path(student, question_id):
+    """Plano 6 — a questão faz parte de uma prática personalizada DESTE aluno?
+
+    A prática mistura questões de vários módulos da mesma competência (ex.: a de
+    máximos e mínimos traz questões de Cálculo e de Cálculo 2). O gate de leitura
+    é do QUIZ DO MÓDULO; na prática, o próprio caminho já traz o material de
+    estudo, então a questão não pode ser recusada por falta de leitura do módulo
+    de origem — era isso que gerava "algumas respostas não foram corrigidas"."""
+    from edubot.data.models.personalized_ova import PersonalizedOVA, PersonalizedOVAItem
+    return (PersonalizedOVAItem
+            .select()
+            .join(PersonalizedOVA)
+            .where((PersonalizedOVA.student_id == student) &
+                   (PersonalizedOVAItem.item_kind == "question") &
+                   (PersonalizedOVAItem.question_id == question_id))
+            .exists())

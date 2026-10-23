@@ -56,3 +56,23 @@ def test_answer_allowed_after_reading(client, auth, seeded_db):
                     data=json.dumps({"question_id": 50, "selected": "a"}))
     assert r.status_code == 200
     assert json.loads(r.data.decode())["is_correct"] is True
+
+
+def test_practice_question_not_blocked_by_module_gate(client, auth, seeded_db):
+    """Plano 6: a prática mistura questões de módulos ainda não lidos — a questão
+    da prática DO aluno é corrigida; a mesma questão fora da prática segue travada."""
+    import datetime
+    from edubot.data.models.personalized_ova import PersonalizedOVA, PersonalizedOVAItem
+    _gated_ova(gate=70)
+    # Aluno 2 (sem prática) continua bloqueado na questão do módulo não lido.
+    r = client.post("/question/answer", headers=auth(2),
+                    data=json.dumps({"question_id": 50, "selected": "a"}))
+    assert r.status_code == 403
+    pova = PersonalizedOVA.create(student_id=1, target_competency_id=1, title="Reforço",
+                                  status="ativa", created_at=datetime.datetime.now())
+    PersonalizedOVAItem.create(personalized_ova_id=pova, item_kind="question",
+                               question_id=50, position=0)
+    r = client.post("/question/answer", headers=auth(1),
+                    data=json.dumps({"question_id": 50, "selected": "a"}))
+    assert r.status_code == 200
+    assert json.loads(r.data.decode())["is_correct"] is True

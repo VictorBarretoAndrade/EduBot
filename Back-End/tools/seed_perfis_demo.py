@@ -188,7 +188,9 @@ def seed():
         student_id=s2_id,
         target_competency_id=2,
         title="Reforço: Aplicações da Computação Quântica",
-        message="Olá Yasmin! O EduBot percebeu que você teve dúvidas no quiz de aplicações quânticas. Preparamos uma trilha rápida com um vídeo explicativo e exercícios guiados para fixar o conteúdo.",
+        title_en="Practice: Applications of Quantum Computing",
+        message="Olá Yasmin! O Engage-Agent percebeu que você teve dúvidas no quiz de aplicações quânticas. Preparamos uma trilha rápida com um vídeo explicativo e exercícios guiados para fixar o conteúdo.",
+        message_en="Hi Yasmin! Engage-Agent noticed you had some trouble with the quantum applications quiz. Here's a quick practice path with an explainer video and guided exercises to help it stick.",
         rationale="Taxa de acerto de 33% na competência 'Analisar as aplicações da computação quântica'.",
         status="ativa",
         created_at=now - datetime.timedelta(days=2)
@@ -203,6 +205,7 @@ def seed():
         date=today - datetime.timedelta(days=2),
         type="reforco",
         description="Montada trilha de reforço personalizada sobre Aplicações da Computação Quântica.",
+        description_en="Built a personalized practice path on Applications of Quantum Computing.",
         result="aceita"
     )
 
@@ -253,6 +256,7 @@ def seed():
         type="risco_evasao",
         severity="alta",
         message="Aluno Pedro está inativo há 14 dias, com taxa de erro de 83% no quiz e 3 revisões vencidas acumuladas. Risco iminente de evasão.",
+        message_en="Pedro has been inactive for 14 days, with an 83% quiz error rate and 3 overdue reviews. High risk of dropping out.",
         read=False,
         status="aberto",
         created_at=now - datetime.timedelta(days=1),
@@ -267,6 +271,7 @@ def seed():
         date=today - datetime.timedelta(days=7),
         type="inatividade",
         description="Sentimos sua falta! Que tal retomar os estudos de Computação Quântica com um resumo rápido?",
+        description_en="We miss you! How about getting back into Quantum Computing with a quick recap?",
         result="pendente"
     )
 

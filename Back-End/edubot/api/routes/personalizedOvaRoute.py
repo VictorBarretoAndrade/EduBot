@@ -78,6 +78,7 @@ def create_personalized_ova():
             }, default=str), 422
 
         pova = PersonalizedOVA.get_by_id(result["personalized_ova_id"])
+        lang = get_lang()
 
         # 3. Registra no histórico de intervenções (consumido pelo painel)
         Interventions.create(
@@ -85,12 +86,13 @@ def create_personalized_ova():
             date=datetime.date.today(),
             type="ova_personalizada",
             description=pova.message,
+            description_en=pova.message_en,
             result="pendente")
 
         return json.dumps({
             "personalized_ova_id": pova.personalized_ova_id,
-            "titulo": pova.title,
-            "mensagem_aluno": pova.message,
+            "titulo": tr(pova.title, pova.title_en, lang),
+            "mensagem_aluno": tr(pova.message, pova.message_en, lang),
             "justificativa": pova.rationale,
             "target_competency_id": (pova.target_competency_id.competency_id
                                      if pova.target_competency_id else None),
@@ -119,7 +121,7 @@ def list_personalized_ovas():
             comp = pova.target_competency_id
             ovas.append({
                 "personalized_ova_id": pova.personalized_ova_id,
-                "titulo": pova.title,
+                "titulo": tr(pova.title, pova.title_en, lang),
                 "status": pova.status,
                 "created_at": str(pova.created_at),
                 "competencia": tr(comp.competency_description,
@@ -162,12 +164,16 @@ def get_personalized_ova(pova_id):
                     "resource_id": resource.resource_id,
                     "resource_type": resource.resource_type,
                     "resource_title": tr(resource.resource_title, resource.resource_title_en, lang),
-                    "resource_url": resource.resource_url,
+                    "resource_url": tr(resource.resource_url, resource.resource_url_en, lang),
                     "media_type": resource.media_type,
                     "duration_seconds": resource.duration_seconds,
                     "perc_consumed": rp.perc_consumed if rp else 0,
                     "seconds_consumed": rp.seconds_consumed if rp else 0,
                     "completed": bool(rp.completed) if rp else False,
+                    # Plano 6: cobertura já conquistada — o player da prática retoma o
+                    # bitmap em vez de recomeçar a barra do zero a cada visita.
+                    "coverage_perc": rp.coverage_perc if rp else 0,
+                    "coverage_bitmap": rp.coverage_bitmap if rp else None,
                 })
             elif item.item_kind == "question" and item.question_id is not None:
                 question = Questions.get_or_none(Questions.question_id == item.question_id)
@@ -195,8 +201,8 @@ def get_personalized_ova(pova_id):
         comp = pova.target_competency_id
         return json.dumps({
             "personalized_ova_id": pova.personalized_ova_id,
-            "titulo": pova.title,
-            "mensagem_aluno": pova.message,
+            "titulo": tr(pova.title, pova.title_en, lang),
+            "mensagem_aluno": tr(pova.message, pova.message_en, lang),
             "justificativa": pova.rationale,
             "status": pova.status,
             "created_at": str(pova.created_at),
