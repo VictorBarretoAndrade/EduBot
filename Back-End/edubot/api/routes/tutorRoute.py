@@ -197,6 +197,43 @@ def tutor_alert_ack():
         return json.dumps({"Error": f"{err}"}), 500
 
 
+@app_tutor.route("/tutor/reset-password", methods=["POST"])
+@cross_origin()
+@require_auth
+def tutor_reset_password():
+    """Plano 6 — atende o pedido "Esqueci minha senha": gera uma senha temporária
+    para o aluno do alerta, mostrada UMA vez ao professor (que a entrega ao aluno).
+    Só para alertas `redefinir_senha` de alunos do curso do professor."""
+    if not _is_tutor():
+        return json.dumps({"Error": "Acesso restrito a tutores."}), 403
+    try:
+        import secrets
+        from edubot.api.auth import hash_password
+        data = get_payload()
+        alert = (Alerts
+                 .select(Alerts, Students)
+                 .join(Students)
+                 .where((Alerts.alert_id == data.get("alert_id")) &
+                        (Students.course_id == g.student.course_id))
+                 .first())
+        if alert is None:
+            return json.dumps({"Error": "Alerta não encontrado"}), 404
+        if alert.type != "redefinir_senha":
+            return json.dumps({"Error": "Este alerta não é um pedido de senha."}), 400
+        # Sem caracteres ambíguos (0/O, 1/l/I): o professor vai ditar ou anotar.
+        alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+        temp = "".join(secrets.choice(alphabet) for _ in range(8))
+        student = alert.student_id
+        student.student_password = hash_password(temp)
+        student.save()
+        alert.read = True
+        alert.save()
+        return json.dumps({"ok": True, "aluno": student.student_name, "ra": student.ra,
+                           "senha_temporaria": temp}), 200
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500
+
+
 @app_tutor.route("/tutor/mastery", methods=["GET"])
 @cross_origin()
 @require_auth

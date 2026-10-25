@@ -25,7 +25,8 @@ const NOTICE_TYPES: Record<string, Pair> = {
   inatividade: ["Sentimos sua falta", "We miss you"],
   risco_evasao: ["Risco de evasão", "Dropout risk"],
   erro_quiz: ["Muitos erros no quiz", "Struggling on quizzes"],
-  em_risco: ["Em risco", "At risk"]
+  em_risco: ["Em risco", "At risk"],
+  redefinir_senha: ["Pedido de nova senha", "Password reset request"]
 };
 
 const COMPETENCY_STATUS: Record<string, Pair> = {

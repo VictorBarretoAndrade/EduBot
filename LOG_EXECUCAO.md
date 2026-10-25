@@ -2156,3 +2156,18 @@ outcome* em EN, home do professor = **Minha turma**, conteúdo real para Cálcul
   de um certificado Cisco) — o ponto de troca para LLM real é `evaluate_certificate`. O PDF não é
   guardado (só sha256, tamanho e veredito). Aprovado → o recurso conta como concluído.
 - Suíte: **340 passed**; `tsc` limpo.
+
+## Tela de login — usabilidade (25/10/2026)
+
+- **Esqueci minha senha:** não há e-mail no cadastro (`students` não tem coluna de e-mail) nem
+  envio de e-mail. O pedido (`POST /login/forgot-password`) vira um alerta `redefinir_senha`
+  para a coordenação da turma; a resposta é a mesma exista a conta ou não (não revela quem é
+  aluno), com limite de tentativas. Em Minha turma, o professor gera uma senha temporária
+  (`POST /tutor/reset-password`, só para alunos do próprio curso), mostrada uma única vez.
+- **Esqueci meu RA ou usuário:** orientação (carteirinha, portal acadêmico, login pelo nome
+  completo — o backend já aceitava) e a quem procurar.
+- **Formulário:** mostrar/ocultar senha, aviso de Caps Lock, PT/EN antes de entrar,
+  `autocomplete` (gerenciador de senhas), mensagem própria para "muitas tentativas" (429),
+  `aria-invalid`/`aria-describedby` nos erros.
+- Testes: `test_forgot_password.py` (4); suíte 344 passando; `tsc` limpo. Validado no
+  navegador: pedido do Pedro → senha temporária gerada por Gabriel → Pedro entra com ela.

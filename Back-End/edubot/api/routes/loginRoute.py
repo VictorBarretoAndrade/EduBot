@@ -90,3 +90,50 @@ def login():
     else:
         # Return a message if the HTTP method is not POST
         return "Wrong Request Methods. Only POST Allowed", 405
+
+
+# Plano 6 — "Esqueci minha senha". Não há e-mail cadastrado nem envio de e-mail
+# na plataforma: o pedido vira um alerta para a coordenação/professor da turma
+# (Minha turma), que gera uma senha temporária e a entrega ao aluno.
+# A resposta é SEMPRE a mesma, exista a conta ou não (não revela quem é aluno).
+FORGOT_TYPE = "redefinir_senha"
+
+
+@app_login.route("/login/forgot-password", methods=["POST"])
+@cross_origin()
+def forgot_password():
+    import datetime
+    from peewee import fn
+    from edubot.data.models.alerts import Alerts
+
+    generic = json.dumps({"ok": True}), 202
+    try:
+        data = get_payload()
+        ra = str(data.get("ra", "")).strip()
+        if not ra:
+            return json.dumps({"Error": "Informe seu RA ou usuário."}), 400
+        if login_throttled(f"forgot:{ra}", request.remote_addr or "?"):
+            return json.dumps({"Error": "Muitas tentativas. Tente novamente em instantes."}), 429, {"Retry-After": "60"}
+
+        student = (Students
+                   .select()
+                   .where((fn.LOWER(Students.ra) == ra.lower()) |
+                          (fn.LOWER(Students.student_name) == ra.lower()))
+                   .first())
+        if student is None:
+            return generic
+        pending = (Alerts
+                   .select()
+                   .where((Alerts.student_id == student) &
+                          (Alerts.type == FORGOT_TYPE) &
+                          (Alerts.read == False))
+                   .exists())
+        if not pending:
+            Alerts.create(
+                student_id=student, type=FORGOT_TYPE, severity="media",
+                message=f"{student.student_name} (RA {student.ra}) pediu para redefinir a senha.",
+                message_en=f"{student.student_name} (ID {student.ra}) asked to reset their password.",
+                created_at=datetime.datetime.now(), read=False)
+        return generic
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500

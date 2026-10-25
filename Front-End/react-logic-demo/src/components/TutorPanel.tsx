@@ -5,9 +5,9 @@ Visão de turma + Central de Alertas preventivos. O botão "Analisar turma" roda
 as regras do EduBot no servidor (POST /tutor/evaluate) e gera os alertas dos
 alunos em risco — o beat "o Engage-Agent envia o plano de retomada e alerta o tutor".
 */
-import { AlertTriangle, Bell, Check, GraduationCap, LoaderCircle, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, Bell, Check, Copy, GraduationCap, KeyRound, LoaderCircle, RefreshCw, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { StudentRisk, TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts } from "../services/api";
+import { StudentRisk, TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts, tutorResetPassword } from "../services/api";
 import { useToast } from "./ui/Toast";
 import { MasteryHeatmap } from "./MasteryHeatmap";
 import { ApprovalQueue } from "./ApprovalQueue";
@@ -87,6 +87,20 @@ export const TutorPanel = () => {
 
   // A.4: marca o alerta como tratado. Atualiza o estado local (read=true) para
   // sair da contagem de abertos sem recarregar o painel inteiro.
+  // Plano 6: "Esqueci minha senha" — a senha temporária aparece UMA vez, aqui.
+  const [tempPasswords, setTempPasswords] = useState<Record<number, string>>({});
+  const [resetting, setResetting] = useState<number | null>(null);
+  const resetPassword = (alertId: number) => {
+    setResetting(alertId);
+    tutorResetPassword(alertId)
+      .then((r) => {
+        setTempPasswords((cur) => ({ ...cur, [alertId]: r.senha_temporaria }));
+        setAlertas((current) => current.map((a) => (a.alert_id === alertId ? { ...a, read: true } : a)));
+      })
+      .catch(() => toast.error(t("Não foi possível gerar a senha agora.", "Couldn't create the password right now.")))
+      .finally(() => setResetting(null));
+  };
+
   const treat = (alertId: number) => {
     setAlertas((current) => current.map((a) => (a.alert_id === alertId ? { ...a, read: true } : a)));
     ackTutorAlert(alertId).catch(() =>
@@ -279,8 +293,39 @@ export const TutorPanel = () => {
                   <span>{levelLabel(al.severity, lang)}</span>
                 </div>
                 <p className="mt-1 text-sm font-medium">{al.message}</p>
+                {tempPasswords[al.alert_id] && (
+                  <div role="status" className="mt-2 rounded-[6px] border border-emerald-300 bg-emerald-50 p-2.5 text-sm text-emerald-900">
+                    <div className="flex items-center justify-between gap-2">
+                      <span>
+                        {t("Senha temporária:", "Temporary password:")}{" "}
+                        <code className="rounded bg-white px-1.5 py-0.5 font-mono text-base font-bold tracking-wider">{tempPasswords[al.alert_id]}</code>
+                      </span>
+                      <button
+                        onClick={() => navigator.clipboard?.writeText(tempPasswords[al.alert_id]).then(() => toast.success(t("Copiada.", "Copied.")))}
+                        aria-label={t("Copiar senha temporária", "Copy temporary password")}
+                        className="rounded-[6px] p-1 transition hover:bg-white"
+                      >
+                        <Copy size={14} aria-hidden="true" />
+                      </button>
+                    </div>
+                    <p className="mt-1 text-xs">
+                      {t("Entregue ao aluno pessoalmente. Ela só aparece agora.", "Give it to the student in person. It's only shown now.")}
+                    </p>
+                  </div>
+                )}
                 <div className="mt-2 flex justify-end">
-                  {al.read ? (
+                  {al.type === "redefinir_senha" && !al.read ? (
+                    <button
+                      onClick={() => resetPassword(al.alert_id)}
+                      disabled={resetting === al.alert_id}
+                      className="flex items-center gap-1 rounded-[6px] border border-current px-2 py-1 text-xs font-semibold transition hover:bg-white/40 disabled:opacity-60"
+                    >
+                      {resetting === al.alert_id
+                        ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
+                        : <KeyRound size={14} aria-hidden="true" />}
+                      {t("Gerar senha temporária", "Create temporary password")}
+                    </button>
+                  ) : al.read ? (
                     <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
                       <Check size={14} /> {t("Tratado", "Handled")}
                     </span>

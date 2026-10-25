@@ -867,3 +867,15 @@ export async function uploadCertificate(resourceId: number, file: File): Promise
   if (!response.ok) throw new ApiError(response.status, (await response.text()) || `Erro ${response.status}`);
   return response.json();
 }
+
+// Plano 6 — "Esqueci minha senha": o pedido vira um alerta para a coordenação da
+// turma. A resposta é a mesma exista a conta ou não (202).
+export const requestPasswordReset = (ra: string) =>
+  request<{ ok: boolean }>("/login/forgot-password", { method: "POST", body: { ra } });
+
+// O professor atende o pedido: gera uma senha temporária, mostrada uma única vez.
+export const tutorResetPassword = (alertId: number) =>
+  request<{ ok: boolean; aluno: string; ra: string; senha_temporaria: string }>("/tutor/reset-password", {
+    method: "POST",
+    body: { alert_id: alertId }
+  });
