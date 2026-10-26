@@ -1,6 +1,6 @@
 edubot-project.chilecentral.cloudapp.azure.com {
     @api {
-        path /login /student/* /course/* /courses /ova/* /question/* /progress/* /edubot/* /personalized-ova* /interaction/* /events* /consents* /reviews* /goals* /mastery/* /gamification/* /tutor/* /collect* /catalog/* /metrics/* /tracking/* /ping /scopes /students
+        path /login /student/* /course/* /courses /ova/* /question/* /progress/* /edubot/* /personalized-ova* /interaction/* /events* /consents* /reviews* /goals* /mastery/* /gamification/* /tutor/* /collect* /catalog/* /metrics/* /tracking/* /ping /scopes /students /external-courses* /resource/*
     }
     handle @api {
         reverse_proxy ova_flask:8090
