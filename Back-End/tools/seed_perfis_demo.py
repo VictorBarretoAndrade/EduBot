@@ -24,6 +24,7 @@ from edubot.data.models.review_schedule import ReviewSchedule
 from edubot.data.models.alerts import Alerts
 from edubot.data.models.interventions import Interventions
 from edubot.data.models.personalized_ova import PersonalizedOVA, PersonalizedOVAItem
+from edubot.data.models.consents import Consents
 
 def seed():
     print("Iniciando população dos perfis com codificação UTF-8 correta...")
@@ -51,13 +52,64 @@ def seed():
         StudentStreak.delete().where(StudentStreak.student_id.in_(target_ids)).execute()
         XpEvents.delete().where(XpEvents.student_id.in_(target_ids)).execute()
         
-        # Alunos
-        Students.update(student_name="Eduardo", student_password="1", role="aluno", title="Mestre").where(Students.student_id == 1).execute()
-        Students.update(student_name="Gabriel", student_password="2", role="tutor").where(Students.student_id == 2).execute()
-        Students.update(student_name="Yasmin", student_password="3", role="aluno", title=None).where(Students.student_id == 3).execute()
-        Students.update(ra="4", student_name="Sanval (Coordenador)", student_password="4", role="admin", is_admin=True).where(Students.student_id == 4).execute()
-        Students.update(student_name="Pedro", student_password="5", role="aluno", title=None).where(Students.student_id == 5).execute()
-        Students.update(student_name="Thiago", student_password="6", role="aluno", title=None).where(Students.student_id == 6).execute()
+        # Alunos e Tutores Principais da Demonstração
+        Students.update(student_name="Eduardo", student_password="1", role="aluno", course_id=1, is_admin=False, title="Mestre").where(Students.student_id == 1).execute()
+        Students.update(student_name="Gabriel", student_password="2", role="tutor", course_id=1, is_admin=False).where(Students.student_id == 2).execute()
+        Students.update(student_name="Yasmin", student_password="3", role="aluno", course_id=1, is_admin=False, title=None).where(Students.student_id == 3).execute()
+        Students.update(ra="4", student_name="Sanval (Coordenador)", student_password="4", role="admin", course_id=1, is_admin=True).where(Students.student_id == 4).execute()
+        Students.update(student_name="Pedro", student_password="5", role="aluno", course_id=1, is_admin=False, title=None).where(Students.student_id == 5).execute()
+        Students.update(student_name="Thiago", student_password="6", role="aluno", course_id=1, is_admin=False, title=None).where(Students.student_id == 6).execute()
+
+        # Contas nominais de aluno (conforme README.md e docs/acessos_demo.csv)
+        s_sanval, _ = Students.get_or_create(
+            ra="Sanval",
+            defaults={
+                "student_name": "Sanval",
+                "student_password": "Cimatec123",
+                "role": "aluno",
+                "course_id": 1,
+                "is_admin": False,
+            }
+        )
+        s_sanval.student_name = "Sanval"
+        s_sanval.student_password = "Cimatec123"
+        s_sanval.role = "aluno"
+        s_sanval.course_id = 1
+        s_sanval.is_admin = False
+        s_sanval.save()
+
+        s_edon, _ = Students.get_or_create(
+            ra="Edon",
+            defaults={
+                "student_name": "Educação Online",
+                "student_password": "Cimatec@123",
+                "role": "aluno",
+                "course_id": 1,
+                "is_admin": False,
+            }
+        )
+        s_edon.student_name = "Educação Online"
+        s_edon.student_password = "Cimatec@123"
+        s_edon.role = "aluno"
+        s_edon.course_id = 1
+        s_edon.is_admin = False
+        s_edon.save()
+
+        # Consentimentos ativos para todos os perfis de demonstração (não bloquear Coach nem IA)
+        all_demo_sids = [1, 2, 3, 4, 5, 6, s_sanval.student_id, s_edon.student_id]
+        now_dt = datetime.datetime.now()
+        for sid in all_demo_sids:
+            for purp in ["tracking_pedagogico", "ia_sobre_dados", "imagem_voz", "ranking_turma"]:
+                c, _ = Consents.get_or_create(
+                    student_id=sid,
+                    purpose=purp,
+                    defaults={"granted": True, "granted_at": now_dt}
+                )
+                if not c.granted:
+                    c.granted = True
+                    c.granted_at = now_dt
+                    c.revoked_at = None
+                    c.save()
 
     today = datetime.date.today()
     now = datetime.datetime.now()

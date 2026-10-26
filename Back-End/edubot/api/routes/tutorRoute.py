@@ -51,6 +51,9 @@ app_tutor = Blueprint("tutor", __name__)
 # Máximo de alunos avaliados por requisição (proteção: o curso de exemplo tem 500)
 MAX_TURMA = 60
 
+# RAs dos alunos de demonstração calibrados que sempre pertencem à turma do professor
+DEMO_RAS = ("1", "3", "5", "6", "Sanval", "Edon")
+
 
 def _is_tutor():
     # A15/A.3: papel de gestão vem da fonte única (edubot.api.auth.is_staff).
@@ -59,14 +62,16 @@ def _is_tutor():
 
 def _turma_students():
     course_id = g.student.course_id
-    active = active_student_ids()  # fonte única (edubot.services.proactivity)
-    if not active:
-        return []
+    active = set(active_student_ids())  # fonte única (edubot.services.proactivity)
+    cond = (Students.course_id == course_id) & (Students.role == "aluno")
+    if active:
+        cond = cond & ((Students.student_id.in_(list(active))) | (Students.ra.in_(DEMO_RAS)))
+    else:
+        cond = cond & (Students.ra.in_(DEMO_RAS))
+
     query = (Students
              .select()
-             .where((Students.course_id == course_id) &
-                    (Students.student_id.in_(list(active))) &
-                    (Students.role == "aluno"))
+             .where(cond)
              .limit(MAX_TURMA))
     return list(query)
 
