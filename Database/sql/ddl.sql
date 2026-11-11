@@ -35,7 +35,7 @@ create table ovas (
 
 create table questions (
 	question_id int primary key auto_increment,
-    statement varchar(255),
+    statement text,
     alternatives json not null,
     answer varchar(1),
     ova_id int,
