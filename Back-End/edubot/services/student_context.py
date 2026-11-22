@@ -65,6 +65,10 @@ def _student_id(student):
     return student.student_id if hasattr(student, "student_id") else student
 
 
+# Verbos de evento que o sistema emite em nome do aluno — não são atividade dele.
+SYSTEM_EMITTED_VERBS = ("received_intervention",)
+
+
 def _days_without_access(student):
     """Dias desde a última atividade do aluno (A2).
 
@@ -86,8 +90,12 @@ def _days_without_access(student):
         # D.1: 5ª fonte — qualquer evento de aprendizado (login, mídia, tutor)
         # também conta como atividade, inclusive os que não geram Attempt nem
         # progresso (ex.: um aluno que só assistiu vídeo e perguntou ao tutor).
+        # Exceto `received_intervention`: é o SISTEMA que grava esse evento em
+        # nome do aluno. Contá-lo fazia o aluno sumido "voltar" a ficar ativo no
+        # mesmo dia em que o agente lhe mandava o plano de retomada.
         LearningEvents.select(fn.MAX(LearningEvents.occurred_at))
-                      .where(LearningEvents.student_id == sid),
+                      .where((LearningEvents.student_id == sid) &
+                             (LearningEvents.verb.not_in(SYSTEM_EMITTED_VERBS))),
     ]
     union = parts[0]
     for part in parts[1:]:
@@ -429,7 +437,10 @@ def build_student_profile(student, lang="pt"):
             "role": getattr(student, "role", "aluno") or "aluno",
             # AV.2 (Plano 3): persona do companheiro (a linha do aluno já está
             # carregada — 0 query nova, contrato de 8 queries do perfil intacto).
-            "persona": getattr(student, "persona", "edubot") or "edubot"
+            "persona": getattr(student, "persona", "edubot") or "edubot",
+            # Migration 026: tipo de conta DEMO (login Google) — 'coordenador' |
+            # 'aluno_teste' | 'exemplo' | 'criado'; None = conta real. 0 query.
+            "demo": getattr(student, "demo_kind", None),
         },
         # CP.1 (Plano 3): flags de feature lidas do ambiente (0 query). `companion`
         # desligado = o leitor de OVA não monta o companheiro (idêntico ao atual).

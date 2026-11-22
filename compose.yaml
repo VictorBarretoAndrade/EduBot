@@ -41,6 +41,16 @@ services:
       # A.3: origem(ns) permitidas de CORS (o app React servido pelo Apache).
       # Vírgula separa múltiplas; "*" libera geral (só dev).
       EDUBOT_CORS_ORIGINS: ${EDUBOT_CORS_ORIGINS:-http://localhost:8010}
+      # Migration 026 — modo DEMO. EDUBOT_DEMO_SEM_LOGIN=1 mostra o botão "Entrar
+      # no Demo" (sem cadastro, uma turma por navegador); 0 esconde. O Google é
+      # opcional: sem client id, o botão dele não aparece. O curso base fornece
+      # as matérias da turma de demonstração.
+      EDUBOT_GOOGLE_CLIENT_ID: ${EDUBOT_GOOGLE_CLIENT_ID:-}
+      EDUBOT_DEMO_SEM_LOGIN: ${EDUBOT_DEMO_SEM_LOGIN:-1}
+      EDUBOT_DEMO_BASE_COURSE: ${EDUBOT_DEMO_BASE_COURSE:-1}
+      # Saltos de proxy confiáveis no X-Forwarded-For. Use 1 no perfil cloud
+      # (Caddy na frente); 0 quando o Flask é acessado direto.
+      EDUBOT_PROXY_HOPS: ${EDUBOT_PROXY_HOPS:-0}
       # Proatividade agendada (A13): varredura periódica da turma. Ligada por
       # padrão no container; ajuste a cadência via .env (hora diária ou, para
       # demo, um intervalo em minutos).

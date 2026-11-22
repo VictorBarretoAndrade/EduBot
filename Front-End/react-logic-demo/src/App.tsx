@@ -14,6 +14,7 @@ import { Sidebar, STAFF_VIEWS, Topbar } from "./components/Sidebar";
 import { Login } from "./components/Login";
 import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
 import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
+import { DemoBanner } from "./components/demoMode/DemoBanner";
 import { LoaderCircle } from "lucide-react";
 import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken, hasRecordedConsent } from "./services/api";
 import { syncPersonaFromProfile } from "./services/persona";
@@ -178,6 +179,9 @@ const App = () => {
     clearSession();
     setSession(null);
     setProfile(null);
+    // Próximo login na mesma aba conta como "primeiro carregamento": o staff
+    // volta a cair em Minha turma, não na home de aluno.
+    landedRef.current = false;
     window.location.hash = `#/${HOME}`;
   };
 
@@ -203,6 +207,16 @@ const App = () => {
       changeView(HOME);
     }
   }, [profile, isStaff, route, changeView]);
+
+  // Migration 026 — troca de visão do modo DEMO (coordenador <-> aluno de teste):
+  // a sessão nova já foi gravada por switchDemoView(); recarrega o perfil e leva
+  // para a home do novo papel.
+  const onDemoSwitched = (next: Session) => {
+    landedRef.current = false;
+    setProfile(null);
+    setSession(next);
+    changeView(next.demo === "coordenador" ? STAFF_HOME : HOME);
+  };
 
   const openModule = (ova: OvaState, step: ModuleStep = "conteudo") =>
     navigate(step === "conteudo" ? `#/modulo/${ova.ova_id}` : `#/modulo/${ova.ova_id}/${step}`);
@@ -268,7 +282,7 @@ const App = () => {
     if (route.view === "pratica") return <Reforco profile={profile} onTracked={refreshProfile} />;
     if (route.view === "progresso") return <Evolution profile={profile} />;
     if (route.view === "privacidade") return <PrivacyPage profile={profile} />;
-    if (route.view === "tutor" && isStaff) return <TutorPanel />;
+    if (route.view === "tutor" && isStaff) return <TutorPanel demo={profile.estudante.demo === "coordenador"} />;
     if (route.view === "gestor" && isStaff) return <ManagerDashboard />;
     return (
       <CoursesHome
@@ -311,6 +325,9 @@ const App = () => {
             onDone={() => setNeedsOnboarding(false)}
           />
         )
+      )}
+      {(profile.estudante.demo === "coordenador" || profile.estudante.demo === "aluno_teste") && (
+        <DemoBanner kind={profile.estudante.demo} onSwitched={onDemoSwitched} />
       )}
       <div className="flex">
         <Sidebar activeView={navView} onChangeView={changeView} studentName={profile.estudante.nome} role={profile.estudante.role} onLogout={logout} />

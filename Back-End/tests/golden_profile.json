@@ -31,6 +31,7 @@
   "dias_sem_acesso": 0,
   "estudante": {
     "curso": "Curso X",
+    "demo": null,
     "nome": "Ana Souza",
     "persona": "edubot",
     "ra": "111",

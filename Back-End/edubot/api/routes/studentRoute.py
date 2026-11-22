@@ -61,6 +61,11 @@ def set_persona():
 @require_roles("tutor", "admin")
 def student_by_course(course_id):
     if request.method == "GET":
+        # Migration 026: só o PRÓPRIO curso. Antes qualquer tutor/admin listava
+        # os alunos de qualquer curso — com o login Google criando coordenadores
+        # de demo, isso exporia nome e id dos alunos reais.
+        if course_id != g.student.course_id_id:
+            return json.dumps({"Error": "Acesso restrito"}), 403
         try:
             # Query the students of the course
             students = Students.select().where(Students.course_id == course_id)

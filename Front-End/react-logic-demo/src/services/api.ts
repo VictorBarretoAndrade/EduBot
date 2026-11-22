@@ -28,7 +28,12 @@ export interface Session {
   student_id: number;
   course_id: number;
   is_admin: boolean;
+  // Migration 026: tipo de conta do modo DEMO (login Google). Opcional: backend
+  // antigo não envia e a sessão segue como antes.
+  demo?: DemoKind | null;
 }
+
+export type DemoKind = "coordenador" | "aluno_teste" | "exemplo" | "criado";
 
 export const getToken = () => safeGet("local", TOKEN_KEY);
 export const getSession = (): Session | null => {
@@ -174,7 +179,16 @@ export interface InterventionState {
 }
 
 export interface StudentProfile {
-  estudante: { student_id: number; nome: string; ra: string; curso: string | null; role: string; persona: string };
+  estudante: {
+    student_id: number;
+    nome: string;
+    ra: string;
+    curso: string | null;
+    role: string;
+    persona: string;
+    // Migration 026: conta do modo DEMO (null/ausente = conta real).
+    demo?: DemoKind | null;
+  };
   features?: { companion: boolean };
   dias_sem_acesso: number | null;
   recursos: {
@@ -232,21 +246,60 @@ export interface OvaResource {
 // Chamadas
 // ---------------------------------------------------------------------------
 
-export async function login(ra: string, password: string): Promise<Session> {
-  const data = await request<{ ids: { student_id: number; course_id: number }; is_admin: boolean; token: string }>(
-    "/login",
-    { method: "POST", body: { ra, password } }
-  );
+interface SessionResponse {
+  ids: { student_id: number; course_id: number };
+  is_admin: boolean;
+  token: string;
+  demo?: DemoKind | null;
+}
+
+// Grava token + sessão. Mesmo formato para /login, /auth/google e /demo/switch.
+function storeSession(data: SessionResponse): Session {
   const session: Session = {
     student_id: data.ids.student_id,
     course_id: data.ids.course_id,
-    is_admin: data.is_admin
+    is_admin: data.is_admin,
+    demo: data.demo ?? null
   };
   safeSet("local", TOKEN_KEY, data.token);
   safeSet("local", SESSION_KEY, JSON.stringify(session));
   // (Fase 5 — A17) As chaves de compatibilidade com o front clássico deixaram
   // de ser gravadas: o app React é único e resolve tudo via SESSION_KEY/token.
   return session;
+}
+
+export async function login(ra: string, password: string): Promise<Session> {
+  return storeSession(await request<SessionResponse>("/login", { method: "POST", body: { ra, password } }));
+}
+
+// Migration 026 — login com Google + modo DEMO.
+// O client id do Google vem do backend (é público), então trocar de projeto no
+// Google Cloud não exige rebuild do front.
+export interface AuthConfig {
+  google_client_id: string | null;
+  demo_sem_login: boolean;
+}
+export const getAuthConfig = () => request<AuthConfig>("/auth/config");
+
+// `credential` = ID token devolvido pelo botão do Google Identity Services.
+export async function loginWithGoogle(credential: string): Promise<Session> {
+  return storeSession(await request<SessionResponse>("/auth/google", { method: "POST", body: { credential } }));
+}
+
+// Botão "Demo" sem login (EDUBOT_DEMO_SEM_LOGIN=1 no backend). Cada navegador tem
+// a própria turma: o servidor devolve um segredo de dispositivo, guardado aqui e
+// reenviado para reabrir a mesma turma. Sobrevive ao "Sair" de propósito.
+const DEMO_DEVICE_KEY = "edubot.demo.device";
+export async function loginDemo(): Promise<Session> {
+  const device = safeGet("local", DEMO_DEVICE_KEY) ?? undefined;
+  const data = await request<SessionResponse & { device: string }>("/auth/demo", { method: "POST", body: { device } });
+  safeSet("local", DEMO_DEVICE_KEY, data.device);
+  return storeSession(data);
+}
+
+// Troca coordenador <-> aluno de teste ("Student View" do Canvas).
+export async function switchDemoView(): Promise<Session> {
+  return storeSession(await request<SessionResponse>("/demo/switch", { method: "POST" }));
 }
 
 export const getMe = () => request<StudentProfile>(withLang("/student/me"));
@@ -464,6 +517,15 @@ export interface TutorAlert {
 
 export const getTurma = () => request<{ total: number; alunos: TurmaStudent[] }>("/tutor/turma");
 export const getTutorAlerts = () => request<{ alertas: TutorAlert[] }>(withLang("/tutor/alerts"));
+
+// Migration 026 — coordenador do modo DEMO cria um aluno na própria turma.
+// `perfil` gera um histórico de exemplo; RA e senha voltam UMA vez.
+export type DemoProfile = "destaque" | "mediano" | "em_risco" | "inativo";
+export const createTutorStudent = (nome: string, perfil: DemoProfile | null) =>
+  request<{ ok: boolean; aluno: TurmaStudent; ra: string; senha: string }>("/tutor/students", {
+    method: "POST",
+    body: { nome, perfil }
+  });
 
 // Plano 5 (19.1) — perfil detalhado de UM aluno para o professor. Mesmo shape de
 // /student/me, então o detalhe reaproveita os componentes de desempenho do aluno.

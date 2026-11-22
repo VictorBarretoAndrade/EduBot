@@ -163,15 +163,15 @@ LOGIN_WINDOW_SECONDS = int(os.environ.get("EDUBOT_LOGIN_WINDOW_SECONDS", "60"))
 _login_hits = defaultdict(deque)
 
 
-def login_throttled(ra, ip):
-    """True se (ra, ip) já excedeu LOGIN_MAX_ATTEMPTS na janela. Registra a
-    tentativa atual quando ainda dentro do limite."""
+def login_throttled(ra, ip, max_attempts=None):
+    """True se (ra, ip) já excedeu o limite (padrão LOGIN_MAX_ATTEMPTS) na
+    janela. Registra a tentativa atual quando ainda dentro do limite."""
     key = f"{ra}|{ip}"
     now = _time.time()
     hits = _login_hits[key]
     while hits and now - hits[0] > LOGIN_WINDOW_SECONDS:
         hits.popleft()
-    if len(hits) >= LOGIN_MAX_ATTEMPTS:
+    if len(hits) >= (max_attempts or LOGIN_MAX_ATTEMPTS):
         return True
     hits.append(now)
     return False

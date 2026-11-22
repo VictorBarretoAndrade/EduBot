@@ -2171,3 +2171,54 @@ outcome* em EN, home do professor = **Minha turma**, conteúdo real para Cálcul
   `aria-invalid`/`aria-describedby` nos erros.
 - Testes: `test_forgot_password.py` (4); suíte 344 passando; `tsc` limpo. Validado no
   navegador: pedido do Pedro → senha temporária gerada por Gabriel → Pedro entra com ela.
+
+## Login com Google + modo DEMO (22/11/2026)
+
+- **Pedido:** entrar com o Google e ganhar uma conta DEMO, no estilo do Canvas, que mexe tanto na
+  visão de aluno quanto na de coordenador (criar e ver alunos, dashboard, como as peças se ligam).
+- **Desenho: sandbox por pessoa** (migration_026). Os papéis no app são contas separadas e todo o
+  painel do tutor filtra por `course_id`. Então cada identidade Google (`google_sub`) ganha, uma vez
+  só, um curso `is_demo` com as mesmas matérias do curso base (offerings: o conteúdo é
+  compartilhado, os dados de aluno não), um **coordenador** (role admin), um **aluno de teste**
+  (o "Student View" do Canvas) e 4 alunos de exemplo. A troca de visão (`POST /demo/switch`) só
+  existe entre coordenador e aluno de teste: aluno de exemplo/criado tem senha conhecida, e trocar
+  a partir dele daria acesso de coordenador a quem só tem a senha do aluno.
+- **Dados de exemplo pelos serviços reais:** as tentativas passam pelo BKT
+  (`mastery.update_on_attempt`) e a avaliação pelo motor de regras (`proactivity.evaluate_student`),
+  que cria intervenção e alerta. Perfis destaque/mediano/em_risco/inativo calibrados para cair em
+  faixas diferentes do risco composto. Sem LLM no login: o consentimento de IA só é dado depois.
+- **Google:** botão oficial do Google Identity Services. O backend valida o ID token no `tokeninfo`
+  do Google (stdlib, sem dependência nova) e confere `aud`, `iss`, `exp` e `email_verified`. O client
+  id vem de `GET /auth/config` (é público), então trocar de projeto não exige rebuild do front. Sem
+  `EDUBOT_GOOGLE_CLIENT_ID` o bloco some e a tela de login fica como antes.
+  **Botão "Entrar no Demo" sem login** (`EDUBOT_DEMO_SEM_LOGIN=1`, ligado por padrão no compose):
+  um clique, sem cadastro. Identidade por NAVEGADOR: o servidor sorteia um segredo de dispositivo
+  (`POST /auth/demo` devolve `device`), o front o guarda em localStorage e o reenvia para reabrir
+  a mesma turma (sobrevive ao "Sair"); no banco fica só o hash (`google_sub = "anon:<sha256>"`).
+  Versão anterior usava o nome digitado como chave — duas pessoas com o mesmo nome caíam na
+  mesma turma; descartada. Só a criação de turma nova tem limite (10/min/IP).
+- **Criar aluno:** `POST /tutor/students` (só em curso DEMO, por ora). Devolve RA e senha uma vez;
+  com eles dá para entrar como o aluno pela tela de login normal.
+- **Correções que a demo expôs:**
+  - `GET /student/course/<id>` deixava qualquer tutor/admin listar alunos de **qualquer** curso.
+    Agora só o próprio curso. Com o login Google criando admins, isso exporia os alunos reais.
+  - `_days_without_access` contava o evento `received_intervention`, que o **sistema** grava,
+    como atividade do aluno. O aluno sumido "voltava" a ficar ativo no dia em que o agente lhe
+    mandava o plano de retomada. Também afetava produção a cada varredura.
+  - Caddyfile: `/login/*` (o "esqueci minha senha" caía no Apache em produção), `/auth/*` e `/demo/*`.
+  - Cursos/contas DEMO ficam fora de `/courses`, do catálogo e de `/api/v1/students` dos parceiros.
+- **Segunda opinião (Antigravity), aceitas:** rastreio e métricas da API de parceiros também
+  ignoram contas DEMO; corrida no 1º login (dois cliques simultâneos → IntegrityError) tratada;
+  `tokeninfo` com 429/5xx vira 503, não 401; **rate-limit atrás do Caddy**: `remote_addr` era o
+  IP do proxy para todos, então o limite por IP virava global (uma turma entrando na demo durante
+  uma apresentação levaria 429). Agora `EDUBOT_PROXY_HOPS=1` no perfil cloud faz o Flask ler o IP
+  real do X-Forwarded-For, e só a CRIAÇÃO de workspace tem limite apertado (10/min/IP).
+  **Recusada:** abrir `/student/course/<id>` para admins de outros cursos (nenhum cliente usa a
+  rota; cada conta tem um só `course_id`, e o comportamento antigo era justamente o vazamento).
+- Logout → login na mesma aba: o staff voltava na home de aluno (o "primeiro carregamento" não
+  era reiniciado no logout). Corrigido em `App.tsx`.
+- **Pendente:** limpeza periódica dos workspaces DEMO antigos (mais relevante com o botão público) (`courses.demo_created_at` já existe
+  para isso). Com IA real ligada, cada visitante consome orçamento de LLM (a guarda diária vale).
+- Testes: `test_demo_google.py` (22); suíte 366 passando; `tsc` limpo. Validado no navegador
+  (Flask em SQLite + Vite): entrada DEMO → turma com 2 em risco → criar aluno → ver como aluno →
+  voltar para coordenador.
