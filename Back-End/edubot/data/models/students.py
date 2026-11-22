@@ -27,3 +27,11 @@ class Students(BaseModel):
     # AV.2 (Plano 3): persona do companheiro de estudo escolhido pelo aluno
     # ('edubot' | 'einstein' | 'curie'). Antes só em localStorage.
     persona = CharField(max_length=24, default="edubot")
+    # Migration 026: identidade Google (sub = id estável; e-mail só exibição) e
+    # dono do workspace DEMO (o coordenador aponta para si). IntegerField sem FK
+    # de propósito: ler o campo não pode disparar query (contrato do /student/me).
+    email = CharField(max_length=254, null=True)
+    google_sub = CharField(max_length=64, null=True, unique=True)
+    demo_owner_id = IntegerField(null=True)
+    # 'coordenador' | 'aluno_teste' | 'exemplo' | 'criado' (NULL = conta real).
+    demo_kind = CharField(max_length=20, null=True)

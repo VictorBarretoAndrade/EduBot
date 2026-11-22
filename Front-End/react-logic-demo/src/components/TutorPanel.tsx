@@ -5,7 +5,7 @@ Visão de turma + Central de Alertas preventivos. O botão "Analisar turma" roda
 as regras do EduBot no servidor (POST /tutor/evaluate) e gera os alertas dos
 alunos em risco — o beat "o Engage-Agent envia o plano de retomada e alerta o tutor".
 */
-import { AlertTriangle, Bell, Check, Copy, GraduationCap, KeyRound, LoaderCircle, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, Bell, Check, Copy, GraduationCap, KeyRound, LoaderCircle, RefreshCw, UserPlus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StudentRisk, TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts, tutorResetPassword } from "../services/api";
 import { useToast } from "./ui/Toast";
@@ -13,6 +13,7 @@ import { MasteryHeatmap } from "./MasteryHeatmap";
 import { ApprovalQueue } from "./ApprovalQueue";
 import { AgentKpi } from "./AgentKpi";
 import { EngagementPanel } from "./EngagementPanel";
+import { AddStudentForm } from "./demoMode/AddStudentForm";
 import { useLanguage, useT } from "../i18n";
 import { levelLabel, noticeTypeLabel } from "../services/labels";
 
@@ -45,8 +46,10 @@ export const riscoDetalhe = (risco: StudentRisk, t: Translate): string => {
     : t("Sem sinais de risco", "No risk signals");
 };
 
-export const TutorPanel = () => {
+// `demo` (migration 026): coordenador do modo DEMO — libera "Adicionar aluno".
+export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
   const t = useT();
+  const [adding, setAdding] = useState(false);
   const { lang } = useLanguage();
   const [alunos, setAlunos] = useState<TurmaStudent[]>([]);
   const [alertas, setAlertas] = useState<TutorAlert[]>([]);
@@ -127,15 +130,28 @@ export const TutorPanel = () => {
           </h1>
           <p className="mt-2 text-muted">{t("Acompanhe a turma e os alertas preventivos do Engage-Agent.", "Monitor your class and early alerts from Engage-Agent.")}</p>
         </div>
-        <button
-          onClick={analisar}
-          disabled={evaluating}
-          className="flex h-12 items-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600 disabled:bg-slate-300"
-        >
-          {evaluating ? <LoaderCircle className="animate-spin" size={20} /> : <RefreshCw size={20} />}
-          {t("Analisar turma", "Analyze class")}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {demo && (
+            <button
+              onClick={() => setAdding(true)}
+              aria-expanded={adding}
+              className="flex h-12 items-center gap-2 rounded-[8px] border border-brand bg-white px-5 font-bold text-brand transition hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <UserPlus size={20} aria-hidden="true" /> {t("Adicionar aluno", "Add student")}
+            </button>
+          )}
+          <button
+            onClick={analisar}
+            disabled={evaluating}
+            className="flex h-12 items-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600 disabled:bg-slate-300"
+          >
+            {evaluating ? <LoaderCircle className="animate-spin" size={20} /> : <RefreshCw size={20} />}
+            {t("Analisar turma", "Analyze class")}
+          </button>
+        </div>
       </div>
+
+      {demo && adding && <AddStudentForm onClose={() => setAdding(false)} onCreated={load} />}
 
       {/* KPIs rápidos */}
       <div className="grid gap-4 sm:grid-cols-3">

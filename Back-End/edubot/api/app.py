@@ -39,6 +39,8 @@ from edubot.api.routes.publicApiRoute import app_public_api
 from edubot.api.routes.collectRoute import app_collect
 # Plano 6: cursos externos com certificado (Cisco NetAcad).
 from edubot.api.routes.certificateRoute import app_certificate
+# Migration 026: login com Google + workspace DEMO (visão aluno/coordenador).
+from edubot.api.routes.demoRoute import app_demo
 
 # Create the Flask app and configure CORS
 # A.3: CORS restrito à(s) origem(ns) do frontend por env (antes liberava
@@ -59,6 +61,15 @@ _cors_origins = os.environ.get("EDUBOT_CORS_ORIGINS", "http://localhost:8010")
 cors = CORS(app, origins=[o.strip() for o in _cors_origins.split(",") if o.strip()])
 
 logger = logging.getLogger("edubot.api")
+
+# Atrás de proxy reverso (Caddy no perfil cloud), request.remote_addr é o IP do
+# proxy para TODOS os clientes — os rate-limits por IP virariam globais. Com
+# EDUBOT_PROXY_HOPS=N, confia nos N últimos saltos do X-Forwarded-For. Padrão 0
+# (acesso direto): sem proxy, o cabeçalho seria forjável pelo cliente.
+_proxy_hops = int(os.environ.get("EDUBOT_PROXY_HOPS", "0") or 0)
+if _proxy_hops > 0:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=_proxy_hops, x_proto=_proxy_hops)
 
 
 # Error handler global (A10) — respostas de erro coerentes em JSON.
@@ -100,6 +111,7 @@ app.register_blueprint(app_goals)
 app.register_blueprint(app_public_api)
 app.register_blueprint(app_collect)
 app.register_blueprint(app_certificate)
+app.register_blueprint(app_demo)
 
 # Start the application
 if __name__ == "__main__":

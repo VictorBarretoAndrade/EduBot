@@ -22,7 +22,8 @@ def get_courses():
     if request.method == "GET":
         try:
             # Retrieve all courses except those restricted to administrators
-            courses = Courses.select().where(Courses.course_id < 100)
+            # Migration 026: cursos-sandbox do modo DEMO não entram na lista pública.
+            courses = Courses.select().where((Courses.course_id < 100) & (Courses.is_demo == False))  # noqa: E712
             course_list = []
             # Iterate over the retrieved courses
             for course in courses:

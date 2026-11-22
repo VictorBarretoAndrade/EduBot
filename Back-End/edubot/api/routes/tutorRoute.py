@@ -62,8 +62,12 @@ def _is_tutor():
 
 def _turma_students():
     course_id = g.student.course_id
-    active = set(active_student_ids())  # fonte única (edubot.services.proactivity)
     cond = (Students.course_id == course_id) & (Students.role == "aluno")
+    # Migration 026: no curso-sandbox do modo DEMO a turma é pequena e criada pelo
+    # próprio coordenador — lista todo mundo, inclusive quem ainda não estudou.
+    if getattr(course_id, "is_demo", False):
+        return list(Students.select().where(cond).order_by(Students.student_id).limit(MAX_TURMA))
+    active = set(active_student_ids())  # fonte única (edubot.services.proactivity)
     if active:
         cond = cond & ((Students.student_id.in_(list(active))) | (Students.ra.in_(DEMO_RAS)))
     else:
@@ -235,6 +239,40 @@ def tutor_reset_password():
         alert.save()
         return json.dumps({"ok": True, "aluno": student.student_name, "ra": student.ra,
                            "senha_temporaria": temp}), 200
+    except PeeweeException as err:
+        return json.dumps({"Error": f"{err}"}), 500
+
+
+@app_tutor.route("/tutor/students", methods=["POST"])
+@cross_origin()
+@require_auth
+def tutor_create_student():
+    """Migration 026 — coordenador do modo DEMO cria um aluno na própria turma.
+
+    Body: {nome, perfil?}. `perfil` (destaque | mediano | em_risco | inativo) gera
+    um histórico de exemplo pelos serviços reais (BKT + regras da proatividade);
+    sem perfil, o aluno nasce zerado. Devolve RA e senha UMA vez — com eles, dá
+    para entrar como esse aluno na tela de login normal.
+    Por ora só em curso DEMO: em curso real, as contas vêm da instituição."""
+    if not _is_tutor():
+        return json.dumps({"Error": "Acesso restrito a tutores."}), 403
+    from edubot.services import demo
+    if not demo.is_demo_course(g.student.course_id_id):
+        return json.dumps({"Error": "Disponível só no modo DEMO."}), 403
+    data = get_payload() or {}
+    nome = str(data.get("nome") or "").strip()
+    if not nome or len(nome) > 100:
+        return json.dumps({"Error": "Informe o nome do aluno (até 100 caracteres)."}), 400
+    perfil = data.get("perfil") or None
+    if perfil is not None and perfil not in demo.PROFILES:
+        return json.dumps({"Error": "Perfil inválido."}), 400
+    if Students.select().where((Students.course_id == g.student.course_id) &
+                               (Students.role == "aluno")).count() >= MAX_TURMA:
+        return json.dumps({"Error": f"A turma de demonstração aceita até {MAX_TURMA} alunos."}), 400
+    try:
+        student, senha = demo.create_student(g.student, nome, profile=perfil)
+        return json.dumps({"ok": True, "aluno": _student_summary(student),
+                           "ra": student.ra, "senha": senha}, default=str), 201
     except PeeweeException as err:
         return json.dumps({"Error": f"{err}"}), 500
 

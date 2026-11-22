@@ -3,6 +3,8 @@ INTEGRAÇÃO (4.2) — Tela de login do frontend React.
 Autentica RA (ou nome de usuário) + senha no POST /login do backend; o token
 devolvido é guardado pelo api.ts e enviado em todas as chamadas seguintes.
 
+Migration 026 — "Entrar com Google" abre o modo DEMO (components/demoMode/DemoSignIn).
+
 Plano 6 — usabilidade:
   - "Esqueci minha senha": não há e-mail cadastrado nem envio de e-mail; o pedido
     vira um alerta para a coordenação da turma, que gera uma senha temporária.
@@ -16,6 +18,7 @@ import { ApiError, Session, login, requestPasswordReset } from "../services/api"
 import { track } from "../services/events";
 import { useLanguage, useT } from "../i18n";
 import { EduBotLogo } from "./brand/EduBotLogo";
+import { DemoSignIn } from "./demoMode/DemoSignIn";
 
 interface LoginProps {
   onLogged: (session: Session) => void;
@@ -194,6 +197,15 @@ export const Login = ({ onLogged }: LoginProps) => {
                 {t("Esqueci meu RA ou usuário", "Forgot your ID or username?")}
               </button>
             </div>
+
+            {/* Migration 026: login com Google → workspace DEMO. Some sozinho se o
+                backend não tiver client id configurado. */}
+            <DemoSignIn
+              onLogged={(session) => {
+                track("logged_in", "session", session.student_id);
+                onLogged(session);
+              }}
+            />
           </>
         )}
 

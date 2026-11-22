@@ -158,7 +158,9 @@ def list_scopes():
 @require_api_key("catalog:read")
 def catalog_courses():
     try:
+        # Migration 026: cursos-sandbox do modo DEMO ficam fora do catálogo.
         rows = list(Courses.select(Courses.course_id, Courses.course_name)
+                    .where(Courses.is_demo == False)  # noqa: E712
                     .order_by(Courses.course_id).dicts())
         return _ok({"data": rows, "count": len(rows)})
     except PeeweeException as err:
@@ -237,6 +239,13 @@ def catalog_questions():
 # ---------------------------------------------------------------------------
 # Rastreio — o núcleo do trabalho de rastreabilidade, pseudonimizado.
 # ---------------------------------------------------------------------------
+def _real_students():
+    """Migration 026: subquery dos alunos da instituição. Contas do modo DEMO
+    (visitantes do login Google e alunos de exemplo) ficam fora de rastreio e
+    métricas — dado sintético distorceria os números do parceiro."""
+    return Students.select(Students.student_id).where(Students.demo_owner_id.is_null())
+
+
 @app_public_api.route("/tracking/events", methods=["GET"])
 @require_api_key("tracking:read")
 def tracking_events():
@@ -257,7 +266,7 @@ def tracking_events():
             return _bad_request(err)
 
         limit = _limit()
-        query = LearningEvents.select()
+        query = LearningEvents.select().where(LearningEvents.student_id.in_(_real_students()))
         after_id = _int_arg("after_id")
         if after_id is not None:
             query = query.where(LearningEvents.event_id > after_id)
@@ -306,7 +315,7 @@ def tracking_progress():
     """Progresso por (aluno, OVA): tempo de leitura, % percorrido, conclusão."""
     try:
         limit = _limit()
-        query = OVAProgress.select()
+        query = OVAProgress.select().where(OVAProgress.student_id.in_(_real_students()))
         after_id = _int_arg("after_id")
         if after_id is not None:
             query = query.where(OVAProgress.progress_id > after_id)
@@ -343,7 +352,7 @@ def tracking_sections():
     "onde ele travou", que o progresso agregado do OVA não responde."""
     try:
         limit = _limit()
-        query = OVASectionProgress.select()
+        query = OVASectionProgress.select().where(OVASectionProgress.student_id.in_(_real_students()))
         after_id = _int_arg("after_id")
         if after_id is not None:
             query = query.where(OVASectionProgress.section_progress_id > after_id)
@@ -387,6 +396,7 @@ def metrics_mastery():
                             fn.AVG(StudentMastery.p_mastery).alias("dominio_medio"),
                             fn.COUNT(StudentMastery.student_id).alias("alunos"),
                             fn.SUM(StudentMastery.attempts_seen).alias("tentativas"))
+                    .where(StudentMastery.student_id.in_(_real_students()))
                     .group_by(StudentMastery.competency_id)
                     .dicts())
         nomes = {c.competency_id: c.competency_description
@@ -414,6 +424,7 @@ def metrics_questions():
                     .select(Attempts.question_id.alias("question_id"),
                             fn.COUNT(Attempts.attempt_id).alias("tentativas"),
                             fn.SUM(Attempts.is_correct).alias("acertos"))
+                    .where(Attempts.student_id.in_(_real_students()))
                     .group_by(Attempts.question_id)
                     .dicts())
         out = []
@@ -460,7 +471,8 @@ def metrics_engagement():
         query = (LearningEvents
                  .select(LearningEvents.verb.alias("verb"),
                          fn.COUNT(LearningEvents.event_id).alias("eventos"),
-                         fn.COUNT(fn.DISTINCT(LearningEvents.student_id)).alias("alunos")))
+                         fn.COUNT(fn.DISTINCT(LearningEvents.student_id)).alias("alunos"))
+                 .where(LearningEvents.student_id.in_(_real_students())))
         if since:
             query = query.where(LearningEvents.occurred_at >= since)
         if until:
@@ -490,7 +502,9 @@ def students_list():
         pii = has_scope("students:pii")
         if pii:
             fields += [Students.student_name, Students.ra]
-        query = Students.select(*fields)
+        # Migration 026: contas do modo DEMO (login Google) não são alunos da
+        # instituição — e trazem o nome real de quem testou. Ficam de fora.
+        query = Students.select(*fields).where(Students.demo_owner_id.is_null())
         course_id = _int_arg("course_id")
         if course_id is not None:
             query = query.where(Students.course_id == course_id)
