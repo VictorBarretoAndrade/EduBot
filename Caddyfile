@@ -1,4 +1,6 @@
-edubot-project.chilecentral.cloudapp.azure.com {
+# Domínio(s) por env (EDUBOT_DOMAIN no .env; vírgula separa, ex.: "learnia.com.br, www.learnia.com.br").
+# Sem a variável, vale o domínio da VM da Azure.
+{$EDUBOT_DOMAIN:edubot-project.chilecentral.cloudapp.azure.com} {
     @api {
         path /login /login/* /student/* /course/* /courses /ova/* /question/* /progress/* /edubot/* /personalized-ova* /interaction/* /events* /consents* /reviews* /goals* /mastery/* /gamification/* /tutor/* /collect* /catalog/* /metrics/* /tracking/* /ping /scopes /students /external-courses* /resource/* /auth/* /demo/*
     }
