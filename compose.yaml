@@ -138,6 +138,11 @@ services:
     working_dir: /src
     environment:
       VITE_OUT_DIR: /out
+      # O build é pulado se Front-End/files/app já existir (modo offline). Para
+      # publicar um front novo num servidor já no ar:
+      #   FORCE_REACT_BUILD=1 docker compose --profile cloud up -d --build
+      # (antes esta variável não chegava ao container, e o front ficava antigo).
+      FORCE_REACT_BUILD: ${FORCE_REACT_BUILD:-0}
     volumes:
       - ./Front-End/react-logic-demo:/src
       - ./Front-End/files/app:/out
