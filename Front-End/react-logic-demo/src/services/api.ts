@@ -283,7 +283,9 @@ export const getAuthConfig = () => request<AuthConfig>("/auth/config");
 
 // `credential` = ID token devolvido pelo botão do Google Identity Services.
 export async function loginWithGoogle(credential: string): Promise<Session> {
-  return storeSession(await request<SessionResponse>("/auth/google", { method: "POST", body: { credential } }));
+  return storeSession(
+    await request<SessionResponse>("/auth/google", { method: "POST", body: { credential, lang: currentLang() } })
+  );
 }
 
 // Botão "Demo" sem login (EDUBOT_DEMO_SEM_LOGIN=1 no backend). Cada navegador tem
@@ -292,7 +294,10 @@ export async function loginWithGoogle(credential: string): Promise<Session> {
 const DEMO_DEVICE_KEY = "edubot.demo.device";
 export async function loginDemo(): Promise<Session> {
   const device = safeGet("local", DEMO_DEVICE_KEY) ?? undefined;
-  const data = await request<SessionResponse & { device: string }>("/auth/demo", { method: "POST", body: { device } });
+  const data = await request<SessionResponse & { device: string }>("/auth/demo", {
+    method: "POST",
+    body: { device, lang: currentLang() }
+  });
   safeSet("local", DEMO_DEVICE_KEY, data.device);
   return storeSession(data);
 }

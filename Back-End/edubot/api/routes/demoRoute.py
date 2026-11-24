@@ -83,7 +83,8 @@ def auth_google():
     if (not demo.workspace_exists(identity["sub"])
             and _throttled("google-new", NEW_WORKSPACES_PER_MINUTE)):
         return _TOO_MANY
-    coord = demo.get_or_create_workspace(identity["sub"], identity["email"], identity["name"])
+    lang = (get_payload() or {}).get("lang")
+    coord = demo.get_or_create_workspace(identity["sub"], identity["email"], identity["name"], lang)
     return json.dumps(session_payload(coord)), 200
 
 
@@ -94,13 +95,16 @@ def auth_demo():
         return json.dumps({"Error": "Não encontrado"}), 404
     if _throttled("demo", VERIFY_PER_MINUTE):
         return _TOO_MANY
-    device = demo.valid_device((get_payload() or {}).get("device"))
+    payload = get_payload() or {}
+    device = demo.valid_device(payload.get("device"))
     if device is None or not demo.workspace_exists(demo.device_sub(device)):
         # Navegador novo (ou segredo desconhecido): sorteia outro e cria a turma.
         if _throttled("demo-new", NEW_WORKSPACES_PER_MINUTE):
             return _TOO_MANY
         device = device or demo.new_device()
-    coord = demo.get_or_create_workspace(demo.device_sub(device), None, demo.ANON_NAME)
+    # Nome da conta no idioma da tela (a turma é criada uma vez; depois fica).
+    lang = "en" if payload.get("lang") == "en" else "pt"
+    coord = demo.get_or_create_workspace(demo.device_sub(device), None, demo.ANON_NAME[lang], lang)
     return json.dumps({**session_payload(coord), "device": device}), 200
 
 

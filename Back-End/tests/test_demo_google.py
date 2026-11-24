@@ -252,3 +252,13 @@ def test_api_de_parceiros_ignora_dados_demo(client, google, api_key):
     assert all(q["tentativas"] == 0 for q in questoes) or questoes == []
     assert _j(client.get("/api/v1/tracking/events", headers=h))["data"] == []
     assert _j(client.get("/api/v1/tracking/progress", headers=h))["data"] == []
+
+
+def test_demo_sem_login_nome_no_idioma_da_tela(client, monkeypatch):
+    monkeypatch.setenv("EDUBOT_DEMO_SEM_LOGIN", "1")
+    en = _j(client.post("/auth/demo", json={"lang": "en"}))
+    pt = _j(client.post("/auth/demo", json={}))
+    nomes_en = {s.student_name for s in Students.select().where(Students.course_id == en["ids"]["course_id"])}
+    nomes_pt = {s.student_name for s in Students.select().where(Students.course_id == pt["ids"]["course_id"])}
+    assert {"Visitor", "Visitor (test student)"} <= nomes_en
+    assert {"Visitante", "Visitante (aluno de teste)"} <= nomes_pt

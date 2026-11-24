@@ -89,7 +89,12 @@ def anonymous_demo_enabled():
 # em google_sub ("anon:<sha256>"). Quem tem o segredo reabre a turma — ele vive
 # apenas naquele navegador, como um cookie de sessão de visitante.
 # ---------------------------------------------------------------------------
-ANON_NAME = "Visitante"
+ANON_NAME = {"pt": "Visitante", "en": "Visitor"}
+TEST_STUDENT_SUFFIX = {"pt": "aluno de teste", "en": "test student"}
+
+
+def _lang(lang):
+    return "en" if lang == "en" else "pt"
 
 
 def new_device():
@@ -152,7 +157,7 @@ def workspace_exists(google_sub):
     return Students.select().where(Students.google_sub == google_sub).exists()
 
 
-def get_or_create_workspace(google_sub, email, name):
+def get_or_create_workspace(google_sub, email, name, lang="pt"):
     """Devolve o coordenador do workspace DEMO desta identidade (cria na 1ª vez)."""
     existing = Students.get_or_none(Students.google_sub == google_sub)
     if existing is not None:
@@ -162,7 +167,7 @@ def get_or_create_workspace(google_sub, email, name):
         return existing
 
     try:
-        return _create_workspace(google_sub, email, name)
+        return _create_workspace(google_sub, email, name, lang)
     except IntegrityError:
         # Duas requisições simultâneas no 1º login: a outra criou antes (unique
         # em google_sub) e esta transação foi desfeita — usa a dela.
@@ -172,7 +177,7 @@ def get_or_create_workspace(google_sub, email, name):
         return existing
 
 
-def _create_workspace(google_sub, email, name):
+def _create_workspace(google_sub, email, name, lang="pt"):
     now = datetime.datetime.now()
     first = _first_name(name)
     with db.atomic():
@@ -191,7 +196,7 @@ def _create_workspace(google_sub, email, name):
 
         test_student = Students.create(
             ra=_new_ra("t"), student_password=hash_password(secrets.token_urlsafe(24)),
-            student_name=f"{first} (aluno de teste)"[:100], course_id=course,
+            student_name=f"{first} ({TEST_STUDENT_SUFFIX[_lang(lang)]})"[:100], course_id=course,
             is_admin=False, role="aluno", demo_owner_id=coord.student_id,
             demo_kind=KIND_TEST_STUDENT)
         _grant_consents(coord, now)
