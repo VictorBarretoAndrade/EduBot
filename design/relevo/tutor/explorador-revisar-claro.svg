@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="--surface:251 250 245;--ink:20 22 26;--trail:226 80 27;--contour-em:169 159 132;--muted:90 92 97" viewBox="0 0 120 120" class="chr chr-exp " data-expr="revisar" aria-hidden="true"><style>.chr .ex{display:none}.ex-on{display:inline}
+.fill{fill:rgb(var(--surface));stroke:rgb(var(--ink));stroke-width:2.4;stroke-linejoin:round}
+.ln{fill:none;stroke:rgb(var(--ink));stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ln2{fill:none;stroke:rgb(var(--ink));stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nose{stroke-width:1.8}.fk,.eyes ellipse{fill:rgb(var(--ink))}
+.tr-f{fill:rgb(var(--trail));stroke:rgb(var(--ink));stroke-width:1.6;stroke-linejoin:round}
+.rel{fill:none;stroke:rgb(var(--contour-em));stroke-width:1.6;stroke-linecap:round}
+.sw{fill:none;stroke:rgb(var(--muted));stroke-width:2;stroke-linecap:round}.m-b{display:none}
+.cab .fill,.cab .ln{stroke-width:3.2}.cab .ln2{stroke-width:2.6}.cab .rel{stroke-width:2}</style>
+      <g class="bodyg">
+        <path class="fill" d="M18 121 C20 98 38 88 60 88 C82 88 100 98 102 121"/>
+        <path class="ln2" d="M50 89 L60 99 L70 89"/>
+        <path class="ln2" d="M38 93 C40 103 41 112 41 121"/><path class="ln2" d="M82 93 C80 103 79 112 79 121"/>
+        <g class="cmp"><circle class="fill" cx="80" cy="106" r="7.5"/><g class="ndl"><path class="tr-f" d="M80 99.8 L82.4 106 L77.6 106Z"/><path class="fk" d="M80 112.2 L82.4 106 L77.6 106Z"/></g></g>
+        <path class="ln2" d="M53 80 V89 M67 80 V89"/>
+        <g class="headg">
+          <path class="fill" d="M39 60 Q33.5 60 34.5 66 Q36 70.5 40.5 68.5"/><path class="fill" d="M81 60 Q86.5 60 85.5 66 Q84 70.5 79.5 68.5"/>
+          <ellipse class="fill" cx="60" cy="61" rx="21" ry="23"/>
+          <path class="ln nose" d="M60 64 Q57.5 68.5 60.5 69.5"/>
+          <g class="ex-on ex-revisar"><path class="ln" d="M45 54 Q51 51 56 53"/><path class="ln" d="M64 53 Q69 51 75 54"/><ellipse class="fk" cx="51" cy="62" rx="2.8" ry="3.8"/><path class="ln" d="M65 62 Q69 59 73 62"/><path class="ln" d="M54 73 Q60 78 66 73"/></g>
+          <g class="hat">
+            <path class="fill" d="M38 45 C38 25 82 25 82 45"/>
+            <path class="tr-f" d="M38.7 38 H81.3 V43.5 H38.7Z"/>
+            <path class="rel" d="M50 33 Q60 28.5 70 33"/><path class="rel" d="M54 29.5 Q60 27.5 66 29.5"/>
+            <path class="fill" d="M23 46 C36 39.5 84 39.5 97 46 C84 50.5 36 50.5 23 46Z"/>
+          </g>
+        </g>
+        
+      </g></svg>

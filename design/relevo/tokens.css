@@ -1,0 +1,100 @@
+/* Learnia · identidade "Relevo" — tokens de design
+   O conhecimento tem relevo: domínio = altitude, meta do professor = cota,
+   reforço = trilha. Este arquivo é a fonte única de cores, tipografia e movimento.
+
+   Cores em canais RGB ("R G B") para o Tailwind aplicar opacidade:
+   rgb(var(--ink) / <alpha-value>). Ver tailwind.preset.js.
+
+   Tema: claro por padrão; escuro por prefers-color-scheme ou data-theme="dark"
+   no <html>. data-theme="light" força o claro. */
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap");
+
+:root {
+  color-scheme: light;
+
+  /* Superfícies */
+  --bg: 241 238 228;          /* Papel de mapa  #F1EEE4 */
+  --surface: 251 250 245;     /* Folha          #FBFAF5 */
+  --surface-2: 233 229 216;   /* Papel escuro   #E9E5D8 */
+
+  /* Texto */
+  --ink: 20 22 26;            /* Basalto        #14161A · 15,6:1 no fundo */
+  --muted: 90 92 97;          /* Grafite        #5A5C61 · 5,8:1 */
+  --on-ink: 241 238 228;      /* texto sobre botão Basalto */
+
+  /* Linhas */
+  --line: 211 204 185;        /* divisórias decorativas  #D3CCB9 */
+  --line-strong: 90 92 97;    /* borda de campo e controle (3:1 ou mais) */
+  --contour: 201 193 170;     /* curvas de nível         #C9C1AA */
+  --contour-em: 169 159 132;  /* curva mestra (a cada 5)  #A99F84 */
+
+  /* Sinal */
+  --trail: 226 80 27;         /* Trilha #E2501B · gráficos e fundo de botão (texto Basalto, 4,7:1) */
+  --trail-text: 178 60 16;    /* Trilha para texto #B23C10 · 5,1:1 */
+  --on-trail: 20 22 26;
+  --mata: 30 107 82;          /* Mata #1E6B52 · na meta · 5,5:1 */
+
+  /* Tipografia */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Forma: cantos quase retos; o relevo vem das linhas, não de sombras */
+  --radius: 4px;
+  --radius-sm: 2px;
+
+  /* Movimento */
+  --ease-subida: cubic-bezier(.2, .7, .2, 1);   /* entra rápido, assenta devagar */
+  --ease-trilha: cubic-bezier(.65, 0, .35, 1);  /* desenho de linhas */
+  --dur-rapido: 150ms;   /* hover, foco */
+  --dur-medio: 400ms;    /* entrada de cartões, troca de tema */
+  --dur-desenho: 1400ms; /* trilha, perfil de elevação */
+  --dur-deriva: 60s;     /* deriva das curvas de nível no fundo */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: 14 16 19;           /* Mapa noturno   #0E1013 */
+    --surface: 23 26 31;      /* #171A1F */
+    --surface-2: 30 34 40;    /* #1E2228 */
+    --ink: 236 232 220;       /* Papel          #ECE8DC · 15,6:1 */
+    --muted: 163 163 155;     /* #A3A39B · 7,5:1 */
+    --on-ink: 14 16 19;
+    --line: 46 50 56;
+    --line-strong: 120 122 118;
+    --contour: 43 48 54;
+    --contour-em: 70 76 84;
+    --trail: 255 106 51;      /* #FF6A33 · 6,7:1 */
+    --trail-text: 255 134 86; /* #FF8656 · 8,0:1 */
+    --on-trail: 14 16 19;
+    --mata: 69 188 143;       /* #45BC8F · 8,0:1 */
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: 14 16 19;
+  --surface: 23 26 31;
+  --surface-2: 30 34 40;
+  --ink: 236 232 220;
+  --muted: 163 163 155;
+  --on-ink: 14 16 19;
+  --line: 46 50 56;
+  --line-strong: 120 122 118;
+  --contour: 43 48 54;
+  --contour-em: 70 76 84;
+  --trail: 255 106 51;
+  --trail-text: 255 134 86;
+  --on-trail: 14 16 19;
+  --mata: 69 188 143;
+}
+
+/* Quem pede menos movimento recebe o estado final, sem animação. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-rapido: 0ms;
+    --dur-medio: 0ms;
+    --dur-desenho: 0ms;
+  }
+}
