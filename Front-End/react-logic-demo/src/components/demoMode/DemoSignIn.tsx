@@ -54,6 +54,22 @@ const loadGis = (): Promise<GoogleId> => {
   return gisPromise;
 };
 
+// A home page (Front-End/files/index.html) leva o botão "Demo" para /app/?demo=1:
+// a demonstração abre sozinha, sem passar pelo clique daqui. O parâmetro é lido
+// uma vez ao carregar o app e sai da URL, para o demo não reabrir sozinho depois
+// de um logout. Já logado, ele é só descartado.
+let demoIntent = (() => {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("demo") !== "1") return false;
+    url.searchParams.delete("demo");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 interface DemoSignInProps {
   onLogged: (session: Session) => void;
 }
@@ -133,6 +149,15 @@ export const DemoSignIn = ({ onLogged }: DemoSignInProps) => {
       .catch(fail)
       .finally(() => setBusy(false));
   };
+
+  // Veio do botão "Demo" da home: entra direto (se o demo sem login estiver ligado;
+  // senão a pessoa vê o bloco do Google normalmente).
+  useEffect(() => {
+    if (!config || !demoIntent) return;
+    demoIntent = false;
+    if (config.demo_sem_login) enterDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config]);
 
   if (!config || (!config.google_client_id && !config.demo_sem_login)) return null;
 

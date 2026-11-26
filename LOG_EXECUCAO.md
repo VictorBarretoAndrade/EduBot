@@ -2222,3 +2222,17 @@ outcome* em EN, home do professor = **Minha turma**, conteúdo real para Cálcul
 - Testes: `test_demo_google.py` (22); suíte 366 passando; `tsc` limpo. Validado no navegador
   (Flask em SQLite + Vite): entrada DEMO → turma com 2 em risco → criar aluno → ver como aluno →
   voltar para coordenador.
+
+## Home page da Learnia (identidade "Relevo") — 25/11/2026
+
+- A raiz (`Front-End/files/index.html`) deixou de redirecionar para `/app/`: agora é a home page
+  que explica o projeto (desafio, 6 passos, semana da Maria, tutor Explorador, governança,
+  pesquisa, demo). O app em `/app/` segue com o front antigo; a troca de identidade dele fica
+  para depois.
+- PT e EN no mesmo arquivo: PT no HTML (funciona sem JS), EN em `data-en`. O idioma escolhido
+  na home vai para `localStorage["edubot.lang"]` (mesma chave do app) e também em `?lang=`.
+- Botão **Demo** → `/app/?demo=1`: o `DemoSignIn` entra direto na demonstração quando o
+  `demo_sem_login` está ligado (senão mostra o bloco do Google). O parâmetro é consumido uma vez
+  e sai da URL, para o demo não reabrir sozinho depois de um "Sair".
+- Página gerada por `design/relevo/gerador/build_home.py` (edite o script, não o HTML).
+- Deploy: o React mudou, então o build precisa de `FORCE_REACT_BUILD=1`.

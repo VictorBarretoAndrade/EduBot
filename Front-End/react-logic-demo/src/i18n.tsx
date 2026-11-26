@@ -25,6 +25,19 @@ const STORAGE_KEY = "edubot.lang";
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
+    // A home page passa o idioma escolhido lá (?lang=en): vale e fica lembrado.
+    try {
+      const url = new URL(window.location.href);
+      const fromUrl = url.searchParams.get("lang");
+      if (fromUrl === "en" || fromUrl === "pt") {
+        safeSet("local", STORAGE_KEY, fromUrl);
+        url.searchParams.delete("lang");
+        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+        return fromUrl;
+      }
+    } catch {
+      /* URL inválida: segue para o idioma salvo */
+    }
     const saved = safeGet("local", STORAGE_KEY);
     return saved === "en" || saved === "pt" ? saved : "pt";
   });
