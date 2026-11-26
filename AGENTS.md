@@ -51,8 +51,13 @@ cd Front-End/react-logic-demo && npx tsc --noEmit   # checagem de tipos do front
 
 - **Português** em docs, comentários, mensagens de commit e textos de UI (com versão EN
   via i18n: colunas `*_en` no banco, `src/i18n.tsx` no front).
-- Na interface, o produto e a IA se chamam **Engage-Agent** (o código e o repositório
-  seguem com o nome interno EduBot). Inglês da interface: **americano**, com o glossário
+- Na interface, o produto se chama **Learnia** e o tutor é o **Explorador** ("Tutor
+  Learnia"), na identidade visual **Relevo** (`design/relevo/`: guia, tokens, preset
+  Tailwind, logo e tutor). O código e o repositório seguem com o nome interno EduBot; os
+  prompts do agente no backend ainda dizem "Engage-Agent". Use só os tokens (`bg-surface`,
+  `text-ink`, `text-trail-text`, `bg-mata`…) e as peças de `src/styles.css`
+  (`.card`, `.btn-pri`, `.tag-ok`, `.k`…): nada de cor fixa, gradiente ou sombra em cartão.
+  Inglês da interface: **americano**, com o glossário
   do `PLANO_EXECUCAO_6.md` (D.1): módulo → *module*, matéria → *course*, competência →
   *learning outcome*.
 - Commits no padrão `tipo(escopo): descrição` em português (ex.: `feat(coleta): ...`).

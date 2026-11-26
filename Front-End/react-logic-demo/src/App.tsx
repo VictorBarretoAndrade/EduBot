@@ -15,7 +15,8 @@ import { Login } from "./components/Login";
 import { ConsentModal, CONSENT_FLAG } from "./components/ConsentModal";
 import { OnboardingModal, ONBOARDING_FLAG } from "./components/OnboardingModal";
 import { DemoBanner } from "./components/demoMode/DemoBanner";
-import { LoaderCircle } from "lucide-react";
+import { LearniaLogo } from "./components/brand/LearniaLogo";
+import { RelevoLoader } from "./components/brand/RelevoLoader";
 import { OvaState, Session, StudentProfile, clearSession, getMe, getSession, getToken, hasRecordedConsent } from "./services/api";
 import { syncPersonaFromProfile } from "./services/persona";
 import { useLanguage, useT } from "./i18n";
@@ -39,9 +40,9 @@ const ViewFallback = () => {
   const t = useT();
   return (
     <div className="flex min-h-[40vh] items-center justify-center">
-      <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
-      {/* VI.2: com reduced-motion o spinner congela — o texto sr-only mantém o sentido. */}
-      <span className="sr-only">{t("Carregando", "Loading")}</span>
+      {/* Relevo: curvas de nível se abrindo. VI.2: com reduced-motion fica parado — o
+          texto sr-only mantém o sentido. */}
+      <RelevoLoader size={44} hint={t("Carregando", "Loading")} />
     </div>
   );
 };
@@ -228,14 +229,18 @@ const App = () => {
 
   if (!profile) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 text-muted">
-        <LoaderCircle className="animate-spin text-brand" size={40} />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-bg text-muted">
+        <LearniaLogo height={30} />
         {error ? (
-          <p className="font-semibold text-rose-600">
+          <p className="font-semibold text-trail-text">
             {t("Não conseguimos carregar seus dados. Tente de novo em instantes.", "We couldn't load your data. Please try again in a moment.")}
           </p>
         ) : (
-          <p>{t("Carregando seu perfil...", "Loading your profile...")}</p>
+          <RelevoLoader
+            size={44}
+            label={t("Lendo o seu rastro…", "Reading your trail…")}
+            hint={t("carregando seu perfil", "loading your profile")}
+          />
         )}
       </div>
     );
@@ -299,7 +304,7 @@ const App = () => {
   const navView = ["module", "materia"].includes(route.view) ? HOME : route.view === "aluno" ? STAFF_HOME : route.view;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-ink">
+    <div className="min-h-screen bg-bg text-ink">
       {/* NA.3 (Plano 4): pular para o conteúdo. preventDefault + foco programático
           para NÃO tocar no hash (o app usa hash-routing). */}
       <a
@@ -310,7 +315,7 @@ const App = () => {
           el?.focus();
           el?.scrollIntoView();
         }}
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-[8px] focus:bg-brand focus:px-4 focus:py-2 focus:font-bold focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded focus:bg-ink focus:px-4 focus:py-2 focus:font-bold focus:text-on-ink"
       >
         {t("Pular para o conteúdo", "Skip to content")}
       </a>

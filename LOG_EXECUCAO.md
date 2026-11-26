@@ -2236,3 +2236,28 @@ outcome* em EN, home do professor = **Minha turma**, conteúdo real para Cálcul
   e sai da URL, para o demo não reabrir sozinho depois de um "Sair".
 - Página gerada por `design/relevo/gerador/build_home.py` (edite o script, não o HTML).
 - Deploy: o React mudou, então o build precisa de `FORCE_REACT_BUILD=1`.
+
+## App React na identidade "Relevo" — 26/11/2026
+
+- O app em `/app/` passa a usar a mesma identidade da home: `tailwind.config.js` importa
+  `design/relevo/tailwind.preset.js` e `styles.css` importa `design/relevo/tokens.css` (fonte
+  única; o compose monta `./design` no container de build do React). Claro e escuro pelos tokens;
+  botão de tema no topo, lembrado em `localStorage["learnia-tema"]` (mesma chave da home).
+- Paleta antiga migrada por codemod (~800 classes): `white`/`slate`/`indigo`/`brand` → Folha,
+  Papel, Basalto e Grafite; `rose`/`red` → Trilha (abaixo da meta); `emerald` → Mata (na meta);
+  `amber` → neutro "a caminho" (um laranja só, com função). Cantos de 4 px, sombra só em camada
+  que flutua, sem gradiente. Geist e Geist Mono; rótulos e dados em mono.
+- Nome na interface: **Learnia**; o tutor é o **Explorador** ("Tutor Learnia"), que substitui o
+  robô (persona `edubot` continua o mesmo id no banco). Einstein/Curie 3D continuam opcionais.
+  Os prompts do agente no backend ainda dizem "Engage-Agent" (fora do escopo visual).
+- Peças do guia viraram componentes: `LearniaLogo`, `Explorador` (6 estados, escolhidos pelo
+  momento: pensando ao gerar, encorajando abaixo da meta, meta ao acertar tudo…), `TopoMap`,
+  `RelevoLoader`, `StatusTag` (✓ ◐ ▲ — nunca só cor), régua de elevação, `DomainMountains`.
+- "Domínio por competência" (morros + cota) substitui a teia/radar em Meu progresso e aparece na
+  página da matéria. A cota desenhada é **80** = `DEVELOPED_THRESHOLD` do BKT, não o 70 do exemplo
+  do guia.
+- Voz do guia com moderação: rastro (sequência), trilha de reforço, marcos de revisão, cota.
+- Validado no navegador (Flask em SQLite + Vite + estático na 8010): login, home do aluno,
+  matéria, módulo com chat, prática, progresso, turma, gestor, detalhe do aluno, privacidade;
+  claro, escuro e celular. `tsc` e `npm run build` limpos.
+- Deploy: o React mudou, então o build precisa de `FORCE_REACT_BUILD=1`.

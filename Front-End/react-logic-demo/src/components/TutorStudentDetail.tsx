@@ -13,7 +13,7 @@ números, sem lógica duplicada.
 Segurança: a rota é liberada só para staff no front, mas quem garante o escopo
 (aluno do mesmo curso) é o backend (404 fora de escopo).
 */
-import { AlertTriangle, ArrowLeft, BookX, CalendarClock, Gauge, LoaderCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookX, CalendarClock, Gauge } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { StudentProfile, getTutorStudent } from "../services/api";
 import { useLanguage, useT } from "../i18n";
@@ -21,6 +21,7 @@ import { plural } from "../services/format";
 import { SubjectScores } from "./SubjectScores";
 import { CompetencyScores } from "./CompetencyScores";
 import { PerformanceCharts } from "./PerformanceCharts";
+import { RelevoLoader } from "./brand/RelevoLoader";
 
 interface TutorStudentDetailProps {
   studentId: number;
@@ -35,9 +36,9 @@ interface KpiCardProps {
 }
 
 const KpiCard = ({ icon, label, value, alerta }: KpiCardProps) => (
-  <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-    <div className="flex items-center gap-2 text-muted">{icon} {label}</div>
-    <div className={`mt-2 text-3xl font-bold ${alerta ? "text-rose-600" : "text-ink"}`}>{value}</div>
+  <div className="card p-5">
+    <div className="k k-muted flex items-center justify-between gap-2">{label} <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span></div>
+    <div className={`mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] [font-variant-numeric:tabular-nums] ${alerta ? "text-trail-text" : "text-ink"}`}>{value}</div>
   </div>
 );
 
@@ -70,7 +71,7 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
   const voltar = (
     <button
       onClick={onBack}
-      className="flex items-center gap-2 rounded-[8px] border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:bg-slate-50"
+      className="flex items-center gap-2 card px-4 py-2 text-sm font-semibold text-ink transition hover:bg-surface-2"
     >
       <ArrowLeft size={16} aria-hidden="true" /> {t("Voltar para a turma", "Back to class")}
     </button>
@@ -80,7 +81,7 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
     return (
       <section className="space-y-4">
         {voltar}
-        <div className="rounded-[8px] border border-rose-200 bg-rose-50 p-6 text-rose-800" role="alert">
+        <div className="rounded border border-trail/40 bg-trail/10 p-6 text-trail-text" role="alert">
           <p className="font-semibold">
             {error === "nao_encontrado"
               ? t("Aluno não encontrado nesta turma.", "Student not found in this class.")
@@ -96,7 +97,7 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
       <section className="space-y-4">
         {voltar}
         <div className="flex min-h-[40vh] items-center justify-center">
-          <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
+          <RelevoLoader size={44} />
           <span className="sr-only" role="status">{t("Carregando", "Loading")}</span>
         </div>
       </section>
@@ -112,7 +113,7 @@ export const TutorStudentDetail = ({ studentId, onBack }: TutorStudentDetailProp
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           {voltar}
-          <h1 ref={headingRef} tabIndex={-1} className="mt-3 text-3xl font-bold text-ink outline-none">
+          <h1 ref={headingRef} tabIndex={-1} className="h-display mt-3 text-ink outline-none">
             {est.nome}
           </h1>
           <p className="mt-1 text-muted">

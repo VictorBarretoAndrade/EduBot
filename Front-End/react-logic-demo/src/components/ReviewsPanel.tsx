@@ -3,10 +3,11 @@ D.3 — "Revisões desta semana". Mostra a agenda de revisão espaçada do aluno
 (revisões vencidas em destaque + as que vencem nos próximos dias). O canal
 principal de cobrança é a intervenção do EduBot; este painel dá a visão geral.
 */
-import { CalendarClock, LoaderCircle, PlayCircle } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ReviewItem, getReviews } from "../services/api";
 import { useLanguage, useT } from "../i18n";
+import { RelevoLoader } from "./brand/RelevoLoader";
 import { formatDate } from "../services/format";
 
 export const ReviewsPanel = () => {
@@ -25,20 +26,19 @@ export const ReviewsPanel = () => {
   };
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
-      <div className="flex items-center gap-2">
-        <CalendarClock size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Revisões desta semana", "Reviews this week")}</h2>
-      </div>
+    <div className="card p-6">
+      <h2 className="lab">
+        <span>{t("Revisões desta semana", "Reviews this week")}</span>
+      </h2>
       <p className="mt-1 text-sm text-muted">
         {t("Revisar no intervalo certo consolida o que você já dominou.",
            "Reviewing at the right interval consolidates what you've mastered.")}
       </p>
 
       {reviews === null ? (
-        <div className="flex justify-center py-6"><LoaderCircle className="animate-spin text-brand" size={20} /></div>
+        <div className="flex justify-center py-6"><RelevoLoader size={32} /></div>
       ) : reviews.length === 0 ? (
-        <p className="mt-4 rounded-[8px] bg-slate-50 p-4 text-sm text-muted">
+        <p className="mt-4 rounded bg-bg p-4 text-sm text-muted">
           {t("Nenhuma revisão agendada — continue avançando nos módulos!",
              "No reviews scheduled — keep moving through the modules!")}
         </p>
@@ -47,21 +47,21 @@ export const ReviewsPanel = () => {
           {reviews.map((r) => (
             <li
               key={r.review_id}
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-[8px] border p-4 ${
-                r.vencida ? "border-amber-300 bg-amber-50" : "border-line bg-white"
+              className={`flex flex-wrap items-center justify-between gap-3 rounded border p-4 ${
+                r.vencida ? "border-line-strong bg-surface-2" : "border-line bg-surface"
               }`}
             >
               <div className="min-w-0">
                 <span className="font-semibold text-ink">{r.competencia}</span>
-                <span className={`block text-sm font-semibold ${r.vencida ? "text-amber-700" : "text-muted"}`}>
+                <span className={`block text-sm font-semibold ${r.vencida ? "text-ink" : "text-muted"}`}>
                   {r.vencida ? t("Revisar agora", "Review now") : t(`vence em ${formatDate(r.due_date, lang)}`, `due ${formatDate(r.due_date, lang)}`)}
                 </span>
               </div>
               {r.ova_id != null && (
                 <button
                   onClick={() => revisar(r.ova_id!)}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-[8px] px-4 py-2 text-sm font-bold text-white transition ${
-                    r.vencida ? "bg-amber-600 hover:bg-amber-700" : "bg-brand hover:bg-indigo-600"
+                  className={`flex shrink-0 items-center gap-1.5 rounded px-4 py-2 text-sm font-bold text-on-ink transition ${
+                    r.vencida ? "bg-ink hover:bg-ink/85" : "bg-ink hover:bg-ink/85"
                   }`}
                   aria-label={t(`Revisar ${r.competencia} no quiz`, `Review ${r.competencia} in the quiz`)}
                 >

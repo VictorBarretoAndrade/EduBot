@@ -10,12 +10,13 @@ CP.4 (Plano 3):
 O tutor continua preso ao material do OVA (grounding no backend); a persona muda só
 o TOM. As "Fontes" (seções que embasaram a resposta) seguem exibidas.
 */
-import { BookMarked, Bot, LoaderCircle, Pause, Play, Send, User, X } from "lucide-react";
+import { ArrowRight, Pause, Play, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ChatMessage } from "../../hooks/useTutorChat";
 import { useToast } from "../ui/Toast";
 import { useLanguage, useT } from "../../i18n";
 import { CompanionAvatar } from "../brand/CompanionAvatar";
+import { Explorador } from "../brand/Explorador";
 import { AVATAR_PERSONAS, personaName } from "../brand/avatars";
 import { useSpeech } from "../../hooks/useSpeech";
 
@@ -30,7 +31,7 @@ interface TutorChatProps {
 
 function tutorName(personaId: string, lang: "pt" | "en", t: (pt: string, en: string) => string): string {
   const p = AVATAR_PERSONAS.find((x) => x.id === personaId);
-  return p ? personaName(p, lang) : "Engage-Agent";
+  return p ? personaName(p, lang) : lang === "en" ? "Learnia tutor" : "Tutor Learnia";
 }
 
 export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClose }: TutorChatProps) => {
@@ -63,7 +64,7 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
   // aria-live na lista rolável faria o leitor de tela repetir mensagens antigas
   // a cada re-render do React.
   const liveMessage = useMemo(() => {
-    if (loading) return t("O tutor está pensando...", "Engage-Agent is thinking...");
+    if (loading) return t("O tutor está pensando...", "The tutor is thinking...");
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role !== "user") return messages[i].content;
     }
@@ -96,22 +97,29 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
     speak(content, lang, personaId); // voz da persona (AV.4)
   };
 
+  // Relevo: o Explorador muda de expressão pelo MOMENTO da conversa — pensando
+  // (gerando resposta), ouvindo (o aluno digita), explicando (respondeu).
+  const estado = loading ? "pensando" : input.trim() ? "ouvindo" : "explicando";
+  const name = tutorName(personaId, lang, t);
+
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-      <header className="flex items-center justify-between gap-3 border-b border-line bg-gradient-to-r from-brand to-indigo-500 px-4 py-3 text-white">
+    <div className="flex h-full flex-col overflow-hidden card">
+      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-white/20">
-            <CompanionAvatar personaId={personaId} speaking={speaking} visemeRef={visemeRef} size={44} />
+          <div className="xp-av h-10 w-10">
+            <CompanionAvatar personaId={personaId} speaking={speaking} visemeRef={visemeRef} size={40} estado={estado} still={false} />
           </div>
           <div className="min-w-0">
-            <div className="truncate font-bold leading-tight">{tutorName(personaId, lang, t)}</div>
-            <div className="truncate text-xs text-white/80">{t("Conversando sobre", "Talking about")} “{ovaName}”</div>
+            <div className="truncate text-[15px] font-semibold leading-tight text-ink">{name}</div>
+            <div className="truncate text-[12px] text-muted">
+              {t("Explorador · conversando sobre", "Explorer · talking about")} “{ovaName}”
+            </div>
           </div>
         </div>
         <button
           onClick={onClose}
           aria-label={t("Fechar", "Close")}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:bg-white/20"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
         >
           <X size={18} aria-hidden="true" />
         </button>
@@ -120,104 +128,89 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
       {/* AC.3: região viva dedicada (invisível) — leitor de tela anuncia a resposta do tutor. */}
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveMessage}</div>
 
-      <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
+      <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto bg-bg px-4 py-5">
         {messages.map((message, index) => {
           const isUser = message.role === "user";
+          if (isUser) {
+            return (
+              <div key={index} className="msg-q text-ink">
+                <span className="sr-only">{t("Você:", "You:")} </span>
+                {message.content}
+              </div>
+            );
+          }
           return (
-            <div key={index} className={`flex gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  isUser ? "bg-coral text-white" : "bg-brand text-white"
-                }`}
-                aria-hidden="true"
-              >
-                {isUser ? <User size={16} /> : <Bot size={16} />}
+            <div key={index} className="max-w-[94%]">
+              {/* Relevo: "Tutor Learnia" em mono; resposta com filete em Trilha. */}
+              <div className="msg-who" aria-hidden="true">{name}</div>
+              <div className="msg-a whitespace-pre-wrap text-ink">
+                <span className="sr-only">{name}: </span>
+                {message.content}
               </div>
-              <div className={`flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}>
-                <div
-                  className={`whitespace-pre-wrap rounded-[12px] px-4 py-2.5 text-sm leading-relaxed ${
-                    isUser
-                      ? "rounded-tr-none bg-brand text-white"
-                      : "rounded-tl-none border border-line bg-white text-slate-700"
-                  }`}
-                >
-                  {/* AC.3: quem falou (só para leitor de tela — os avatares são decorativos). */}
-                  <span className="sr-only">{isUser ? t("Você:", "You:") : `${tutorName(personaId, lang, t)}:`} </span>
-                  {message.content}
+
+              {/* Ouvir a resposta na voz da persona (não na saudação inicial) +
+                  fontes: seções do OVA que embasaram a resposta (VI.3: o trecho
+                  abre num bloco expansível, acessível por teclado e toque). */}
+              {((index > 0) || (message.sources && message.sources.length > 0)) && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5 pl-[15px]">
+                  {index > 0 && (
+                    <button
+                      onClick={() => (speakingIdx === index ? stop() : listen(index, message.content))}
+                      className="chip"
+                    >
+                      {speakingIdx === index ? <Pause size={11} aria-hidden="true" /> : <Play size={11} aria-hidden="true" />}
+                      {speakingIdx === index ? t("Parar", "Stop") : t("Ouvir", "Listen")}
+                    </button>
+                  )}
+                  {message.sources?.map((source, sourceIndex) => {
+                    const key = `${index}-${sourceIndex}`;
+                    const isOpen = openSource === key;
+                    return (
+                      <button
+                        key={sourceIndex}
+                        type="button"
+                        onClick={() => setOpenSource(isOpen ? null : key)}
+                        aria-expanded={isOpen}
+                        className={`chip ${isOpen ? "border-ink bg-surface-2" : ""}`}
+                      >
+                        <span aria-hidden="true">◆</span>
+                        {source.secao}
+                      </button>
+                    );
+                  })}
                 </div>
-
-                {/* Ouvir a resposta na voz da persona (não na saudação inicial) */}
-                {!isUser && index > 0 && (
-                  <button
-                    onClick={() => (speakingIdx === index ? stop() : listen(index, message.content))}
-                    className="mt-1 flex items-center gap-1 rounded-full border border-line bg-white px-2 py-0.5 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+              )}
+              {message.sources?.map((source, sourceIndex) =>
+                openSource === `${index}-${sourceIndex}` ? (
+                  <p
+                    key={`trecho-${sourceIndex}`}
+                    className="ml-[15px] mt-2 card px-3 py-2 text-[13px] leading-relaxed text-muted"
                   >
-                    {speakingIdx === index ? <Pause size={11} aria-hidden="true" /> : <Play size={11} aria-hidden="true" />}
-                    {speakingIdx === index ? t("Parar", "Stop") : t("Ouvir", "Listen")}
-                  </button>
-                )}
-
-                {/* Referenciação automática: seções do OVA que embasaram a resposta.
-                    VI.3: o trecho (antes num `title`) abre num bloco expansível. */}
-                {!isUser && message.sources && message.sources.length > 0 && (
-                  <div className="mt-1.5 flex flex-col gap-1.5">
-                    <div className="flex flex-wrap gap-1.5">
-                      {message.sources.map((source, sourceIndex) => {
-                        const key = `${index}-${sourceIndex}`;
-                        const isOpen = openSource === key;
-                        return (
-                          <button
-                            key={sourceIndex}
-                            type="button"
-                            onClick={() => setOpenSource(isOpen ? null : key)}
-                            aria-expanded={isOpen}
-                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
-                              isOpen ? "border-brand bg-indigo-50 text-brand" : "border-line bg-slate-50 text-muted hover:bg-indigo-50"
-                            }`}
-                          >
-                            <BookMarked size={12} className="text-brand" aria-hidden="true" />
-                            {source.secao}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {message.sources.map((source, sourceIndex) =>
-                      openSource === `${index}-${sourceIndex}` ? (
-                        <p
-                          key={`trecho-${sourceIndex}`}
-                          className="rounded-[8px] border border-line bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600"
-                        >
-                          {source.trecho}
-                        </p>
-                      ) : null
-                    )}
-                  </div>
-                )}
-              </div>
+                    {source.trecho}
+                  </p>
+                ) : null
+              )}
             </div>
           );
         })}
 
         {loading && (
-          <div className="flex gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white" aria-hidden="true">
-              <Bot size={16} />
-            </div>
-            <div className="flex items-center gap-2 rounded-[12px] rounded-tl-none border border-line bg-white px-4 py-2.5 text-sm text-muted">
-              <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
-              {t("Pensando...", "Thinking...")}
-            </div>
+          <div className="flex items-center gap-3">
+            <span className="xp-av h-8 w-8">
+              <Explorador estado="pensando" variant="cabeca" size={32} decorative />
+            </span>
+            <span className="num text-[12px] text-muted">{t("Lendo o seu rastro…", "Reading your trail…")}</span>
           </div>
         )}
 
         {messages.length === 1 && !loading && (
-          <div className="space-y-2 pt-2">
-            <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted">{t("Sugestões", "Suggestions")}</p>
+          <div className="space-y-2 pt-1">
+            <p className="k k-muted">{t("Sugestões", "Suggestions")}</p>
             {SUGGESTIONS.map((suggestion) => (
               <button
                 key={suggestion}
                 onClick={() => ask(suggestion)}
-                className="block w-full rounded-[8px] border border-line bg-white px-3 py-2 text-left text-sm text-slate-700 transition hover:border-brand hover:bg-indigo-50"
+                className="block w-full card px-3 py-2.5 text-left text-sm text-ink transition-colors duration-rapido hover:border-ink"
               >
                 {suggestion}
               </button>
@@ -226,22 +219,28 @@ export const TutorChat = ({ ovaName, personaId, messages, loading, onAsk, onClos
         )}
       </div>
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-line bg-white p-3">
-        <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          placeholder={t("Pergunte sobre este conteúdo...", "Ask about this content...")}
-          aria-label={t("Pergunte sobre este conteúdo", "Ask about this content")}
-          className="h-11 w-full rounded-[8px] border border-line bg-slate-50 px-4 text-sm text-ink outline-none focus:border-brand"
-        />
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          aria-label={t("Enviar", "Send")}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] bg-brand text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          <Send size={18} aria-hidden="true" />
-        </button>
+      <form onSubmit={onSubmit} className="border-t border-line bg-surface p-3">
+        <div className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={t("Pergunte sobre este conteúdo...", "Ask about this content...")}
+            aria-label={t("Pergunte sobre este conteúdo", "Ask about this content")}
+            className="field h-11 py-0 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            aria-label={t("Enviar", "Send")}
+            className="btn btn-acc h-11 w-11 shrink-0 p-0"
+          >
+            <ArrowRight size={18} aria-hidden="true" />
+          </button>
+        </div>
+        {/* O tutor responde preso ao material do módulo (grounding no backend). */}
+        <p className="num mt-2 text-[10.5px] text-muted">
+          {t("Respostas a partir do material deste módulo", "Answers drawn from this module's material")}
+        </p>
       </form>
     </div>
   );

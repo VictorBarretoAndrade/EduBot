@@ -37,8 +37,8 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
       icon: BookOpen,
       title: t("Suas matérias estão aqui", "Your courses are here"),
       text: t(
-        `Oi${first ? ", " + first : ""}! Eu sou o Engage-Agent. Em "Minhas matérias" você escolhe a matéria e abre os módulos dela.`,
-        `Hi${first ? ", " + first : ""}! I'm Engage-Agent. Under "My courses" you pick a course and open its modules.`
+        `Oi${first ? ", " + first : ""}! Eu sou o Explorador, seu tutor na Learnia. Em "Minhas matérias" você escolhe a matéria e abre os módulos dela.`,
+        `Hi${first ? ", " + first : ""}! I'm the Explorer, your Learnia tutor. Under "My courses" you pick a course and open its modules.`
       ),
     },
     {
@@ -87,25 +87,25 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
         aria-modal="true"
         aria-labelledby="onb-title"
         tabIndex={-1}
-        className="w-full max-w-lg rounded-[8px] bg-white p-8 shadow-soft outline-none"
+        className="w-full max-w-lg rounded border border-line bg-surface p-8 shadow-soft outline-none"
       >
         <div className="flex flex-col items-center gap-4 text-center">
           <CompanionAvatar personaId={persona} size={96} speaking={speaking} visemeRef={visemeRef} />
           {/* AC.1: o passo atual é anunciado ao avançar (região viva atômica) —
               o foco permanece no botão "Próximo" (bom para Enter repetido). */}
           <div aria-live="polite" aria-atomic="true" className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2 text-brand">
+            <div className="flex items-center gap-2 text-ink">
               <Icon size={20} aria-hidden="true" />
-              <h1 id="onb-title" className="text-2xl font-bold text-ink">{current.title}</h1>
+              <h1 id="onb-title" className="h-sec text-ink">{current.title}</h1>
             </div>
-            <p className="max-w-md leading-relaxed text-slate-700">{current.text}</p>
+            <p className="max-w-md leading-relaxed text-ink">{current.text}</p>
             <span className="sr-only">{t(`Passo ${step + 1} de ${steps.length}`, `Step ${step + 1} of ${steps.length}`)}</span>
           </div>
 
           {supported && (
             <button
               onClick={() => (speaking ? stop() : speak(current.text, lang, persona))}
-              className="flex h-9 items-center gap-2 rounded-[8px] border border-brand px-3 text-sm font-semibold text-brand transition hover:bg-indigo-50"
+              className="btn btn-gh btn-sm"
             >
               <Volume2 size={16} /> {speaking ? t("Parar", "Stop") : t("Ouvir", "Listen")}
             </button>
@@ -115,7 +115,7 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
         {/* indicador de passos */}
         <div className="mt-6 flex items-center justify-center gap-2" aria-hidden="true">
           {steps.map((_, i) => (
-            <span key={i} className={`h-2 rounded-full transition-all ${i === step ? "w-6 bg-brand" : "w-2 bg-slate-300"}`} />
+            <span key={i} className={`h-2 rounded-[1px] transition-all ${i === step ? "w-6 bg-ink" : "w-2 bg-line"}`} />
           ))}
         </div>
 
@@ -125,7 +125,7 @@ export const OnboardingModal = ({ studentName, persona = "edubot", onDone }: Onb
           </button>
           <button
             onClick={next}
-            className="flex h-11 items-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600"
+            className="btn btn-pri"
           >
             {isLast ? t("Começar", "Get started") : t("Próximo", "Next")}
             <ArrowRight size={18} />

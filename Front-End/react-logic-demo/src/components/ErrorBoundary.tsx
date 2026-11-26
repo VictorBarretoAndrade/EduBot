@@ -38,8 +38,8 @@ export class ErrorBoundary extends Component<Props, State> {
       /* storage bloqueado: fica em PT */
     }
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">
-        <AlertTriangle className="text-rose-500" size={48} />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg p-6 text-center">
+        <AlertTriangle className="text-trail-text" size={48} />
         <h1 className="text-2xl font-bold text-ink">{en ? "Something went wrong" : "Algo deu errado"}</h1>
         <p className="max-w-md text-muted">
           {en
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="h-11 rounded-[8px] bg-brand px-6 font-semibold text-white"
+          className="h-11 rounded bg-ink px-6 font-semibold text-on-ink"
         >
           {en ? "Reload" : "Recarregar"}
         </button>

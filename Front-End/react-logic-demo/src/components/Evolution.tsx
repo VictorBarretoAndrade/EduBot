@@ -29,13 +29,14 @@ interface EvolutionProps {
 
 type Tab = "resumo" | "materias" | "conquistas";
 
+// Relevo: número grande (Geist 700, algarismos de largura fixa) e rótulo em mono.
 const Metric = ({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) => (
-  <div className="rounded-[8px] border border-line bg-white p-5 shadow-sm">
-    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[8px] bg-slate-100 text-brand">
-      <Icon size={22} aria-hidden="true" />
+  <div className="card p-5">
+    <div className="k k-muted flex items-center justify-between gap-2">
+      {label}
+      <Icon size={16} strokeWidth={1.8} className="shrink-0 text-muted" aria-hidden="true" />
     </div>
-    <div className="text-2xl font-bold text-ink">{value}</div>
-    <div className="mt-1 text-sm text-muted">{label}</div>
+    <div className="mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] text-ink [font-variant-numeric:tabular-nums]">{value}</div>
   </div>
 );
 
@@ -65,7 +66,8 @@ export const Evolution = ({ profile }: EvolutionProps) => {
 
   return (
     <section>
-      <h1 className="text-3xl font-bold text-ink">{t("Meu progresso", "My progress")}</h1>
+      <p className="k k-muted">{t("Seu relevo", "Your terrain")}</p>
+      <h1 className="h-display mt-2 text-ink">{t("Meu progresso", "My progress")}</h1>
       <p className="mt-2 text-muted">{t("Como você está indo em cada matéria.", "How you're doing in each course.")}</p>
 
       <div role="tablist" aria-label={t("Seções de Meu progresso", "My progress sections")} className="mt-6 flex flex-wrap gap-2 border-b border-line">
@@ -77,8 +79,8 @@ export const Evolution = ({ profile }: EvolutionProps) => {
             aria-selected={tab === item.id}
             aria-controls={`panel-${item.id}`}
             onClick={() => setTab(item.id)}
-            className={`-mb-px rounded-t-[8px] border-b-2 px-4 py-2.5 font-semibold transition ${
-              tab === item.id ? "border-brand text-brand" : "border-transparent text-muted hover:text-ink"
+            className={`-mb-px border-b-2 px-4 py-2.5 font-semibold transition-colors duration-rapido ${
+              tab === item.id ? "border-trail text-ink" : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {t(item.pt, item.en)}
@@ -103,22 +105,25 @@ export const Evolution = ({ profile }: EvolutionProps) => {
             <ReviewsPanel />
 
             {/* C.2 — histórico de sugestões (antes no Professor Mediador) */}
-            <div className="rounded-[8px] border border-line bg-white p-6">
-              <h2 className="text-xl font-bold text-ink">{t("Histórico de sugestões", "Suggestion history")}</h2>
-              <ul className="mt-4 space-y-3">
+            <div className="card p-6">
+              <h2 className="lab">
+                <span>{t("Histórico de sugestões", "Suggestion history")}</span>
+                <span>{t("rastro do tutor", "tutor trail")}</span>
+              </h2>
+              <ul className="-mx-6 divide-y divide-line border-t border-line">
                 {profile.historico_intervencoes.map((item, index) => (
-                  <li key={`${item.data}-${index}`} className="rounded-[8px] bg-slate-50 p-4">
+                  <li key={`${item.data}-${index}`} className="px-6 py-4">
                     <div className="flex items-center justify-between gap-3 text-xs text-muted">
-                      <span className="font-bold uppercase tracking-wide">{noticeTypeLabel(item.tipo, lang)}</span>
-                      <span>{formatDate(item.data, lang)}</span>
+                      <span className="k">{noticeTypeLabel(item.tipo, lang)}</span>
+                      <span className="num">{formatDate(item.data, lang)}</span>
                     </div>
-                    {item.descricao && <p className="mt-2 text-sm text-slate-700">{stripCompetencyMarker(item.descricao)}</p>}
+                    {item.descricao && <p className="mt-2 text-sm text-ink">{stripCompetencyMarker(item.descricao)}</p>}
                   </li>
                 ))}
                 {profile.historico_intervencoes.length === 0 && (
-                  <li className="text-sm text-muted">
-                    {t("Ainda não há sugestões. Estude e responda aos quizzes — o Engage-Agent vai sugerir os próximos passos.",
-                       "No suggestions yet. Study and take the quizzes — Engage-Agent will suggest your next steps.")}
+                  <li className="px-6 py-4 text-sm text-muted">
+                    {t("Ainda não há sugestões. Estude e responda aos quizzes — a Learnia vai sugerir os próximos passos.",
+                       "No suggestions yet. Study and take the quizzes — Learnia will suggest your next steps.")}
                   </li>
                 )}
               </ul>
@@ -139,7 +144,7 @@ export const Evolution = ({ profile }: EvolutionProps) => {
               radarExtra={
                 rising.length > 0 ? (
                   <div className="mt-4 border-t border-line pt-4">
-                    <p className="mb-2 text-sm font-semibold text-ink">{t("Tendência (7 dias)", "Trend (7 days)")}</p>
+                    <p className="k k-muted mb-2">{t("Tendência · 7 dias", "Trend · 7 days")}</p>
                     <div className="flex flex-wrap gap-2">
                       {rising.map((x) => {
                         const up = x.direcao === "up";
@@ -147,9 +152,7 @@ export const Evolution = ({ profile }: EvolutionProps) => {
                         return (
                           <span
                             key={x.competency_id}
-                            className={`flex items-center gap-1 rounded-[8px] px-3 py-1 text-sm font-semibold ${
-                              up ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-                            }`}
+                            className={`tag ${up ? "tag-ok" : "tag-low"}`}
                             aria-label={t(
                               `${x.competencia}: ${up ? "subiu" : "caiu"} ${pts} pontos`,
                               `${x.competencia}: ${up ? "up" : "down"} ${pts} points`

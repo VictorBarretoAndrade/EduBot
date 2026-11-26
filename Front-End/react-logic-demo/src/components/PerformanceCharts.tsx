@@ -11,24 +11,12 @@ para a "Tendência (7 dias)"; o professor não passa nada (aquele sinal é só d
 aluno logado). Assim o visual do aluno fica idêntico ao de antes.
 */
 import { ReactNode } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { StudentProfile } from "../services/api";
 import { useLanguage, useT } from "../i18n";
 import { competencyStatusLabel, resourceTypeLabel } from "../services/labels";
+import { COTA, DomainMountains, kindOf, masteryOf } from "./ui/DomainMountains";
+import { C, axisProps, barRadius, cotaLineProps, gridProps, legendProps, tooltipProps } from "./ui/chartTheme";
 
 interface PerformanceChartsProps {
   profile: StudentProfile;
@@ -51,7 +39,8 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
     score: item.dominio_estimado != null
       ? Math.round(item.dominio_estimado * 100)
       : (item.total_questoes ? Math.round((100 * item.acertos) / item.total_questoes) : 0),
-    status: item.status
+    status: item.status,
+    kind: kindOf(item)
   }));
 
   const typeData = Object.entries(profile.recursos.por_tipo).map(([tipo, stats]) => ({
@@ -71,81 +60,79 @@ export const PerformanceCharts = ({ profile, radarExtra }: PerformanceChartsProp
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
-      {/* Teia de competências (gráfico radar) — visão do domínio do aluno */}
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm xl:col-span-2">
-        <h2 className="text-xl font-bold text-ink">{t("Teia de competências", "Learning outcomes radar")}</h2>
-        <p className="mt-1 text-sm text-muted">{t("Domínio estimado por competência (quanto mais cheia a teia, melhor o domínio).", "Estimated mastery per learning outcome (the fuller the chart, the stronger your mastery).")}</p>
-        <div className="mt-5 h-96">
-          <ResponsiveContainer>
-            <RadarChart data={competencyData} outerRadius="72%">
-              <PolarGrid />
-              <PolarAngleAxis dataKey="nome" tick={{ fontSize: 12 }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
-              <Tooltip
-                formatter={(value: number) => [`${value}%`, t("domínio estimado", "estimated mastery")]}
-                labelFormatter={(label: string) => {
-                  const item = competencyData.find((entry) => entry.nome === label);
-                  return item ? `${item.completo} (${competencyStatusLabel(item.status, lang)})` : label;
-                }}
-              />
-              <Radar name={t("Domínio", "Mastery")} dataKey="score" stroke="#604fd8" fill="#604fd8" fillOpacity={0.35} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Relevo: "Domínio por competência" — cada competência é um morro, a cota
+          (80, limiar do BKT para "desenvolvida") é a linha tracejada. Substitui a
+          antiga teia (radar): o mesmo dado, na peça-assinatura do guia. */}
+      <div className="card p-6 xl:col-span-2">
+        <h2 className="lab">
+          <span>{t("Domínio por competência", "Mastery by learning outcome")}</span>
+          <span>{t("atualizado a cada resposta", "updated with every answer")}</span>
+        </h2>
+        <p className="-mt-1 mb-5 text-sm text-muted">{t("Cada morro é uma competência; a altitude é o seu domínio estimado. A linha tracejada é a cota.", "Each hill is a learning outcome; its altitude is your estimated mastery. The dashed line is the goal.")}</p>
+        <DomainMountains
+          peaks={profile.competencias.map((c) => ({ id: c.competency_id, nome: c.nome, valor: masteryOf(c), kind: kindOf(c) }))}
+        />
         {radarExtra}
       </div>
 
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-ink">{t("Leitura por módulo", "Reading by module")}</h2>
+      <div className="card p-6">
+        <h2 className="lab">{t("Leitura por módulo", "Reading by module")}</h2>
         <div className="mt-5 h-72">
           <ResponsiveContainer>
             <BarChart data={ovaData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="nome" interval={0} tick={{ fontSize: 12 }} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey={kRead} fill="#604fd8" radius={[8, 8, 0, 0]} />
-              <Bar dataKey={kMin} fill="#ff7b65" radius={[8, 8, 0, 0]} />
+              <CartesianGrid {...gridProps} />
+              <XAxis dataKey="nome" interval={0} {...axisProps} />
+              <YAxis {...axisProps} />
+              <Tooltip {...tooltipProps} />
+              <Legend {...legendProps} />
+              <Bar dataKey={kRead} fill={C.ink} radius={barRadius} />
+              <Bar dataKey={kMin} fill={C.trail} radius={barRadius} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-ink">{t("Consumo por tipo de recurso", "Progress by resource type")}</h2>
+      <div className="card p-6">
+        <h2 className="lab">{t("Consumo por tipo de recurso", "Progress by resource type")}</h2>
         <div className="mt-5 h-72">
           <ResponsiveContainer>
             <BarChart data={typeData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="tipo" interval={0} tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey={kConsumed} fill="#15beb5" radius={[8, 8, 0, 0]} />
-              <Bar dataKey={kTotal} fill="#dfe5ef" radius={[8, 8, 0, 0]} />
+              <CartesianGrid {...gridProps} />
+              <XAxis dataKey="tipo" interval={0} {...axisProps} />
+              <YAxis allowDecimals={false} {...axisProps} />
+              <Tooltip {...tooltipProps} />
+              <Legend {...legendProps} />
+              <Bar dataKey={kConsumed} fill={C.ink} radius={barRadius} />
+              <Bar dataKey={kTotal} fill={C.surface2} stroke={C.lineStrong} radius={barRadius} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Competências desenvolvidas (barras) — o mesmo score do radar, em barra */}
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-sm xl:col-span-2">
-        <h2 className="text-xl font-bold text-ink">{t("Competências desenvolvidas", "Mastered learning outcomes")}</h2>
+      <div className="card p-6 xl:col-span-2">
+        <h2 className="lab">{t("Competências desenvolvidas", "Mastered learning outcomes")}</h2>
         <div className="mt-5 h-80">
           <ResponsiveContainer>
             <BarChart data={competencyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="nome" interval={0} height={50} tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 100]} />
+              <CartesianGrid {...gridProps} />
+              <XAxis dataKey="nome" interval={0} height={50} {...axisProps} />
+              <YAxis domain={[0, 100]} {...axisProps} />
               <Tooltip
+                {...tooltipProps}
                 formatter={(value: number) => [`${value}%`, t("acertos", "correct")]}
                 labelFormatter={(label: string) => {
                   const item = competencyData.find((entry) => entry.nome === label);
                   return item ? `${item.completo} (${competencyStatusLabel(item.status, lang)})` : label;
                 }}
               />
-              <Bar dataKey="score" fill="#15beb5" radius={[8, 8, 0, 0]} />
+              <ReferenceLine {...cotaLineProps(COTA, t(`cota ${COTA}`, `goal ${COTA}`))} />
+              {/* Status pela cor E pela linha da cota: na cota (Mata), a caminho (Basalto), abaixo (Trilha). */}
+              <Bar dataKey="score" radius={barRadius}>
+                {competencyData.map((entry) => (
+                  <Cell key={entry.nome} fill={entry.kind === "ok" ? C.mata : entry.kind === "low" ? C.trail : C.ink} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

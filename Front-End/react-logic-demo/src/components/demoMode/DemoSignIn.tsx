@@ -11,7 +11,8 @@ navegador ganha a própria turma e a reabre ao voltar. O Google é opcional e se
 para guardar a turma na conta da pessoa (outro computador, outro navegador).
 Tudo vem do backend (GET /auth/config); sem nenhum dos dois, o bloco não aparece.
 */
-import { LoaderCircle, PlayCircle, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { RelevoLoader } from "../brand/RelevoLoader";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, AuthConfig, Session, getAuthConfig, loginDemo, loginWithGoogle } from "../../services/api";
 import { useLanguage, useT } from "../../i18n";
@@ -163,17 +164,17 @@ export const DemoSignIn = ({ onLogged }: DemoSignInProps) => {
 
   return (
     <section aria-labelledby="demo-title" className="mt-6">
-      <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted" aria-hidden="true">
+      <div className="k k-muted flex items-center gap-3" aria-hidden="true">
         <span className="h-px flex-1 bg-line" />
         {t("ou", "or")}
         <span className="h-px flex-1 bg-line" />
       </div>
-      <div className="mt-5 rounded-[8px] border border-indigo-200 bg-indigo-50/60 p-4">
-        <h2 id="demo-title" className="flex items-center gap-2 font-bold text-ink">
-          <Sparkles size={18} className="text-brand" aria-hidden="true" />
+      <div className="card mt-5 p-5">
+        <div className="k">{t("Demonstração", "Demo")}</div>
+        <h2 id="demo-title" className="mt-1.5 text-lg font-bold tracking-[-0.02em] text-ink">
           {t("Experimente a versão DEMO", "Try the DEMO")}
         </h2>
-        <p className="mt-1 text-sm text-slate-700">
+        <p className="mt-1 text-sm leading-relaxed text-muted">
           {t(
             "Ganhe uma turma de demonstração só sua: você é o coordenador, cria alunos e acompanha o painel — e pode trocar para a visão de aluno quando quiser.",
             "Get a demo class of your own: you're the coordinator, you can add students and follow the dashboard — and switch to the student view anytime."
@@ -186,12 +187,12 @@ export const DemoSignIn = ({ onLogged }: DemoSignInProps) => {
               type="button"
               onClick={enterDemo}
               disabled={busy}
-              className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-ink font-bold text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:bg-slate-400"
+              className="btn btn-acc mt-4 h-12 w-full"
             >
-              <PlayCircle size={20} aria-hidden="true" />
               {t("Entrar no Demo", "Enter the demo")}
+              <ArrowRight size={18} className="arw" aria-hidden="true" />
             </button>
-            <p className="mt-1.5 text-center text-xs text-muted">
+            <p className="mt-2 text-center text-xs text-muted">
               {t("Sem cadastro. Sua turma fica salva neste navegador.", "No sign-up. Your class is saved in this browser.")}
             </p>
           </>
@@ -206,7 +207,7 @@ export const DemoSignIn = ({ onLogged }: DemoSignInProps) => {
             )}
             <div ref={buttonRef} className="flex min-h-[44px] w-full justify-center" />
             {gisFailed && (
-              <p className="mt-2 text-sm text-rose-700">
+              <p className="mt-2 text-sm text-trail-text">
                 {t("Não foi possível carregar o botão do Google (bloqueador de conteúdo?).", "Couldn't load the Google button (content blocker?).")}
               </p>
             )}
@@ -214,12 +215,14 @@ export const DemoSignIn = ({ onLogged }: DemoSignInProps) => {
         )}
 
         {busy && (
-          <p role="status" className="mt-3 flex items-center gap-2 text-sm font-semibold text-brand">
-            <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />
-            {t("Preparando sua turma de demonstração...", "Setting up your demo class...")}
-          </p>
+          <RelevoLoader
+            className="mt-4"
+            size={36}
+            label={t("Preparando sua turma…", "Setting up your class…")}
+            hint={t("montando os dados de demonstração", "building the demo data")}
+          />
         )}
-        {error && <p role="alert" className="mt-3 rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
+        {error && <p role="alert" className="mt-3 border-l-2 border-trail py-1 pl-3 text-sm font-semibold text-trail-text">{error}</p>}
       </div>
     </section>
   );

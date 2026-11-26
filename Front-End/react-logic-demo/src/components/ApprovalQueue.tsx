@@ -4,12 +4,13 @@ alto (alertas de severidade alta, mensagens propostas ao aluno) que o agente NÃ
 executa sozinho. O tutor aprova (executa a ação — ex.: intervenção assinada "do
 seu tutor") ou rejeita. Nada chega ao aluno sem aprovação.
 */
-import { CheckCircle2, Inbox, LoaderCircle, XCircle } from "lucide-react";
+import { CheckCircle2, Inbox, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { QueueItem, approveQueueItem, getTutorQueue, rejectQueueItem } from "../services/api";
 import { useToast } from "./ui/Toast";
 import { useLanguage, useT } from "../i18n";
 import { noticeTypeLabel } from "../services/labels";
+import { RelevoLoader } from "./brand/RelevoLoader";
 
 export const ApprovalQueue = () => {
   const t = useT();
@@ -42,11 +43,11 @@ export const ApprovalQueue = () => {
   if (fila !== null && fila.length === 0) return null; // nada pendente: não ocupa espaço
 
   return (
-    <div className="rounded-[8px] border border-indigo-200 bg-indigo-50/50 p-6">
+    <div className="card-2/50 p-6">
       <div className="flex items-center gap-2">
-        <Inbox size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Aguardando sua aprovação", "Awaiting your approval")}</h2>
-        {fila && <span className="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{fila.length}</span>}
+        <Inbox size={20} className="text-ink" />
+        <h2 className="lab">{t("Aguardando sua aprovação", "Awaiting your approval")}</h2>
+        {fila && <span className="rounded-sm bg-ink px-2 py-0.5 text-xs font-bold text-on-ink">{fila.length}</span>}
       </div>
       <p className="mt-1 text-sm text-muted">
         {t("O agente propôs estas ações de maior impacto — nada é enviado ao aluno sem a sua aprovação.",
@@ -54,21 +55,21 @@ export const ApprovalQueue = () => {
       </p>
 
       {fila === null ? (
-        <div className="flex justify-center py-6"><LoaderCircle className="animate-spin text-brand" size={20} /></div>
+        <div className="flex justify-center py-6"><RelevoLoader size={32} /></div>
       ) : (
         <ul className="mt-4 space-y-3">
           {fila.map((item) => (
-            <li key={item.alert_id} className="rounded-[8px] border border-line bg-white p-4">
+            <li key={item.alert_id} className="card p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-ink">{item.aluno}</span>
-                <span className="rounded-[8px] bg-slate-100 px-2 py-0.5 text-xs font-semibold text-muted">{noticeTypeLabel(item.type, lang)}</span>
+                <span className="rounded bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted">{noticeTypeLabel(item.type, lang)}</span>
               </div>
               {item.proposed_action?.mensagem_aluno ? (
-                <p className="mt-2 rounded-[8px] bg-slate-50 p-3 text-sm text-slate-700">
+                <p className="mt-2 rounded bg-bg p-3 text-sm text-ink">
                   “{item.proposed_action.mensagem_aluno}”
                 </p>
               ) : (
-                <p className="mt-2 text-sm text-slate-700">{item.message}</p>
+                <p className="mt-2 text-sm text-ink">{item.message}</p>
               )}
               {item.proposed_action?.justificativa && (
                 <p className="mt-2 text-xs text-muted">
@@ -79,14 +80,14 @@ export const ApprovalQueue = () => {
                 <button
                   onClick={() => act(item, true)}
                   disabled={busy === item.alert_id}
-                  className="flex h-10 items-center gap-2 rounded-[8px] bg-emerald-600 px-4 text-sm font-bold text-white disabled:bg-slate-300"
+                  className="flex h-10 items-center gap-2 rounded bg-mata px-4 text-sm font-bold text-on-ink disabled:bg-line"
                 >
                   <CheckCircle2 size={16} /> {t("Aprovar", "Approve")}
                 </button>
                 <button
                   onClick={() => act(item, false)}
                   disabled={busy === item.alert_id}
-                  className="flex h-10 items-center gap-2 rounded-[8px] border border-rose-200 px-4 text-sm font-bold text-rose-700 disabled:opacity-60"
+                  className="flex h-10 items-center gap-2 rounded border border-trail/40 px-4 text-sm font-bold text-trail-text disabled:opacity-60"
                 >
                   <XCircle size={16} /> {t("Rejeitar", "Reject")}
                 </button>

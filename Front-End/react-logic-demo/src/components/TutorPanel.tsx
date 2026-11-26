@@ -5,7 +5,7 @@ Visão de turma + Central de Alertas preventivos. O botão "Analisar turma" roda
 as regras do EduBot no servidor (POST /tutor/evaluate) e gera os alertas dos
 alunos em risco — o beat "o Engage-Agent envia o plano de retomada e alerta o tutor".
 */
-import { AlertTriangle, Bell, Check, Copy, GraduationCap, KeyRound, LoaderCircle, RefreshCw, UserPlus, Users } from "lucide-react";
+import { AlertTriangle, Bell, Check, Copy, KeyRound, LoaderCircle, RefreshCw, UserPlus, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StudentRisk, TurmaStudent, TutorAlert, ackTutorAlert, evaluateTurma, getTurma, getTutorAlerts, tutorResetPassword } from "../services/api";
 import { useToast } from "./ui/Toast";
@@ -15,12 +15,15 @@ import { AgentKpi } from "./AgentKpi";
 import { EngagementPanel } from "./EngagementPanel";
 import { AddStudentForm } from "./demoMode/AddStudentForm";
 import { useLanguage, useT } from "../i18n";
+import { RelevoLoader } from "./brand/RelevoLoader";
+import { StatusIcon } from "./ui/Relevo";
 import { levelLabel, noticeTypeLabel } from "../services/labels";
 
 const severityStyle: Record<string, string> = {
-  alta: "border-rose-200 bg-rose-50 text-rose-800",
-  media: "border-amber-200 bg-amber-50 text-amber-800",
-  baixa: "border-line bg-slate-50 text-slate-700"
+  // Relevo: severidade pelo filete à esquerda (Trilha = alta); o texto fica legível.
+  alta: "border-line border-l-2 border-l-trail bg-surface text-ink",
+  media: "border-line border-l-2 border-l-ink bg-surface text-ink",
+  baixa: "border-line bg-bg text-ink"
 };
 
 type Translate = (pt: string, en: string) => string;
@@ -77,7 +80,7 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
       const { alertas_criados } = await evaluateTurma();
       toast.success(
         alertas_criados > 0
-          ? t(`${alertas_criados} ${alertas_criados === 1 ? "novo alerta gerado" : "novos alertas gerados"} pelo Engage-Agent.`, `${alertas_criados} new ${alertas_criados === 1 ? "alert" : "alerts"} from Engage-Agent.`)
+          ? t(`${alertas_criados} ${alertas_criados === 1 ? "novo alerta gerado" : "novos alertas gerados"} pela Learnia.`, `${alertas_criados} new ${alertas_criados === 1 ? "alert" : "alerts"} from Learnia.`)
           : t("Análise concluída — nenhum aluno novo em zona de risco.", "Analysis complete — no new at-risk students.")
       );
       await load();
@@ -114,7 +117,7 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <LoaderCircle className="animate-spin text-brand" size={32} />
+        <RelevoLoader size={44} />
       </div>
     );
   }
@@ -125,27 +128,26 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
     <section className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-ink">
-            <GraduationCap className="text-brand" /> {t("Minha turma", "My class")}
-          </h1>
-          <p className="mt-2 text-muted">{t("Acompanhe a turma e os alertas preventivos do Engage-Agent.", "Monitor your class and early alerts from Engage-Agent.")}</p>
+          <p className="k k-muted">{t("Painel do professor", "Teacher dashboard")}</p>
+          <h1 className="h-display mt-2 text-ink">{t("Minha turma", "My class")}</h1>
+          <p className="mt-2 text-muted">{t("Acompanhe a turma e os alertas preventivos da Learnia.", "Monitor your class and early alerts from Learnia.")}</p>
         </div>
         <div className="flex flex-wrap gap-3">
           {demo && (
             <button
               onClick={() => setAdding(true)}
               aria-expanded={adding}
-              className="flex h-12 items-center gap-2 rounded-[8px] border border-brand bg-white px-5 font-bold text-brand transition hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="btn btn-gh"
             >
-              <UserPlus size={20} aria-hidden="true" /> {t("Adicionar aluno", "Add student")}
+              <UserPlus size={18} aria-hidden="true" /> {t("Adicionar aluno", "Add student")}
             </button>
           )}
           <button
             onClick={analisar}
             disabled={evaluating}
-            className="flex h-12 items-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600 disabled:bg-slate-300"
+            className="btn btn-pri"
           >
-            {evaluating ? <LoaderCircle className="animate-spin" size={20} /> : <RefreshCw size={20} />}
+            {evaluating ? <LoaderCircle className="animate-spin" size={18} /> : <RefreshCw size={18} />}
             {t("Analisar turma", "Analyze class")}
           </button>
         </div>
@@ -155,17 +157,17 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
 
       {/* KPIs rápidos */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-          <div className="flex items-center gap-2 text-muted"><Users size={18} /> {t("Alunos ativos", "Active students")}</div>
-          <div className="mt-2 text-3xl font-bold text-ink">{alunos.length}</div>
+        <div className="card p-5">
+          <div className="k k-muted flex items-center justify-between">{t("Alunos ativos", "Active students")} <Users size={16} strokeWidth={1.8} /></div>
+          <div className="mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] text-ink [font-variant-numeric:tabular-nums]">{alunos.length}</div>
         </div>
-        <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-          <div className="flex items-center gap-2 text-muted"><Bell size={18} /> {t("Alertas abertos", "Open alerts")}</div>
-          <div className="mt-2 text-3xl font-bold text-rose-600">{alertasAbertos}</div>
+        <div className="card p-5">
+          <div className="k k-muted flex items-center justify-between">{t("Alertas abertos", "Open alerts")} <Bell size={16} strokeWidth={1.8} /></div>
+          <div className="mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] text-trail-text [font-variant-numeric:tabular-nums]">{alertasAbertos}</div>
         </div>
-        <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-          <div className="flex items-center gap-2 text-muted"><AlertTriangle size={18} /> {t("Em risco", "At risk")}</div>
-          <div className="mt-2 text-3xl font-bold text-amber-600">
+        <div className="card p-5">
+          <div className="k k-muted flex items-center justify-between">{t("Em risco", "At risk")} <AlertTriangle size={16} strokeWidth={1.8} /></div>
+          <div className="mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] text-ink [font-variant-numeric:tabular-nums]">
             {/* Fase 3: risco COMPOSTO, calculado no backend (erro + ausência +
                 esquecimento + revisões + consumo). A regra antiga (taxa_erro >
                 50%) não via o aluno que sumiu — quem não tenta, não erra.
@@ -189,17 +191,15 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         {/* Tabela da turma */}
-        <div className="overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-          <div className="border-b border-line px-5 py-3">
-            <span className="font-bold text-ink">{t("Alunos", "Students")}</span>
+        <div className="overflow-hidden card">
+          <div className="lab mb-0 border-b border-line px-5 py-3.5">
+            <span>{t("Alunos", "Students")}</span>
             {/* Plano 5 (19.4): a linha abre o detalhe do aluno. */}
-            <span className="ml-2 text-xs font-normal text-muted">
-              {t("· clique num aluno para ver o desempenho detalhado", "· click a student to see detailed performance")}
-            </span>
+            <span>{t("clique para ver o detalhe", "click for details")}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-muted">
+              <thead className="k k-muted bg-bg text-[10.5px]">
                 <tr>
                   <th className="px-5 py-3 font-semibold">{t("Aluno", "Student")}</th>
                   <th className="px-3 py-3 font-semibold">{t("Consumo", "Progress")}</th>
@@ -218,50 +218,45 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
                   <tr
                     key={a.student_id}
                     onClick={abrir}
-                    className="cursor-pointer border-t border-line transition hover:bg-slate-50"
+                    className="cursor-pointer border-t border-line transition hover:bg-surface-2"
                   >
                     <td className="px-5 py-3 font-semibold text-ink">
                       {/* Botão = alvo focável por teclado (Enter/Espaço). O onClick
                           da linha é só conveniência do mouse (mesmo destino). */}
                       <button
                         onClick={(e) => { e.stopPropagation(); abrir(); }}
-                        className="rounded text-left font-semibold text-brand underline-offset-2 hover:underline focus-visible:underline"
+                        className="rounded text-left font-semibold text-ink underline-offset-2 hover:underline focus-visible:underline"
                         aria-label={t(`Ver desempenho de ${a.nome}`, `View ${a.nome}'s performance`)}
                       >
                         {a.nome}
                       </button>{" "}
                       <span className="font-normal text-muted">· {t("RA", "ID")} {a.ra}</span>
                     </td>
-                    <td className="px-3 py-3">{a.consumo_percentual}%</td>
+                    <td className="num px-3 py-3">{a.consumo_percentual}%</td>
                     <td className="px-3 py-3">
                       {a.taxa_erro != null ? (
-                        <span className={(a.taxa_erro > 0.5 ? "text-rose-600" : "text-slate-700") + " font-semibold"}>
+                        <span className={(a.taxa_erro > 0.5 ? "text-trail-text" : "text-ink") + " num font-semibold"}>
                           {Math.round(a.taxa_erro * 100)}%
                         </span>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-3 py-3">{a.dias_sem_acesso != null ? `${a.dias_sem_acesso}d` : "—"}</td>
+                    <td className="num px-3 py-3">{a.dias_sem_acesso != null ? `${a.dias_sem_acesso}d` : "—"}</td>
                     <td className="px-3 py-3">
                       {a.risco ? (
                         <span
                           className={
-                            "rounded-full px-2.5 py-1 text-xs font-bold " +
-                            (a.risco.em_risco
-                              ? "bg-rose-100 text-rose-700"
-                              : a.risco.score > 0
-                                ? "bg-amber-100 text-amber-800"
-                                : "bg-emerald-100 text-emerald-700")
+                            "tag " +
+                            (a.risco.em_risco ? "tag-low" : a.risco.score > 0 ? "tag-mid" : "tag-ok")
                           }
                           // O motivo principal é o que diz ao professor COMO
                           // agir: sumiu, está esquecendo ou está errando.
                           title={riscoDetalhe(a.risco, t)}
                         >
+                          <StatusIcon kind={a.risco.em_risco ? "low" : a.risco.score > 0 ? "mid" : "ok"} />
                           {a.risco.score}
-                          {a.risco.principal && (
-                            <span className="ml-1 font-semibold">· {motivoLabel(a.risco.principal, t)}</span>
-                          )}
+                          {a.risco.principal && <span>· {motivoLabel(a.risco.principal, t)}</span>}
                         </span>
                       ) : (
                         <span className="text-muted">—</span>
@@ -269,7 +264,7 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
                     </td>
                     <td className="px-3 py-3">
                       {a.alertas_abertos > 0 ? (
-                        <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700">
+                        <span className="tag tag-low">
                           {a.alertas_abertos}
                         </span>
                       ) : (
@@ -292,34 +287,35 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
         </div>
 
         {/* Central de alertas */}
-        <aside className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
-            <Bell size={18} className="text-brand" /> {t("Central de alertas", "Alert center")}
+        <aside className="card p-5">
+          <h2 className="lab">
+            <span>{t("Central de alertas", "Alert center")}</span>
+            <span>{alertasAbertos} {t("abertos", "open")}</span>
           </h2>
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3">
             {alertas.length === 0 && (
               <p className="text-sm text-muted">
-                {t("Sem alertas. Clique em", "No alerts. Click")} <strong>"{t("Analisar turma", "Analyze class")}"</strong> {t("para o Engage-Agent avaliar os alunos.", "for Engage-Agent to evaluate the students.")}
+                {t("Sem alertas. Clique em", "No alerts. Click")} <strong>"{t("Analisar turma", "Analyze class")}"</strong> {t("para a Learnia avaliar os alunos.", "for Learnia to evaluate the students.")}
               </p>
             )}
             {alertas.map((al) => (
-              <div key={al.alert_id} className={`rounded-[8px] border p-3 ${al.read ? "border-line bg-slate-50 text-muted" : severityStyle[al.severity] ?? severityStyle.baixa}`}>
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide">
+              <div key={al.alert_id} className={`rounded border p-3 ${al.read ? "border-line bg-bg text-muted" : severityStyle[al.severity] ?? severityStyle.baixa}`}>
+                <div className="k flex items-center justify-between">
                   <span>{noticeTypeLabel(al.type, lang)}</span>
                   <span>{levelLabel(al.severity, lang)}</span>
                 </div>
                 <p className="mt-1 text-sm font-medium">{al.message}</p>
                 {tempPasswords[al.alert_id] && (
-                  <div role="status" className="mt-2 rounded-[6px] border border-emerald-300 bg-emerald-50 p-2.5 text-sm text-emerald-900">
+                  <div role="status" className="mt-2 rounded border border-mata/50 bg-mata/10 p-2.5 text-sm text-mata">
                     <div className="flex items-center justify-between gap-2">
                       <span>
                         {t("Senha temporária:", "Temporary password:")}{" "}
-                        <code className="rounded bg-white px-1.5 py-0.5 font-mono text-base font-bold tracking-wider">{tempPasswords[al.alert_id]}</code>
+                        <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-base font-bold tracking-wider">{tempPasswords[al.alert_id]}</code>
                       </span>
                       <button
                         onClick={() => navigator.clipboard?.writeText(tempPasswords[al.alert_id]).then(() => toast.success(t("Copiada.", "Copied.")))}
                         aria-label={t("Copiar senha temporária", "Copy temporary password")}
-                        className="rounded-[6px] p-1 transition hover:bg-white"
+                        className="rounded p-1 transition hover:bg-surface"
                       >
                         <Copy size={14} aria-hidden="true" />
                       </button>
@@ -334,7 +330,7 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
                     <button
                       onClick={() => resetPassword(al.alert_id)}
                       disabled={resetting === al.alert_id}
-                      className="flex items-center gap-1 rounded-[6px] border border-current px-2 py-1 text-xs font-semibold transition hover:bg-white/40 disabled:opacity-60"
+                      className="btn btn-gh btn-sm"
                     >
                       {resetting === al.alert_id
                         ? <LoaderCircle size={14} className="animate-spin" aria-hidden="true" />
@@ -342,13 +338,13 @@ export const TutorPanel = ({ demo = false }: { demo?: boolean }) => {
                       {t("Gerar senha temporária", "Create temporary password")}
                     </button>
                   ) : al.read ? (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                      <Check size={14} /> {t("Tratado", "Handled")}
+                    <span className="tag tag-ok">
+                      <StatusIcon kind="ok" /> {t("Tratado", "Handled")}
                     </span>
                   ) : (
                     <button
                       onClick={() => treat(al.alert_id)}
-                      className="flex items-center gap-1 rounded-[6px] border border-current px-2 py-1 text-xs font-semibold transition hover:bg-white/40"
+                      className="btn btn-gh btn-sm"
                     >
                       <Check size={14} /> {t("Marcar como tratado", "Mark as handled")}
                     </button>

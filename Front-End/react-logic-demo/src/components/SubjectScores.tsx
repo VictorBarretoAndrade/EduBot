@@ -20,7 +20,7 @@ barra é decorativa (`aria-hidden`); textos ≥ 12px.
 Degradação: se nenhuma competência trouxer `subject_nome` (backend antigo), o
 componente não renderiza (retorna null) — a tela segue idêntica ao que era.
 */
-import { CheckCircle2, Layers, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { CompetencyState } from "../services/api";
 import { useT } from "../i18n";
 
@@ -75,11 +75,10 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
   if (assuntos.length === 0) return null;
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-      <div className="flex items-center gap-2">
-        <Layers size={20} className="text-brand" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto", "Correct and incorrect answers by course")}</h2>
-      </div>
+    <div className="card p-6">
+      <h2 className="lab">
+        <span>{t("Acertos e erros por assunto", "Correct and incorrect answers by course")}</span>
+      </h2>
       <p className="mt-1 text-sm text-muted">
         {t(
           "Visão por disciplina — cada assunto reúne as suas competências.",
@@ -97,7 +96,7 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
             : null;
 
           return (
-            <li key={s.subject_id} className="rounded-[8px] border border-line p-4">
+            <li key={s.subject_id} className="rounded border border-line p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold text-ink">{s.nome}</span>
                 <span className="text-xs text-muted">
@@ -112,24 +111,24 @@ export const SubjectScores = ({ competencias, perspective = "self" }: SubjectSco
                 <>
                   <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
                     <span className="flex items-center gap-1.5 text-sm">
-                      <CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />
-                      <strong className="text-base text-emerald-700">{s.acertos}</strong>
+                      <CheckCircle2 size={16} className="text-mata" aria-hidden="true" />
+                      <strong className="text-base text-mata">{s.acertos}</strong>
                       <span className="text-muted">{s.acertos === 1 ? t("acerto", "correct") : t("acertos", "correct")}</span>
                     </span>
                     <span className="flex items-center gap-1.5 text-sm">
-                      <XCircle size={16} className="text-rose-600" aria-hidden="true" />
-                      <strong className="text-base text-rose-700">{s.erros}</strong>
+                      <XCircle size={16} className="text-trail-text" aria-hidden="true" />
+                      <strong className="text-base text-trail-text">{s.erros}</strong>
                       <span className="text-muted">{s.erros === 1 ? t("erro", "incorrect") : t("erros", "incorrect")}</span>
                     </span>
-                    <span className="text-sm font-semibold text-brand">
+                    <span className="text-sm font-semibold text-ink">
                       {perc}% {t("de aproveitamento", "accuracy")}
                     </span>
                   </div>
 
                   {/* Barra proporcional acertos x erros (decorativa: repete os números acima) */}
-                  <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-                    <div className="bg-emerald-500" style={{ width: `${(100 * s.acertos) / respostas}%` }} />
-                    <div className="bg-rose-500" style={{ width: `${(100 * s.erros) / respostas}%` }} />
+                  <div className="mt-2 flex h-2.5 overflow-hidden rounded-[1px] bg-surface-2" aria-hidden="true">
+                    <div className="bg-mata" style={{ width: `${(100 * s.acertos) / respostas}%` }} />
+                    <div className="bg-trail" style={{ width: `${(100 * s.erros) / respostas}%` }} />
                   </div>
                 </>
               )}

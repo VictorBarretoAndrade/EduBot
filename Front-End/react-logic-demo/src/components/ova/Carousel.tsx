@@ -37,7 +37,7 @@ export const Carousel = ({ items, onInteract }: CarouselProps) => {
 
   return (
     <div
-      className="rounded-[8px] border border-line bg-slate-50 p-5 outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="rounded border border-line bg-bg p-5 outline-none focus-visible:ring-2 focus-visible:ring-ink"
       role="group"
       aria-roledescription={t("carrossel", "carousel")}
       aria-label={t(`Item ${index + 1} de ${items.length}`, `Item ${index + 1} of ${items.length}`)}
@@ -49,12 +49,12 @@ export const Carousel = ({ items, onInteract }: CarouselProps) => {
           <img
             src={item.image}
             alt={item.title ?? ""}
-            className="mx-auto max-h-72 w-full rounded-[8px] object-cover"
+            className="mx-auto max-h-72 w-full rounded object-cover"
           />
         )}
         <div className={item.image ? "" : "md:col-span-2"}>
           {item.title && <h4 className="text-xl font-bold text-ink">{item.title}</h4>}
-          <p className="mt-2 leading-relaxed text-slate-700">{item.text}</p>
+          <p className="mt-2 leading-relaxed text-ink">{item.text}</p>
         </div>
       </div>
 
@@ -62,7 +62,7 @@ export const Carousel = ({ items, onInteract }: CarouselProps) => {
         <div className="mt-5 flex items-center justify-between">
           <button
             onClick={() => go(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-brand transition hover:bg-indigo-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink transition hover:bg-surface-2"
             aria-label={t("Anterior", "Previous")}
           >
             <ChevronLeft size={20} />
@@ -73,15 +73,15 @@ export const Carousel = ({ items, onInteract }: CarouselProps) => {
                 key={dot}
                 onClick={() => setIndex(dot)}
                 aria-label={t(`Ir para o item ${dot + 1}`, `Go to item ${dot + 1}`)}
-                className={`h-2.5 rounded-full transition-all ${
-                  dot === index ? "w-6 bg-brand" : "w-2.5 bg-slate-300 hover:bg-slate-400"
+                className={`h-2.5 rounded-[1px] transition-all ${
+                  dot === index ? "w-6 bg-ink" : "w-2.5 bg-line hover:bg-line-strong"
                 }`}
               />
             ))}
           </div>
           <button
             onClick={() => go(1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-brand transition hover:bg-indigo-50"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-ink transition hover:bg-surface-2"
             aria-label={t("Próximo", "Next")}
           >
             <ChevronRight size={20} />

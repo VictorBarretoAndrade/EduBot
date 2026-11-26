@@ -26,12 +26,12 @@ export const Accordion = ({ items, onInteract }: AccordionProps) => {
       {items.map((item, index) => {
         const isOpen = open === index;
         return (
-          <div key={index} className="overflow-hidden rounded-[8px] border border-line bg-white">
+          <div key={index} className="overflow-hidden card">
             <button
               onClick={() => toggle(index, item.title)}
               aria-expanded={isOpen}
               className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-semibold transition ${
-                isOpen ? "bg-indigo-50 text-indigo-800" : "text-ink hover:bg-slate-50"
+                isOpen ? "bg-surface-2 text-ink" : "text-ink hover:bg-surface-2"
               }`}
             >
               {item.title}
@@ -41,7 +41,7 @@ export const Accordion = ({ items, onInteract }: AccordionProps) => {
               />
             </button>
             {isOpen && (
-              <div className="border-t border-line px-5 py-4 leading-relaxed text-slate-700">
+              <div className="border-t border-line px-5 py-4 leading-relaxed text-ink">
                 {item.body}
               </div>
             )}

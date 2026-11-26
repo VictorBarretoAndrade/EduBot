@@ -64,16 +64,16 @@ export const AddStudentForm = ({ onClose, onCreated }: AddStudentFormProps) => {
     navigator.clipboard?.writeText(text).then(() => toast.success(t("Copiado.", "Copied.")));
 
   return (
-    <section aria-labelledby="add-student-title" className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
+    <section aria-labelledby="add-student-title" className="card p-5">
       <div className="flex items-start justify-between gap-3">
         <h2 id="add-student-title" className="flex items-center gap-2 text-lg font-bold text-ink">
-          <UserPlus size={18} className="text-brand" aria-hidden="true" /> {t("Adicionar aluno", "Add student")}
+          <UserPlus size={18} className="text-ink" aria-hidden="true" /> {t("Adicionar aluno", "Add student")}
         </h2>
         <button
           type="button"
           onClick={onClose}
           aria-label={t("Fechar", "Close")}
-          className="rounded-[6px] p-1.5 text-muted transition hover:bg-slate-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="rounded p-1.5 text-muted transition hover:bg-surface-2 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           <X size={18} aria-hidden="true" />
         </button>
@@ -88,7 +88,7 @@ export const AddStudentForm = ({ onClose, onCreated }: AddStudentFormProps) => {
             onChange={(event) => setNome(event.target.value)}
             maxLength={100}
             autoFocus
-            className="h-11 w-full rounded-[8px] border border-line px-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+            className="h-11 w-full rounded border border-line px-3 outline-none focus:border-ink focus:ring-2 focus:ring-trail/20"
           />
         </div>
         <div>
@@ -97,7 +97,7 @@ export const AddStudentForm = ({ onClose, onCreated }: AddStudentFormProps) => {
             id="new-student-profile"
             value={perfil}
             onChange={(event) => setPerfil(event.target.value as DemoProfile | "")}
-            className="h-11 w-full rounded-[8px] border border-line bg-white px-3 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+            className="h-11 w-full card px-3 outline-none focus:border-ink focus:ring-2 focus:ring-trail/20"
           >
             {profiles.map((p) => (
               <option key={p.value} value={p.value}>{p.label}</option>
@@ -107,17 +107,17 @@ export const AddStudentForm = ({ onClose, onCreated }: AddStudentFormProps) => {
         <button
           type="submit"
           disabled={busy || !nome.trim()}
-          className="flex h-11 items-center justify-center gap-2 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+          className="flex h-11 items-center justify-center gap-2 rounded bg-ink px-5 font-bold text-on-ink transition hover:bg-ink/85 disabled:cursor-not-allowed disabled:bg-line"
         >
           {busy ? <LoaderCircle size={18} className="animate-spin" aria-hidden="true" /> : <UserPlus size={18} aria-hidden="true" />}
           {t("Criar", "Create")}
         </button>
       </form>
 
-      {error && <p role="alert" className="mt-3 rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
+      {error && <p role="alert" className="mt-3 rounded bg-trail/10 p-3 text-sm font-semibold text-trail-text">{error}</p>}
 
       {created && (
-        <div role="status" className="mt-4 rounded-[8px] border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+        <div role="status" className="mt-4 rounded border border-mata/50 bg-mata/10 p-3 text-sm text-mata">
           <p className="font-semibold">{t(`${created.nome} entrou na turma.`, `${created.nome} joined the class.`)}</p>
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
             {[
@@ -126,12 +126,12 @@ export const AddStudentForm = ({ onClose, onCreated }: AddStudentFormProps) => {
             ].map((item) => (
               <span key={item.label} className="flex items-center gap-1.5">
                 {item.label}:{" "}
-                <code className="rounded bg-white px-1.5 py-0.5 font-mono text-base font-bold tracking-wider">{item.value}</code>
+                <code className="rounded bg-surface px-1.5 py-0.5 font-mono text-base font-bold tracking-wider">{item.value}</code>
                 <button
                   type="button"
                   onClick={() => copy(item.value)}
                   aria-label={t(`Copiar ${item.label}`, `Copy ${item.label}`)}
-                  className="rounded-[6px] p-1 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  className="rounded p-1 transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-mata"
                 >
                   <Copy size={14} aria-hidden="true" />
                 </button>

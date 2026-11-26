@@ -11,7 +11,7 @@ export const PrivacyPage = ({ profile }: { profile: StudentProfile }) => {
   const t = useT();
   return (
     <section className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-3xl font-bold text-ink">{t("Privacidade e dados", "Privacy & data")}</h1>
+      <h1 className="h-display text-ink">{t("Privacidade e dados", "Privacy & data")}</h1>
       <p className="text-muted">
         {t("Escolha como seus dados de estudo são usados. Você pode mudar isso quando quiser.",
            "Choose how your study data is used. You can change this at any time.")}

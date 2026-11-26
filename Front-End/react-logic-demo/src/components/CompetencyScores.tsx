@@ -19,14 +19,14 @@ A11y (padrão do Plano 4): nada depende só de cor — cada número vem com íco
 e a palavra "acertos"/"erros"; a barra é decorativa (`aria-hidden`) porque repete
 números que já estão em texto; textos ≥ 12px.
 */
-import { CheckCircle2, Layers, Target, XCircle } from "lucide-react";
+import { CheckCircle2, Layers, XCircle } from "lucide-react";
 import { CompetencyState } from "../services/api";
 import { useT } from "../i18n";
 
 const STATUS_STYLE: Record<string, string> = {
-  desenvolvida: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "em desenvolvimento": "border-amber-200 bg-amber-50 text-amber-700",
-  "não iniciada": "border-line bg-slate-100 text-slate-500"
+  desenvolvida: "border-mata/40 bg-mata/10 text-mata",
+  "em desenvolvimento": "border-line-strong bg-surface-2 text-ink",
+  "não iniciada": "border-line bg-surface-2 text-muted"
 };
 
 const statusLabel = (status: string, t: (pt: string, en: string) => string) => {
@@ -66,11 +66,10 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
   }
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-      <div className="flex items-center gap-2">
-        <Target size={20} className="text-brand" aria-hidden="true" />
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por competência", "Correct and incorrect answers by learning outcome")}</h2>
-      </div>
+    <div className="card p-6">
+      <h2 className="lab">
+        <span>{t("Acertos e erros por competência", "Correct and incorrect answers by learning outcome")}</span>
+      </h2>
       <p className="mt-1 text-sm text-muted">
         {other
           ? t(
@@ -84,23 +83,23 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
       </p>
 
       {/* Resumo geral — o número cru, bem grande */}
-      <div className="mt-5 flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-slate-50 p-4">
+      <div className="mt-5 flex flex-wrap items-center gap-3 rounded border border-line bg-bg p-4">
         <div className="flex items-center gap-2">
-          <CheckCircle2 size={22} className="text-emerald-600" aria-hidden="true" />
-          <span className="text-2xl font-bold text-emerald-700">{totalAcertos}</span>
+          <CheckCircle2 size={22} className="text-mata" aria-hidden="true" />
+          <span className="text-2xl font-bold text-mata">{totalAcertos}</span>
           <span className="text-sm text-muted">{t("acertos", "correct")}</span>
         </div>
-        <span className="text-slate-300" aria-hidden="true">|</span>
+        <span className="text-muted" aria-hidden="true">|</span>
         <div className="flex items-center gap-2">
-          <XCircle size={22} className="text-rose-600" aria-hidden="true" />
-          <span className="text-2xl font-bold text-rose-700">{totalErros}</span>
+          <XCircle size={22} className="text-trail-text" aria-hidden="true" />
+          <span className="text-2xl font-bold text-trail-text">{totalErros}</span>
           <span className="text-sm text-muted">{t("erros", "incorrect")}</span>
         </div>
         {aproveitamento !== null && (
           <>
-            <span className="text-slate-300" aria-hidden="true">|</span>
+            <span className="text-muted" aria-hidden="true">|</span>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-brand">{aproveitamento}%</span>
+              <span className="text-2xl font-bold text-ink">{aproveitamento}%</span>
               <span className="text-sm text-muted">{t("de aproveitamento", "accuracy")}</span>
             </div>
           </>
@@ -108,7 +107,7 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
       </div>
 
       {competencias.length === 0 ? (
-        <p className="mt-4 rounded-[8px] bg-slate-50 p-4 text-sm text-muted">
+        <p className="mt-4 rounded bg-bg p-4 text-sm text-muted">
           {t("Nenhuma competência cadastrada para o seu curso.", "No learning outcomes available for your program.")}
         </p>
       ) : (
@@ -118,7 +117,7 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
               {/* Cabeçalho do assunto — a "área Cálculo" que agrupa as competências */}
               {g.nome && (
                 <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-line pb-2">
-                  <Layers size={16} className="text-brand" aria-hidden="true" />
+                  <Layers size={16} className="text-ink" aria-hidden="true" />
                   <h3 className="text-base font-bold text-ink">{g.nome}</h3>
                   <span className="text-xs text-muted">
                     {g.itens.length}{" "}
@@ -135,11 +134,11 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                   const semTentativas = respostas === 0;
 
                   return (
-              <li key={c.competency_id} className="rounded-[8px] border border-line p-4">
+              <li key={c.competency_id} className="rounded border border-line p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-semibold text-ink">{c.nome}</span>
                   <span
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                    className={`rounded-sm border px-2.5 py-0.5 text-xs font-semibold ${
                       STATUS_STYLE[c.status] ?? STATUS_STYLE["não iniciada"]
                     }`}
                   >
@@ -158,24 +157,24 @@ export const CompetencyScores = ({ competencias, perspective = "self" }: Compete
                     {/* Números crus — o que o aluno quer ver de imediato */}
                     <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
                       <span className="flex items-center gap-1.5 text-sm">
-                        <CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />
-                        <strong className="text-base text-emerald-700">{acertos}</strong>
+                        <CheckCircle2 size={16} className="text-mata" aria-hidden="true" />
+                        <strong className="text-base text-mata">{acertos}</strong>
                         <span className="text-muted">{acertos === 1 ? t("acerto", "correct") : t("acertos", "correct")}</span>
                       </span>
                       <span className="flex items-center gap-1.5 text-sm">
-                        <XCircle size={16} className="text-rose-600" aria-hidden="true" />
-                        <strong className="text-base text-rose-700">{erros}</strong>
+                        <XCircle size={16} className="text-trail-text" aria-hidden="true" />
+                        <strong className="text-base text-trail-text">{erros}</strong>
                         <span className="text-muted">{erros === 1 ? t("erro", "incorrect") : t("erros", "incorrect")}</span>
                       </span>
-                      <span className="text-sm font-semibold text-brand">
+                      <span className="text-sm font-semibold text-ink">
                         {perc}% {t("de aproveitamento", "accuracy")}
                       </span>
                     </div>
 
                     {/* Barra proporcional acertos x erros (decorativa: repete os números acima) */}
-                    <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
-                      <div className="bg-emerald-500" style={{ width: `${(100 * acertos) / respostas}%` }} />
-                      <div className="bg-rose-500" style={{ width: `${(100 * erros) / respostas}%` }} />
+                    <div className="mt-2 flex h-2.5 overflow-hidden rounded-[1px] bg-surface-2" aria-hidden="true">
+                      <div className="bg-mata" style={{ width: `${(100 * acertos) / respostas}%` }} />
+                      <div className="bg-trail" style={{ width: `${(100 * erros) / respostas}%` }} />
                     </div>
                   </>
                 )}

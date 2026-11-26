@@ -1,4 +1,4 @@
-import { BarChart3, Bell, BookOpen, ChevronDown, Grid2X2, Languages, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Stars, TrendingUp, Users, X } from "lucide-react";
+import { BarChart3, Bell, BookOpen, ChevronDown, Grid2X2, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, Stars, Users, X } from "lucide-react";
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { StudentProfile } from "../services/api";
@@ -7,7 +7,9 @@ import { noticeTypeLabel } from "../services/labels";
 import { stripCompetencyMarker } from "../services/reinforcementTarget";
 import { useInterventions } from "../hooks/useInterventions";
 import { useFocusTrap } from "../hooks/useFocusTrap";
-import { EduBotLogo } from "./brand/EduBotLogo";
+import { LearniaLogo } from "./brand/LearniaLogo";
+import { ExploradorAvatar } from "./brand/Explorador";
+import { LangSwitch, ThemeToggle } from "./ui/ShellControls";
 
 interface NavItem {
   id: string;
@@ -48,16 +50,9 @@ export const STAFF_VIEWS = ["tutor", "gestor", "materias", "privacidade"];
 const itemsFor = (role: string): NavItem[] =>
   role === "tutor" || role === "admin" ? [tutorItem, gestorItem, staffCoursesItem] : navItems;
 
-// Plano 6 (A12): marca única do produto.
-export const Wordmark = ({ small = false }: { small?: boolean }) => {
-  const t = useT();
-  return (
-    <div>
-      <div className={`${small ? "text-xl" : "text-2xl"} font-bold leading-none text-ink`}>Engage-Agent</div>
-      <div className={`mt-1 ${small ? "text-xs" : "text-sm"} tracking-[0.18em] text-muted`}>{t("APRENDIZAGEM · IA", "LEARNING · AI")}</div>
-    </div>
-  );
-};
+// Plano 6 (A12): marca única do produto — identidade "Relevo": logo Learnia
+// (anéis de nível + trilha até a cota), o mesmo da home.
+export const Wordmark = ({ small = false }: { small?: boolean }) => <LearniaLogo height={small ? 24 : 28} />;
 
 // NA.1 (Plano 4): lista de navegação compartilhada entre a sidebar (desktop) e o
 // drawer (mobile) — uma única fonte dos itens e do estilo. `aria-current="page"`
@@ -82,11 +77,15 @@ const NavList = ({
             key={item.id}
             onClick={() => onNavigate(item.id)}
             aria-current={active ? "page" : undefined}
-            className={`flex h-14 w-full items-center gap-4 rounded-[8px] px-5 text-left text-lg transition ${
-              active ? "bg-indigo-50 text-indigo-800 shadow-soft" : "text-muted hover:bg-slate-50"
+            className={`relative flex h-11 w-full items-center gap-3 rounded px-4 text-left text-[15px] transition-colors duration-rapido ${
+              active
+                ? "bg-surface font-semibold text-ink ring-1 ring-inset ring-line"
+                : "text-muted hover:bg-surface-2 hover:text-ink"
             }`}
           >
-            <Icon size={22} aria-hidden="true" />
+            {/* Aba ativa: marca em Trilha à esquerda ("você está aqui"). */}
+            {active && <span className="absolute inset-y-2 left-0 w-[2px] bg-trail" aria-hidden="true" />}
+            <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
             {t(item.pt, item.en)}
           </button>
         );
@@ -99,25 +98,25 @@ export const Sidebar = ({ activeView, onChangeView, studentName, role, onLogout 
   const t = useT();
   const items = itemsFor(role);
   return (
-    <aside className="hidden min-h-screen w-[340px] shrink-0 border-r border-line bg-white/70 lg:block">
-      <div className="flex h-20 items-center gap-3 border-b border-line px-5">
-        <EduBotLogo size={46} />
+    <aside className="sticky top-0 hidden h-screen w-[264px] shrink-0 flex-col border-r border-line bg-surface/50 lg:flex">
+      <div className="flex h-16 items-center border-b border-line px-5">
         <Wordmark />
       </div>
 
-      <nav aria-label={t("Navegação principal", "Main navigation")} className="space-y-2 px-3 py-8">
+      <nav aria-label={t("Navegação principal", "Main navigation")} className="flex-1 space-y-1 px-3 py-6">
+        <div className="k k-muted mb-3 px-4">{t("Navegação", "Navigation")}</div>
         <NavList items={items} activeView={activeView} onNavigate={onChangeView} />
       </nav>
 
       {/* INTEGRAÇÃO (4.2): aluno logado real + logout */}
-      <div className="mx-3 mt-auto border-t border-line px-2 py-6">
-        <div className="px-3 text-sm text-muted">{t("Conectado como", "Signed in as")}</div>
-        <div className="px-3 font-bold text-ink">{studentName}</div>
+      <div className="mx-3 border-t border-line px-1 py-5">
+        <div className="k k-muted px-3">{t("Conectado como", "Signed in as")}</div>
+        <div className="mt-1 px-3 font-semibold text-ink">{studentName}</div>
         <button
           onClick={onLogout}
-          className="mt-3 flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-left text-muted transition hover:bg-rose-50 hover:text-rose-700"
+          className="mt-3 flex h-10 w-full items-center gap-3 rounded px-3 text-left text-[15px] text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
         >
-          <LogOut size={20} aria-hidden="true" />
+          <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
           {t("Sair", "Sign out")}
         </button>
       </div>
@@ -148,9 +147,9 @@ export const MobileNav = ({ activeView, onChangeView, studentName, role, onLogou
         aria-label={t("Abrir menu", "Open menu")}
         aria-expanded={open}
         aria-controls="mobile-nav"
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[8px] border border-line bg-white text-ink transition hover:bg-slate-50 lg:hidden"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-line-strong text-ink transition-colors duration-rapido hover:bg-surface-2 lg:hidden"
       >
-        <Menu size={22} aria-hidden="true" />
+        <Menu size={20} aria-hidden="true" />
       </button>
 
       {/* Portal para o body: o header tem `backdrop-blur` (backdrop-filter), que
@@ -160,7 +159,7 @@ export const MobileNav = ({ activeView, onChangeView, studentName, role, onLogou
         <div className="fixed inset-0 z-50 lg:hidden">
           <style>{`
             @keyframes ebDrawerIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-            .eb-drawer-in { animation: ebDrawerIn .2s ease-out; }
+            .eb-drawer-in { animation: ebDrawerIn var(--dur-medio) var(--ease-subida); }
             @media (prefers-reduced-motion: reduce) { .eb-drawer-in { animation: none !important; } }
           `}</style>
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} aria-hidden="true" />
@@ -170,34 +169,31 @@ export const MobileNav = ({ activeView, onChangeView, studentName, role, onLogou
             role="dialog"
             aria-modal="true"
             aria-label={t("Menu", "Menu")}
-            className="eb-drawer-in absolute inset-y-0 left-0 flex w-[300px] max-w-[85vw] flex-col border-r border-line bg-white shadow-soft"
+            className="eb-drawer-in absolute inset-y-0 left-0 flex w-[300px] max-w-[85vw] flex-col border-r border-line bg-surface shadow-soft"
           >
-            <div className="flex h-20 items-center justify-between gap-3 border-b border-line px-5">
-              <div className="flex items-center gap-3">
-                <EduBotLogo size={40} />
-                <Wordmark small />
-              </div>
+            <div className="flex h-16 items-center justify-between gap-3 border-b border-line px-5">
+              <Wordmark small />
               <button
                 onClick={() => setOpen(false)}
                 aria-label={t("Fechar menu", "Close menu")}
-                className="flex h-10 w-10 items-center justify-center rounded-[8px] text-muted transition hover:bg-slate-50"
+                className="flex h-9 w-9 items-center justify-center rounded text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
               >
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
 
-            <nav aria-label={t("Navegação principal", "Main navigation")} className="flex-1 space-y-2 overflow-y-auto px-3 py-6">
+            <nav aria-label={t("Navegação principal", "Main navigation")} className="flex-1 space-y-1 overflow-y-auto px-3 py-6">
               <NavList items={items} activeView={activeView} onNavigate={navigate} />
             </nav>
 
             <div className="border-t border-line px-5 py-5">
-              <div className="text-sm text-muted">{t("Conectado como", "Signed in as")}</div>
-              <div className="font-bold text-ink">{studentName}</div>
+              <div className="k k-muted">{t("Conectado como", "Signed in as")}</div>
+              <div className="mt-1 font-semibold text-ink">{studentName}</div>
               <button
                 onClick={onLogout}
-                className="mt-3 flex h-11 w-full items-center gap-3 rounded-[8px] px-3 text-left text-muted transition hover:bg-rose-50 hover:text-rose-700"
+                className="mt-3 flex h-10 w-full items-center gap-3 rounded px-3 text-left text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
               >
-                <LogOut size={20} aria-hidden="true" />
+                <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
                 {t("Sair", "Sign out")}
               </button>
             </div>
@@ -234,7 +230,7 @@ interface TopbarProps {
 // sino operável por teclado (Esc fecha e devolve o foco; contagem no rótulo).
 export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentName, role, onLogout }: TopbarProps) => {
   const t = useT();
-  const { lang, toggle } = useLanguage();
+  const { lang } = useLanguage();
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(-1);
   const [showNotif, setShowNotif] = useState(false);
@@ -319,7 +315,7 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-line bg-slate-50/90 px-5 backdrop-blur">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-line bg-bg/85 px-5 backdrop-blur-md lg:px-8">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {/* NA.1: hambúrguer + drawer (só aparece em telas < lg). */}
         <MobileNav
@@ -330,9 +326,9 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
           onLogout={onLogout}
         />
 
-        <div ref={searchRef} className="relative w-full max-w-[620px]">
-          <div className="flex h-14 items-center gap-4 rounded-[8px] border border-line bg-slate-100 px-5 text-muted focus-within:border-brand">
-            <Search size={24} aria-hidden="true" />
+        <div ref={searchRef} className="relative w-full max-w-[520px]">
+          <div className="flex h-10 items-center gap-3 card px-3.5 text-muted transition-colors duration-rapido focus-within:border-ink">
+            <Search size={17} strokeWidth={1.8} aria-hidden="true" />
             <input
               role="combobox"
               aria-expanded={Boolean(q)}
@@ -344,7 +340,7 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onSearchKeyDown}
               placeholder={t("Buscar matérias, módulos...", "Search courses, modules...")}
-              className="w-full bg-transparent text-lg text-ink outline-none placeholder:text-muted"
+              className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-muted"
             />
           </div>
           {/* Contagem anunciada por leitor de tela (NA.2). */}
@@ -356,10 +352,10 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
               id="search-results"
               role="listbox"
               aria-label={t("Resultados da busca", "Search results")}
-              className="absolute left-0 right-0 top-16 z-30 overflow-hidden rounded-[8px] border border-line bg-white shadow-soft"
+              className="absolute left-0 right-0 top-12 z-30 overflow-hidden card shadow-soft"
             >
               {results.length === 0 ? (
-                <div className="px-5 py-4 text-muted">{t("Nada encontrado para", "No results for")} “{query}”.</div>
+                <div className="px-4 py-4 text-muted">{t("Nada encontrado para", "No results for")} “{query}”.</div>
               ) : (
                 results.map((result, index) => (
                   <button
@@ -370,12 +366,12 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
                     tabIndex={-1}
                     onClick={() => pick(result.hash)}
                     onMouseEnter={() => setActiveIdx(index)}
-                    className={`flex w-full flex-col items-start gap-0.5 border-b border-line px-5 py-3 text-left transition last:border-0 ${
-                      index === activeIdx ? "bg-slate-50" : "hover:bg-slate-50"
+                    className={`flex w-full flex-col items-start gap-0.5 border-b border-line px-4 py-3 text-left transition-colors duration-rapido last:border-0 ${
+                      index === activeIdx ? "bg-surface-2" : "hover:bg-surface-2"
                     }`}
                   >
                     <span className="font-semibold text-ink">{result.label}</span>
-                    <span className="text-xs text-muted">{result.sub}</span>
+                    <span className="k k-muted text-[10.5px]">{result.sub}</span>
                   </button>
                 ))
               )}
@@ -384,27 +380,24 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
         </div>
       </div>
 
-      <div className="ml-4 flex items-center gap-4">
-        {/* Alternador de idioma PT/EN */}
-        <button
-          onClick={toggle}
-          className="flex h-10 items-center gap-2 rounded-[8px] border border-line bg-white px-3 font-bold text-ink transition hover:bg-slate-50"
-          aria-label={t("Trocar idioma", "Switch language")}
-          title={t("Trocar idioma", "Switch language")}
-        >
-          <Languages size={18} className="text-brand" aria-hidden="true" />
-          {lang === "pt" ? "PT" : "EN"}
-        </button>
-
+      <div className="ml-4 flex items-center gap-2.5">
         {/* INTEGRAÇÃO: o chip fake de "streak" virou o consumo real de recursos.
             NA.1: oculto em telas muito estreitas para o header não transbordar
-            sobre o hambúrguer (o mesmo dado está no dashboard). */}
+            sobre o hambúrguer (o mesmo dado está no dashboard). Relevo: dado em
+            mono, status "você está aqui" (◐). */}
         {!staff && (
-          <div className="hidden h-10 items-center gap-2 rounded-[8px] bg-coral px-4 font-bold text-white sm:flex">
-            <TrendingUp size={19} aria-hidden="true" />
+          <div className="tag tag-mid mr-1 hidden md:inline-flex">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" />
+            </svg>
             {profile.recursos.percentual_consumido}% {t("concluído", "complete")}
           </div>
         )}
+
+        {/* Alternador de idioma PT/EN e tema claro/escuro, iguais aos da home. */}
+        <LangSwitch className="hidden sm:inline-flex" />
+        <ThemeToggle />
         <div
           ref={notifRef}
           className="relative"
@@ -415,19 +408,22 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
             onClick={() => setShowNotif((value) => !value)}
             aria-expanded={showNotif}
             aria-controls="notif-popover"
-            className="relative flex h-12 w-12 items-center justify-center rounded-full border border-line bg-white text-ink transition hover:bg-slate-50"
+            className="relative flex h-9 w-9 items-center justify-center rounded border border-line-strong text-ink transition-colors duration-rapido hover:bg-surface-2"
             aria-label={
               notifCount > 0
                 ? t(`Avisos — ${notifCount} ${notifCount === 1 ? "não lido" : "não lidos"}`, `Notifications — ${notifCount} unread`)
                 : t("Avisos", "Notifications")
             }
           >
-            <Bell size={22} aria-hidden="true" />
-            {notifCount > 0 && <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-red-500" aria-hidden="true" />}
+            <Bell size={18} strokeWidth={1.8} aria-hidden="true" />
+            {notifCount > 0 && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-bg bg-trail" aria-hidden="true" />}
           </button>
           {showNotif && (
-            <div id="notif-popover" className="absolute right-0 top-14 z-30 w-80 overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
-              <div className="border-b border-line px-4 py-3 font-bold text-ink">{t("Avisos do Engage-Agent", "Engage-Agent notifications")}</div>
+            <div id="notif-popover" className="absolute right-0 top-12 z-30 w-80 overflow-hidden card shadow-soft">
+              <div className="flex items-center gap-2.5 border-b border-line px-4 py-3">
+                <ExploradorAvatar size={28} estado="revisar" />
+                <span className="font-semibold text-ink">{t("Avisos da Learnia", "Learnia notifications")}</span>
+              </div>
               <div className="max-h-96 overflow-auto">
                 {notifications.length === 0 ? (
                   <p className="px-4 py-4 text-sm text-muted">{t("Nenhum aviso por enquanto.", "No notifications yet.")}</p>
@@ -435,7 +431,7 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
                   notifications.map((item) => (
                     <div key={item.intervention_id} className="border-b border-line px-4 py-3 last:border-0">
                       <div className="flex items-center justify-between text-xs text-muted">
-                        <span className="font-bold uppercase tracking-wide">{noticeTypeLabel(item.tipo, lang)}</span>
+                        <span className="k">{noticeTypeLabel(item.tipo, lang)}</span>
                         <button
                           onClick={() => dismiss(item.intervention_id)}
                           className="text-muted transition hover:text-ink"
@@ -444,7 +440,7 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
                           <X size={14} aria-hidden="true" />
                         </button>
                       </div>
-                      {item.descricao && <p className="mt-1 text-sm text-slate-700">{stripCompetencyMarker(item.descricao)}</p>}
+                      {item.descricao && <p className="mt-1 text-sm text-ink">{stripCompetencyMarker(item.descricao)}</p>}
                     </div>
                   ))
                 )}
@@ -464,28 +460,33 @@ export const Topbar = ({ profile, onChangeView, onNavigate, activeView, studentN
             aria-expanded={showAccount}
             aria-controls="account-menu"
             aria-label={t(`Conta de ${studentName}`, `${studentName}'s account`)}
-            className="flex h-12 items-center gap-2 rounded-full border border-line bg-white pl-1.5 pr-3 text-ink transition hover:bg-slate-50"
+            className="flex h-9 items-center gap-1.5 rounded border border-line-strong pl-1 pr-2 text-ink transition-colors duration-rapido hover:bg-surface-2"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 font-bold text-brand" aria-hidden="true">
+            <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-ink text-sm font-semibold text-on-ink" aria-hidden="true">
               {studentName.charAt(0).toUpperCase()}
             </span>
-            <ChevronDown size={16} aria-hidden="true" />
+            <ChevronDown size={15} aria-hidden="true" />
           </button>
           {showAccount && (
-            <div id="account-menu" className="absolute right-0 top-14 z-30 w-64 overflow-hidden rounded-[8px] border border-line bg-white shadow-soft">
+            <div id="account-menu" className="absolute right-0 top-12 z-30 w-64 overflow-hidden card shadow-soft">
               <div className="border-b border-line px-4 py-3">
-                <div className="text-xs text-muted">{t("Conectado como", "Signed in as")}</div>
-                <div className="font-bold text-ink">{studentName}</div>
+                <div className="k k-muted">{t("Conectado como", "Signed in as")}</div>
+                <div className="mt-0.5 font-semibold text-ink">{studentName}</div>
+              </div>
+              {/* Idioma no menu da conta em telas estreitas (o segmentado some no header). */}
+              <div className="flex items-center justify-between border-b border-line px-4 py-3 sm:hidden">
+                <span className="text-sm text-muted">{t("Idioma", "Language")}</span>
+                <LangSwitch />
               </div>
               <button
                 onClick={() => { setShowAccount(false); onChangeView("privacidade"); }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-ink transition hover:bg-slate-50"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-ink transition-colors duration-rapido hover:bg-surface-2"
               >
-                <ShieldCheck size={18} className="text-brand" aria-hidden="true" /> {t("Privacidade e dados", "Privacy & data")}
+                <ShieldCheck size={18} strokeWidth={1.8} aria-hidden="true" /> {t("Privacidade e dados", "Privacy & data")}
               </button>
               <button
                 onClick={onLogout}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-muted transition hover:bg-rose-50 hover:text-rose-700"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
               >
                 <LogOut size={18} aria-hidden="true" /> {t("Sair", "Sign out")}
               </button>

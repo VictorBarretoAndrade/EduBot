@@ -146,6 +146,9 @@ services:
     volumes:
       - ./Front-End/react-logic-demo:/src
       - ./Front-End/files/app:/out
+      # Identidade "Relevo": o tailwind.config.js e o styles.css importam
+      # ../../design/relevo (tokens.css e o preset), que no container é /design.
+      - ./design:/design:ro
     command: sh -c "if [ -f /out/index.html ] && [ \"$$FORCE_REACT_BUILD\" != \"1\" ]; then echo 'Build React ja presente em Front-End/files/app (offline-ready)'; elif [ -d node_modules ]; then npm run build; else npm install --prefer-offline --no-audit && npm run build; fi"
     networks:
       - ova_network

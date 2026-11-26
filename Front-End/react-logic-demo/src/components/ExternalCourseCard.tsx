@@ -53,10 +53,10 @@ export const ExternalCourseCard = ({ course, onApproved }: ExternalCourseCardPro
   };
 
   return (
-    <div className={`rounded-[8px] border bg-white p-5 ${approved ? "border-emerald-300" : "border-line"}`}>
+    <div className={`rounded border bg-surface p-5 ${approved ? "border-mata/50" : "border-line"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <Award className="mt-0.5 shrink-0 text-brand" size={24} aria-hidden="true" />
+          <Award className="mt-0.5 shrink-0 text-ink" size={24} aria-hidden="true" />
           <div className="min-w-0">
             <div className="font-bold text-ink">{course.titulo}</div>
             <div className="text-sm text-muted">
@@ -66,17 +66,17 @@ export const ExternalCourseCard = ({ course, onApproved }: ExternalCourseCardPro
           </div>
         </div>
         {approved && (
-          <span className="flex items-center gap-1.5 rounded-[8px] bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+          <span className="flex items-center gap-1.5 rounded bg-mata/10 px-3 py-1.5 text-sm font-semibold text-mata">
             <CheckCircle2 size={16} aria-hidden="true" /> {t("Certificado aprovado", "Certificate approved")}
           </span>
         )}
       </div>
 
       {!approved && (
-        <ol className="mt-4 space-y-1 text-sm text-slate-700">
+        <ol className="mt-4 space-y-1 text-sm text-ink">
           <li>1. {t("Faça o curso no site da Cisco (é gratuito).", "Take the course on Cisco's website (it's free).")}</li>
           <li>2. {t("Ao terminar, baixe o certificado em PDF.", "When you finish, download your certificate as a PDF.")}</li>
-          <li>3. {t("Envie o PDF aqui — o Engage-Agent confere o certificado.", "Upload the PDF here — Engage-Agent will check it.")}</li>
+          <li>3. {t("Envie o PDF aqui — a Learnia confere o certificado.", "Upload the PDF here — Learnia will check it.")}</li>
         </ol>
       )}
 
@@ -86,7 +86,7 @@ export const ExternalCourseCard = ({ course, onApproved }: ExternalCourseCardPro
             href={course.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-10 items-center gap-2 rounded-[8px] border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-indigo-50"
+            className="flex h-10 items-center gap-2 rounded border border-ink px-4 text-sm font-semibold text-ink transition hover:bg-surface-2"
           >
             <ExternalLink size={16} aria-hidden="true" /> {t("Abrir curso na Cisco", "Open course on Cisco")}
           </a>
@@ -104,7 +104,7 @@ export const ExternalCourseCard = ({ course, onApproved }: ExternalCourseCardPro
             <button
               onClick={() => inputRef.current?.click()}
               disabled={sending}
-              className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:bg-slate-300"
+              className="flex h-10 items-center gap-2 rounded bg-ink px-4 text-sm font-semibold text-on-ink transition hover:bg-ink/85 disabled:bg-line"
             >
               {sending ? <LoaderCircle className="animate-spin" size={16} aria-hidden="true" /> : <FileUp size={16} aria-hidden="true" />}
               {sending ? t("Conferindo certificado…", "Checking certificate…") : t("Enviar certificado (PDF)", "Upload certificate (PDF)")}
@@ -116,8 +116,8 @@ export const ExternalCourseCard = ({ course, onApproved }: ExternalCourseCardPro
       {(cert.feedback || error) && (
         <p
           role="status"
-          className={`mt-3 flex items-start gap-2 rounded-[8px] p-3 text-sm ${
-            error || cert.status === "recusado" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-800"
+          className={`mt-3 flex items-start gap-2 rounded p-3 text-sm ${
+            error || cert.status === "recusado" ? "bg-trail/10 text-trail-text" : "bg-mata/10 text-mata"
           }`}
         >
           {error || cert.status === "recusado"

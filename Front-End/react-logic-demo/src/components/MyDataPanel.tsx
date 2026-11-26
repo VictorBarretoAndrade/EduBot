@@ -5,10 +5,11 @@ de contrato, então fica travado como concedido), exportação do perfil em JSON
 solicitação de exclusão (que vira um alerta para o admin — exclusão efetiva é
 manual na v1).
 */
-import { FileDown, LoaderCircle, ShieldCheck, Trash2 } from "lucide-react";
+import { FileDown, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Consent, StudentProfile, getConsents, requestDataDeletion, setConsent } from "../services/api";
 import { useT } from "../i18n";
+import { RelevoLoader } from "./brand/RelevoLoader";
 
 interface MyDataPanelProps {
   profile: StudentProfile;
@@ -24,8 +25,8 @@ const PURPOSE_LABEL: Record<Consent["purpose"], { pt: string; en: string; desc_p
   ia_sobre_dados: {
     pt: "IA sobre os seus dados",
     en: "AI-powered personalization",
-    desc_pt: "Permitir que o Engage-Agent use IA sobre o seu histórico e guarde o texto das perguntas ao tutor. Opcional e revogável.",
-    desc_en: "Allow Engage-Agent to use AI on your study history and save the questions you ask in chat. Optional and revocable."
+    desc_pt: "Permitir que a Learnia use IA sobre o seu histórico e guarde o texto das perguntas ao tutor. Opcional e revogável.",
+    desc_en: "Allow Learnia to use AI on your study history and save the questions you ask in chat. Optional and revocable."
   },
   imagem_voz: {
     pt: "Imagem e voz",
@@ -87,11 +88,10 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
   };
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-6">
-      <div className="flex items-center gap-2">
-        <ShieldCheck size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Meus dados", "My data")}</h2>
-      </div>
+    <div className="card p-6">
+      <h2 className="lab">
+        <span>{t("Meus dados", "My data")}</span>
+      </h2>
       <p className="mt-2 text-sm text-muted">
         {t("Controle como seus dados são usados (LGPD).", "Control how your data is used (GDPR/LGPD).")}
       </p>
@@ -100,7 +100,7 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
         {(consents ?? []).map((c) => {
           const label = labelFor(c.purpose);
           return (
-            <div key={c.purpose} className="rounded-[8px] border border-line p-4">
+            <div key={c.purpose} className="rounded border border-line p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-semibold text-ink">{t(label.pt, label.en)}</div>
@@ -114,11 +114,11 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
                     disabled={!c.opt_in || saving === c.purpose}
                     onChange={(e) => toggle(c.purpose, e.target.checked)}
                   />
-                  <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-brand peer-checked:after:translate-x-5 peer-disabled:opacity-60" />
+                  <div className="h-6 w-11 rounded-full bg-surface-2 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-surface after:transition-all peer-checked:bg-ink peer-checked:after:translate-x-5 peer-disabled:opacity-60" />
                 </label>
               </div>
               {!c.opt_in && (
-                <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <p className="k mt-2 text-muted">
                   {t("Necessário para o serviço", "Required for the service")}
                 </p>
               )}
@@ -126,14 +126,14 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
           );
         })}
         {consents === null && (
-          <div className="flex justify-center py-4"><LoaderCircle className="animate-spin text-brand" size={20} /></div>
+          <div className="flex justify-center py-4"><RelevoLoader size={32} /></div>
         )}
       </div>
 
       <div className="mt-5 grid gap-3">
         <button
           onClick={exportProfile}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-ink font-semibold text-white"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded bg-ink font-semibold text-on-ink"
         >
           <FileDown size={18} />
           {t("Exportar meus dados (JSON)", "Export my data (JSON)")}
@@ -141,7 +141,7 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
         <button
           onClick={askDeletion}
           disabled={deleteStatus === "pendente"}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-rose-200 font-semibold text-rose-700 disabled:opacity-60"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded border border-trail/40 font-semibold text-trail-text disabled:opacity-60"
         >
           <Trash2 size={18} />
           {deleteStatus === "pendente"
@@ -149,7 +149,7 @@ export const MyDataPanel = ({ profile }: MyDataPanelProps) => {
             : t("Solicitar exclusão dos dados", "Request data deletion")}
         </button>
         {deleteStatus === "erro" && (
-          <p className="text-sm font-semibold text-rose-700">{t("Não foi possível enviar agora.", "Couldn't send right now.")}</p>
+          <p className="text-sm font-semibold text-trail-text">{t("Não foi possível enviar agora.", "Couldn't send right now.")}</p>
         )}
       </div>
     </div>

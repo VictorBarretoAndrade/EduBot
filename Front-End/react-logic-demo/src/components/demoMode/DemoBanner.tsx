@@ -50,8 +50,8 @@ export const DemoBanner = ({ kind, onSwitched }: DemoBannerProps) => {
         t("Clique num aluno para ver o desempenho detalhado, ou use “Adicionar aluno” para criar um (com ou sem histórico de exemplo).",
           "Click a student to see detailed performance, or use “Add student” to create one (with or without a sample history)."),
         t("Troque para a visão de aluno, estude um módulo e responda o quiz.", "Switch to the student view, study a module and take the quiz."),
-        t("Volte e clique em “Analisar turma”: o Engage-Agent reavalia o seu aluno de teste e o alerta aparece aqui.",
-          "Come back and click “Analyze class”: Engage-Agent re-evaluates your test student and the alert shows up here.")
+        t("Volte e clique em “Analisar turma”: a Learnia reavalia o seu aluno de teste e o alerta aparece aqui.",
+          "Come back and click “Analyze class”: Learnia re-evaluates your test student and the alert shows up here.")
       ]
     : [
         t("Você é o aluno de teste da sua turma de demonstração — começa sem nenhum histórico.",
@@ -64,9 +64,9 @@ export const DemoBanner = ({ kind, onSwitched }: DemoBannerProps) => {
       ];
 
   return (
-    <div className="border-b border-indigo-200 bg-indigo-50 text-ink">
+    <div className="border-b border-line bg-surface-2 text-ink">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2 px-5 py-2.5 lg:px-10">
-        <span className="rounded-[4px] bg-brand px-2 py-0.5 text-xs font-bold tracking-[0.12em] text-white">DEMO</span>
+        <span className="rounded bg-ink px-2 py-0.5 text-xs font-bold tracking-[0.12em] text-on-ink">DEMO</span>
         <p className="min-w-0 flex-1 text-sm">
           {t("Você está na visão de", "You're viewing as")}{" "}
           <strong>{coord ? t("Coordenador", "Coordinator") : t("Aluno de teste", "Test student")}</strong>
@@ -80,7 +80,7 @@ export const DemoBanner = ({ kind, onSwitched }: DemoBannerProps) => {
           onClick={toggleGuide}
           aria-expanded={open}
           aria-controls="demo-guide"
-          className="flex h-9 items-center gap-1 rounded-[8px] px-2.5 text-sm font-semibold text-brand transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          className="flex h-9 items-center gap-1 rounded px-2.5 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           {t("Como funciona?", "How it works")}
           {open ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
@@ -89,17 +89,17 @@ export const DemoBanner = ({ kind, onSwitched }: DemoBannerProps) => {
           type="button"
           onClick={switchView}
           disabled={busy}
-          className="flex h-9 items-center gap-2 rounded-[8px] bg-brand px-3.5 text-sm font-bold text-white transition hover:bg-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:bg-slate-400"
+          className="flex h-9 items-center gap-2 rounded bg-ink px-3.5 text-sm font-bold text-on-ink transition hover:bg-ink/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:bg-line-strong"
         >
           {busy ? <LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> : <ArrowLeftRight size={16} aria-hidden="true" />}
           {coord ? t("Ver como aluno", "View as student") : t("Voltar para coordenador", "Back to coordinator")}
         </button>
       </div>
       {open && (
-        <ol id="demo-guide" className="mx-auto grid max-w-[1400px] gap-2 px-5 pb-3 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
+        <ol id="demo-guide" className="mx-auto grid max-w-[1400px] gap-2 px-5 pb-3 text-sm text-ink sm:grid-cols-2 lg:grid-cols-4 lg:px-10">
           {steps.map((step, i) => (
-            <li key={i} className="flex gap-2 rounded-[8px] border border-indigo-100 bg-white p-2.5">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-brand" aria-hidden="true">
+            <li key={i} className="flex gap-2 card p-2.5">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-bold text-ink" aria-hidden="true">
                 {i + 1}
               </span>
               <span>{step}</span>

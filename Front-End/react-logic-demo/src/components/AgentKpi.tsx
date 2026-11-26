@@ -4,17 +4,17 @@ diz se o EduBot está ajudando de verdade: aceita/melhorou contam como sucesso;
 dispensada/expirada, como rejeição. O agente usa o mesmo sinal (via o digest do
 redator) para variar a abordagem.
 */
-import { LineChart, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AgentKpi as AgentKpiType, AgentKpiByFormat, getAgentKpi } from "../services/api";
 import { useLanguage, useT } from "../i18n";
+import { RelevoLoader } from "./brand/RelevoLoader";
 import { noticeTypeLabel, resourceTypeLabel } from "../services/labels";
 
 function rateColor(rate: number | null): string {
   if (rate == null) return "text-muted";
-  if (rate >= 0.6) return "text-emerald-600";
-  if (rate >= 0.3) return "text-amber-600";
-  return "text-rose-600";
+  if (rate >= 0.6) return "text-mata";
+  if (rate >= 0.3) return "text-ink";
+  return "text-trail-text";
 }
 
 const FORMAT_ICON: Record<string, string> = { video: "🎬", texto: "📖", podcast: "🎧" };
@@ -37,22 +37,21 @@ export const AgentKpi = () => {
   if (kpis !== null && kpis.length === 0) return null;
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-      <div className="flex items-center gap-2">
-        <LineChart size={20} className="text-brand" />
-        <h2 className="text-xl font-bold text-ink">{t("Desempenho do Engage-Agent", "Engage-Agent performance")}</h2>
-      </div>
+    <div className="card p-6">
+      <h2 className="lab">
+        <span>{t("Desempenho do agente da Learnia", "Learnia agent performance")}</span>
+      </h2>
       <p className="mt-1 text-sm text-muted">
         {t("Taxa de aceitação das intervenções por tipo (aceita ou melhorou = sucesso).",
            "Intervention acceptance rate by type (accepted or improved = success).")}
       </p>
 
       {kpis === null ? (
-        <div className="flex justify-center py-6"><LoaderCircle className="animate-spin text-brand" size={20} /></div>
+        <div className="flex justify-center py-6"><RelevoLoader size={32} /></div>
       ) : (
         <div className="mt-4 space-y-3">
           {kpis.map((k) => (
-            <div key={k.tipo} className="rounded-[8px] border border-line p-4">
+            <div key={k.tipo} className="rounded border border-line p-4">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-ink">{noticeTypeLabel(k.tipo, lang)}</span>
                 <span className={`text-lg font-bold ${rateColor(k.taxa_aceitacao)}`}>
@@ -61,8 +60,8 @@ export const AgentKpi = () => {
               </div>
               <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
                 <span>{t("total", "total")}: {k.total}</span>
-                <span className="text-emerald-700">✓ {k.aceita + k.melhorou}</span>
-                <span className="text-rose-700">✕ {k.dispensada + k.expirada}</span>
+                <span className="text-mata">✓ {k.aceita + k.melhorou}</span>
+                <span className="text-trail-text">✕ {k.dispensada + k.expirada}</span>
                 {k.pendente > 0 && <span>{t("pendente", "pending")}: {k.pendente}</span>}
               </div>
             </div>
@@ -76,7 +75,7 @@ export const AgentKpi = () => {
               </p>
               <div className="flex flex-wrap gap-3">
                 {byFormat.map((f) => (
-                  <div key={f.formato} className="rounded-[8px] border border-line px-3 py-2">
+                  <div key={f.formato} className="rounded border border-line px-3 py-2">
                     <span className="text-sm font-semibold text-ink">{`${FORMAT_ICON[f.formato] ?? ""} ${resourceTypeLabel(f.formato, lang)}`.trim()}</span>
                     <span className={`ml-2 font-bold ${rateColor(f.taxa_aceitacao)}`}>
                       {f.taxa_aceitacao != null ? `${Math.round(f.taxa_aceitacao * 100)}%` : "—"}

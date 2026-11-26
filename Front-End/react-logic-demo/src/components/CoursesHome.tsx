@@ -4,11 +4,15 @@ Plano 6 (B.1) — "Minhas matérias": a home do aluno no modelo Canvas.
 Substitui o antigo Dashboard. Mostra, nesta ordem, o que o aluno precisa para
 decidir o que estudar: continuar de onde parou, os cartões de MATÉRIA (cada um
 leva aos seus módulos) e, à direita, a coluna "Para fazer" — o único lugar onde
-o aluno age sobre o que o Engage-Agent sugeriu (C.2). Métricas detalhadas foram
+o aluno age sobre o que o tutor sugeriu (C.2). Métricas detalhadas foram
 para "Meu progresso".
+
+Identidade "Relevo": cartão "Próximo passo" com régua de elevação, rastro da
+semana em dados mono, cartões de matéria em Folha com borda de 1 px (sem
+gradiente), o Explorador como tutor.
 */
-import { ArrowRight, BookOpenText, CalendarClock, Flame, Sparkles, Square, Volume2, X, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, CalendarClock, Square, Volume2, X } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
 import {
   GamificationMe,
   OvaState,
@@ -24,6 +28,9 @@ import {
 import { useLanguage, useT } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
+import { Explorador } from "./brand/Explorador";
+import { TopoMap } from "./brand/TopoMap";
+import { Elev, Lab, StatusTag } from "./ui/Relevo";
 import { REFORCO_COMP_KEY, competencyFromDescription, stripCompetencyMarker } from "../services/reinforcementTarget";
 import { WeeklyGoalsCard } from "./Gamification";
 import { safeSet } from "../services/storage";
@@ -66,18 +73,18 @@ const StreakChip = () => {
     getGamificationMe().then(setMe).catch(() => setMe(null));
   }, []);
   if (!me || !me.enabled) return null;
+  // Relevo (voz): o histórico de estudo é o "rastro". Dados em mono, um por célula.
+  const cell = (label: string, value: ReactNode) => (
+    <div className="px-4 py-2.5">
+      <div className="k k-muted text-[10.5px]">{label}</div>
+      <div className="num mt-0.5 text-[17px] font-semibold text-ink">{value}</div>
+    </div>
+  );
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-white px-4 py-3 shadow-sm">
-      <span className="flex items-center gap-1.5 font-bold text-orange-600">
-        <Flame size={20} className={me.streak.current_days > 0 ? "" : "opacity-40"} aria-hidden="true" />
-        {plural(me.streak.current_days, lang, ["dia", "dias"], ["day", "days"])}
-      </span>
-      <span className="h-5 w-px bg-line" />
-      <span className="font-bold text-brand">{t("Nível", "Level")} {me.level}</span>
-      <span className="h-5 w-px bg-line" />
-      <span className="flex items-center gap-1.5 font-bold text-amber-600">
-        <Zap size={18} aria-hidden="true" /> {me.xp_week} <span className="text-xs font-medium text-muted">{t("XP/semana", "XP/week")}</span>
-      </span>
+    <div className="card flex divide-x divide-line">
+      {cell(t("Rastro", "Trail"), plural(me.streak.current_days, lang, ["dia", "dias"], ["day", "days"]))}
+      {cell(t("Nível", "Level"), me.level)}
+      {cell(t("XP · semana", "XP · week"), me.xp_week)}
     </div>
   );
 };
@@ -130,46 +137,49 @@ const NextSteps = ({ persona, onOpenPractice }: { persona: string; onOpenPractic
   };
 
   return (
-    <section aria-labelledby="next-steps-title" className="rounded-[8px] border border-brand/30 bg-indigo-50/60 p-5 shadow-soft">
-      <h2 id="next-steps-title" className="flex items-center gap-2 text-lg font-bold text-brand">
-        <Sparkles size={20} aria-hidden="true" /> {t("Próximos passos", "Next steps")}
-      </h2>
-      <p className="mt-1 text-sm text-slate-700">{t("Sugestões do Engage-Agent para você.", "Suggestions from Engage-Agent.")}</p>
+    <section aria-labelledby="next-steps-title" className="card p-5">
+      <Lab as="h2" id="next-steps-title">
+        <span>{t("Próximos passos", "Next steps")}</span>
+        <span>{t("tutor Learnia", "Learnia tutor")}</span>
+      </Lab>
 
       {items === null ? null : items.length === 0 ? (
-        <div className="mt-4 rounded-[8px] bg-white p-4 text-sm text-muted">
-          <p>{t("Você está em dia. Quando houver algo novo, aparece aqui.", "You're all caught up. New suggestions will show up here.")}</p>
-          <button
-            onClick={askNow}
-            disabled={asking}
-            className="mt-3 font-semibold text-brand underline-offset-2 hover:underline disabled:text-muted"
-          >
-            {asking ? t("Pensando…", "Thinking…") : t("Pedir uma sugestão agora", "Get a suggestion now")}
-          </button>
+        <div className="flex items-start gap-3">
+          <Explorador estado="meta" size={56} still decorative />
+          <div className="text-sm text-muted">
+            <p>{t("Você está em dia. Quando houver algo novo, aparece aqui.", "You're all caught up. New suggestions will show up here.")}</p>
+            <button
+              onClick={askNow}
+              disabled={asking}
+              className="mt-2 font-semibold text-trail-text underline decoration-1 underline-offset-[3px] hover:decoration-2 disabled:text-muted disabled:no-underline"
+            >
+              {asking ? t("Pensando…", "Thinking…") : t("Pedir uma sugestão agora", "Get a suggestion now")}
+            </button>
+          </div>
         </div>
       ) : (
-        <ul className="mt-4 space-y-3">
+        <ul className="-mx-5 divide-y divide-line border-t border-line">
           {items.map((item) => (
-            <li key={item.intervention_id} className="rounded-[8px] border border-line bg-white p-4">
+            <li key={item.intervention_id} className="px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="shrink-0">
-                    <CompanionAvatar personaId={persona} size={36} speaking={speakingId === item.intervention_id} />
+                    <CompanionAvatar personaId={persona} size={36} estado="encorajando" speaking={speakingId === item.intervention_id} />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-xs font-bold uppercase tracking-wide text-muted">{noticeTypeLabel(item.tipo, lang)}</span>
-                    {item.descricao && <p className="mt-1 text-sm text-slate-700">{stripCompetencyMarker(item.descricao)}</p>}
+                    <span className="k">{noticeTypeLabel(item.tipo, lang)}</span>
+                    {item.descricao && <p className="mt-1 text-sm leading-relaxed text-ink">{stripCompetencyMarker(item.descricao)}</p>}
                   </div>
                 </div>
                 <button
                   onClick={() => dismiss(item.intervention_id)}
-                  className="shrink-0 rounded-[8px] p-1.5 text-muted transition hover:bg-slate-100"
+                  className="shrink-0 rounded p-1.5 text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
                   aria-label={t("Dispensar", "Dismiss")}
                 >
                   <X size={18} aria-hidden="true" />
                 </button>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-2 pl-[48px]">
                 <button
                   onClick={() => {
                     const alvo = competencyFromDescription(item.descricao);
@@ -177,14 +187,15 @@ const NextSteps = ({ persona, onOpenPractice }: { persona: string; onOpenPractic
                     dismiss(item.intervention_id);
                     onOpenPractice();
                   }}
-                  className="h-10 rounded-[8px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-indigo-600"
+                  className="btn btn-acc btn-sm"
                 >
                   {t("Praticar agora", "Practice now")}
+                  <ArrowRight size={16} className="arw" aria-hidden="true" />
                 </button>
                 {supported && (
                   <button
                     onClick={() => listen(item)}
-                    className="flex h-10 items-center gap-2 rounded-[8px] border border-brand bg-white px-4 text-sm font-semibold text-brand transition hover:bg-indigo-50"
+                    className="btn btn-gh btn-sm"
                   >
                     {speakingId === item.intervention_id ? <Square size={16} aria-hidden="true" /> : <Volume2 size={16} aria-hidden="true" />}
                     {speakingId === item.intervention_id ? t("Parar", "Stop") : t("Ouvir", "Listen")}
@@ -208,16 +219,21 @@ const DueReviews = () => {
   }, []);
   if (reviews.length === 0) return null;
   return (
-    <section aria-labelledby="due-reviews-title" className="rounded-[8px] border border-amber-200 bg-amber-50 p-5">
-      <h2 id="due-reviews-title" className="flex items-center gap-2 font-bold text-amber-800">
-        <CalendarClock size={18} aria-hidden="true" /> {t("Revisões para hoje", "Reviews due")}
-      </h2>
-      <ul className="mt-3 space-y-2">
+    <section aria-labelledby="due-reviews-title" className="card p-5">
+      {/* Relevo (voz): revisão agendada = "marco"; o Explorador no estado "revisar". */}
+      <Lab as="h2" id="due-reviews-title">
+        <span>{t("Marcos de revisão", "Review checkpoints")}</span>
+        <span>{t(`${reviews.length} para hoje`, `${reviews.length} due today`)}</span>
+      </Lab>
+      <ul className="-mx-5 divide-y divide-line border-t border-line">
         {reviews.map((r) => (
-          <li key={r.review_id} className="flex items-center justify-between gap-3 text-sm">
-            <span className="min-w-0 text-amber-900">{r.competencia}</span>
+          <li key={r.review_id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+            <span className="flex min-w-0 items-center gap-2 text-ink">
+              <CalendarClock size={16} className="shrink-0 text-muted" aria-hidden="true" />
+              {r.competencia}
+            </span>
             {r.ova_id != null && (
-              <a href={`#/modulo/${r.ova_id}/quiz`} className="shrink-0 font-semibold text-amber-800 underline-offset-2 hover:underline">
+              <a href={`#/modulo/${r.ova_id}/quiz`} className="btn btn-gh btn-sm shrink-0">
                 {t("Revisar", "Review")}
               </a>
             )}
@@ -239,6 +255,7 @@ interface CoursesHomeProps {
 
 export const CoursesHome = ({ profile, onOpenSubject, onOpenModule, onOpenPractice, preview = false }: CoursesHomeProps) => {
   const t = useT();
+  const { lang } = useLanguage();
   const groups = groupBySubject(profile, profile.estudante.curso ?? t("Minhas matérias", "My courses"));
   const firstName = profile.estudante.nome.split(" ")[0];
   const isFresh = !preview && profile.ovas.every((ova) => !ova.perc_scrolled && !ova.read_time);
@@ -248,11 +265,11 @@ export const CoursesHome = ({ profile, onOpenSubject, onOpenModule, onOpenPracti
     .sort((a, b) => String(b.last_access).localeCompare(String(a.last_access)))[0];
 
   return (
-    <section className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <section className="space-y-10">
+      <div className="flex flex-wrap items-end justify-between gap-5">
         <div>
-          <p className="text-lg text-muted">{profile.estudante.curso ?? ""}</p>
-          <h1 className="mt-1 text-4xl font-bold text-ink">
+          <p className="k k-muted">{profile.estudante.curso ?? ""}</p>
+          <h1 className="h-display mt-2 text-ink">
             {preview ? t("Matérias", "Courses") : t(`Olá, ${firstName}!`, `Hi, ${firstName}!`)}
           </h1>
           {preview && (
@@ -262,74 +279,89 @@ export const CoursesHome = ({ profile, onOpenSubject, onOpenModule, onOpenPracti
         {!preview && <StreakChip />}
       </div>
 
-      <div className={`grid gap-6 ${preview ? "" : "xl:grid-cols-[1fr_360px]"}`}>
-        <div className="space-y-6">
+      <div className={`grid gap-8 ${preview ? "" : "xl:grid-cols-[1fr_360px]"}`}>
+        <div className="space-y-8">
           {isFresh && profile.ovas[0] && (
-            <div className="flex flex-col items-start gap-4 rounded-[8px] border border-brand/30 bg-gradient-to-br from-indigo-50 to-white p-6 shadow-soft sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="flex items-center gap-2 text-lg font-bold text-brand">
-                  <Sparkles size={20} aria-hidden="true" /> {t("Boas-vindas ao Engage-Agent!", "Welcome to Engage-Agent!")}
-                </h2>
-                <p className="mt-1 text-sm text-slate-700">
-                  {t("Escolha uma matéria e comece pelo primeiro módulo — eu acompanho você a cada passo.",
-                     "Pick a course and start with its first module — I'll be with you every step of the way.")}
-                </p>
+            <div className="card relative overflow-hidden">
+              <TopoMap variant="faixa" className="opacity-70" />
+              <div className="relative flex flex-col items-start gap-5 p-6 sm:flex-row sm:items-center">
+                <Explorador estado="explicando" size={88} />
+                <div className="min-w-0 flex-1">
+                  <div className="k">{t("Primeiro passo", "First step")}</div>
+                  <h2 className="h-sec mt-1.5 text-ink">{t("Boas-vindas à Learnia!", "Welcome to Learnia!")}</h2>
+                  <p className="mt-1.5 max-w-[520px] text-muted">
+                    {t("Escolha uma matéria e comece pelo primeiro módulo — eu acompanho você a cada passo.",
+                       "Pick a course and start with its first module — I'll be with you every step of the way.")}
+                  </p>
+                </div>
+                <button onClick={() => onOpenModule(profile.ovas[0])} className="btn btn-pri shrink-0">
+                  {t("Começar o primeiro módulo", "Start the first module")}
+                  <ArrowRight size={18} className="arw" aria-hidden="true" />
+                </button>
               </div>
-              <button
-                onClick={() => onOpenModule(profile.ovas[0])}
-                className="h-11 shrink-0 rounded-[8px] bg-brand px-5 font-bold text-white transition hover:bg-indigo-600"
-              >
-                {t("Começar o primeiro módulo", "Start the first module")}
-              </button>
             </div>
           )}
 
+          {/* Guia "Próximo passo": rótulo, título, régua de elevação e o botão. */}
           {resume && (
-            <button
-              onClick={() => onOpenModule(resume)}
-              className="flex w-full flex-wrap items-center justify-between gap-4 rounded-[8px] border border-line bg-white p-5 text-left shadow-soft transition hover:border-brand"
-            >
-              <span className="flex items-center gap-3">
-                <BookOpenText className="text-brand" size={24} aria-hidden="true" />
-                <span>
-                  <span className="block text-sm font-semibold text-brand">{t("Continuar de onde parou", "Pick up where you left off")}</span>
-                  <span className="block font-bold text-ink">{resume.ova_name}</span>
-                  <span className="block text-sm text-muted">{t(`${moduleProgress(resume)}% lido`, `${moduleProgress(resume)}% read`)}</span>
-                </span>
-              </span>
-              <ArrowRight className="text-brand" size={22} aria-hidden="true" />
-            </button>
+            <div className="card sobe p-6">
+              <Lab>
+                <span>{t("Próximo passo", "Next step")}</span>
+                <span>{resume.subject_nome ?? ""}</span>
+              </Lab>
+              <h2 className="h-sec text-ink">{t(`Continuar ${resume.ova_name}`, `Continue ${resume.ova_name}`)}</h2>
+              <p className="mt-1.5 text-sm text-muted">{t("De onde você parou", "Where you left off")}</p>
+              <Elev value={moduleProgress(resume)} className="my-5" />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <small className="num text-[11.5px] text-muted">
+                  {t(`${moduleProgress(resume)}% lido · faltam ${100 - moduleProgress(resume)}%`, `${moduleProgress(resume)}% read · ${100 - moduleProgress(resume)}% to go`)}
+                </small>
+                <button onClick={() => onOpenModule(resume)} className="btn btn-pri btn-sm">
+                  {t("Continuar", "Continue")}
+                  <ArrowRight size={16} className="arw" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           )}
 
           <div>
-            {!preview && <h2 className="mb-4 text-2xl font-bold text-ink">{t("Minhas matérias", "My courses")}</h2>}
+            {!preview && (
+              <div className="mb-4 flex items-baseline justify-between gap-3">
+                <h2 className="h-sec text-ink">{t("Minhas matérias", "My courses")}</h2>
+                <span className="k k-muted">{plural(groups.length, lang, ["matéria", "matérias"], ["course", "courses"])}</span>
+              </div>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
-              {groups.map((group) => {
+              {groups.map((group, i) => {
                 const perc = subjectProgress(group);
                 const done = group.ovas.filter((ova) => ova.completed).length;
                 return (
                   <button
                     key={group.subject_id}
                     onClick={() => onOpenSubject(group.subject_id)}
-                    className="flex flex-col overflow-hidden rounded-[8px] border border-line bg-white text-left shadow-soft transition hover:border-brand"
+                    style={{ animationDelay: `${i * 60}ms` }}
+                    className="card sobe group flex flex-col p-5 text-left transition-colors duration-rapido hover:border-ink"
                   >
-                    <span className="h-2 w-full bg-gradient-to-r from-indigo-700 via-brand to-violet-500" aria-hidden="true" />
-                    <span className="flex flex-1 flex-col p-5">
-                      <span className="text-xl font-bold text-ink">{group.nome}</span>
-                      <span className="mt-1 text-sm text-muted">
-                        {t(
-                          `${done} de ${group.ovas.length} ${group.ovas.length === 1 ? "módulo concluído" : "módulos concluídos"}`,
-                          `${done} of ${group.ovas.length} ${group.ovas.length === 1 ? "module" : "modules"} completed`
-                        )}
-                      </span>
-                      <span className="mt-4 h-2 rounded-full bg-slate-100" aria-hidden="true">
-                        <span className="block h-2 rounded-full bg-teal" style={{ width: `${perc}%` }} />
-                      </span>
-                      <span className="mt-2 flex items-center justify-between text-sm">
-                        <span className="text-muted">{t(`${perc}% do conteúdo`, `${perc}% of the content`)}</span>
-                        <span className="flex items-center gap-1 font-semibold text-brand">
-                          {t("Abrir", "Open")} <ArrowRight size={16} aria-hidden="true" />
-                        </span>
+                    <span className="k k-muted">
+                      {plural(group.ovas.length, lang, ["módulo", "módulos"], ["module", "modules"])}
+                    </span>
+                    <span className="mt-1.5 text-xl font-bold leading-tight tracking-[-0.02em] text-ink">{group.nome}</span>
+                    <span className="mt-1 text-sm text-muted">
+                      {t(
+                        `${done} de ${group.ovas.length} ${group.ovas.length === 1 ? "módulo concluído" : "módulos concluídos"}`,
+                        `${done} of ${group.ovas.length} ${group.ovas.length === 1 ? "module" : "modules"} completed`
+                      )}
+                    </span>
+                    <Elev value={perc} small meta={perc >= 100} className="mt-5" />
+                    <span className="mt-3 flex items-center justify-between gap-3 text-sm">
+                      {perc >= 100 ? (
+                        <StatusTag kind="ok">{t("Concluída", "Completed")}</StatusTag>
+                      ) : (
+                        <span className="num text-[12px] text-muted">{t(`${perc}% do conteúdo`, `${perc}% of the content`)}</span>
+                      )}
+                      <span className="flex items-center gap-1.5 font-semibold text-ink">
+                        {t("Abrir", "Open")}
+                        <ArrowRight size={16} className="transition-transform duration-medio ease-subida group-hover:translate-x-1" aria-hidden="true" />
                       </span>
                     </span>
                   </button>
@@ -340,7 +372,7 @@ export const CoursesHome = ({ profile, onOpenSubject, onOpenModule, onOpenPracti
         </div>
 
         {!preview && <aside aria-label={t("Para fazer", "To do")} className="h-fit space-y-4">
-          <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-muted">{t("Para fazer", "To do")}</h2>
+          <h2 className="k k-muted">{t("Para fazer", "To do")}</h2>
           <NextSteps persona={profile.estudante.persona} onOpenPractice={onOpenPractice} />
           <DueReviews />
           <WeeklyGoalsCard />

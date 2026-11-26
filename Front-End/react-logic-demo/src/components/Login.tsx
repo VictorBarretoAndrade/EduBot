@@ -12,12 +12,14 @@ Plano 6 — usabilidade:
   - mostrar/ocultar senha, aviso de Caps Lock, PT/EN já na entrada, autocomplete
     do navegador e mensagem própria para "muitas tentativas" (429).
 */
-import { ArrowLeft, Eye, EyeOff, Languages, LoaderCircle, MailCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, MailCheck } from "lucide-react";
 import { FormEvent, KeyboardEvent, useState } from "react";
 import { ApiError, Session, login, requestPasswordReset } from "../services/api";
 import { track } from "../services/events";
-import { useLanguage, useT } from "../i18n";
-import { EduBotLogo } from "./brand/EduBotLogo";
+import { useT } from "../i18n";
+import { LearniaLogo } from "./brand/LearniaLogo";
+import { TopoMap } from "./brand/TopoMap";
+import { LangSwitch, ThemeToggle } from "./ui/ShellControls";
 import { DemoSignIn } from "./demoMode/DemoSignIn";
 
 interface LoginProps {
@@ -26,14 +28,13 @@ interface LoginProps {
 
 type Mode = "login" | "forgotPassword" | "forgotId" | "resetSent";
 
-const inputClass =
-  "h-12 w-full rounded-[8px] border border-line px-4 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20";
+// Identidade "Relevo": campo com borda forte (3:1), links em Trilha (texto).
+const inputClass = "field h-11";
 const linkClass =
-  "rounded-[4px] text-sm font-semibold text-brand underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+  "rounded-sm text-sm font-semibold text-trail-text underline decoration-1 underline-offset-[3px] hover:decoration-2";
 
 export const Login = ({ onLogged }: LoginProps) => {
   const t = useT();
-  const { lang, toggle } = useLanguage();
   const [mode, setMode] = useState<Mode>("login");
   const [ra, setRa] = useState("");
   const [password, setPassword] = useState("");
@@ -94,36 +95,50 @@ export const Login = ({ onLogged }: LoginProps) => {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-700 via-brand to-violet-500 p-4">
-      <main className="w-full max-w-md rounded-[8px] bg-white p-8 shadow-soft">
-        <div className="mb-8 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <EduBotLogo size={52} />
-            <div>
-              <div className="text-2xl font-bold leading-none text-ink">Engage-Agent</div>
-              <div className="mt-1 text-sm tracking-[0.18em] text-muted">{t("APRENDIZAGEM · IA", "LEARNING · AI")}</div>
-            </div>
+    <div className="min-h-screen bg-bg text-ink lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(440px,1fr)]">
+      {/* Mapa (só desktop): curvas de nível, a trilha até o cume e a promessa da home. */}
+      <aside className="relative hidden overflow-hidden border-r border-line lg:block">
+        <TopoMap variant="login" trilha />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" aria-hidden="true" />
+        <div className="relative flex h-full flex-col justify-between p-10 xl:p-14">
+          <LearniaLogo height={30} />
+          <div className="max-w-[560px]">
+            <div className="k k-muted">S 12°58′ · O 38°30′ · SALVADOR, BAHIA</div>
+            <p className="mt-4 text-[44px] font-bold leading-[1.02] tracking-[-0.045em] xl:text-[52px]">
+              {t("Todo aluno tem um relevo. A Learnia traça a trilha até a meta.", "Every student has a terrain. Learnia draws the trail to the goal.")}
+            </p>
+            <p className="mt-4 max-w-[460px] text-[17px] leading-[1.55] text-muted">
+              {t(
+                "Cada interação vira um ponto no mapa. O professor define a cota; a Learnia mostra o caminho mais curto para chegar lá.",
+                "Every interaction becomes a point on the map. The teacher sets the goal; Learnia shows the shortest path to get there."
+              )}
+            </p>
           </div>
-          {/* Idioma já na entrada: quem não lê português não precisa entrar para trocar. */}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={lang === "pt" ? "Switch to English" : "Mudar para português"}
-            className="flex h-9 items-center gap-1.5 rounded-[8px] border border-line px-2.5 text-sm font-bold text-ink transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          >
-            <Languages size={16} className="text-brand" aria-hidden="true" />
-            {lang === "pt" ? "EN" : "PT"}
-          </button>
         </div>
+      </aside>
 
+      <div className="flex min-h-screen flex-col">
+        <header className="flex h-16 items-center justify-between gap-3 border-b border-line px-5 lg:border-0 lg:px-10">
+          <span className="lg:invisible">
+            <LearniaLogo height={26} />
+          </span>
+          {/* Idioma já na entrada: quem não lê português não precisa entrar para trocar. */}
+          <div className="flex items-center gap-2.5">
+            <LangSwitch />
+            <ThemeToggle />
+          </div>
+        </header>
+
+      <main className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center px-5 py-10">
         {mode === "login" && (
           <>
-            <h1 className="text-2xl font-bold text-ink">{t("Entrar na plataforma", "Sign in to the platform")}</h1>
-            <p className="mt-1 text-muted">{t("Use seu RA (ou usuário) e a senha da instituição.", "Use your student ID (or username) and school password.")}</p>
+            <div className="k">{t("Entrar", "Sign in")}</div>
+            <h1 className="mt-2 text-[32px] font-bold leading-[1.05] tracking-[-0.04em] text-ink">{t("Entrar na plataforma", "Sign in to the platform")}</h1>
+            <p className="mt-2 text-muted">{t("Use seu RA (ou usuário) e a senha da instituição.", "Use your student ID (or username) and school password.")}</p>
 
             <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
               <div>
-                <label htmlFor="ra" className="mb-1 block text-sm font-semibold text-ink">{t("RA ou usuário", "Student ID or username")}</label>
+                <label htmlFor="ra" className="mb-1.5 block text-sm font-semibold text-ink">{t("RA ou usuário", "Student ID or username")}</label>
                 <input
                   id="ra"
                   name="username"
@@ -140,7 +155,7 @@ export const Login = ({ onLogged }: LoginProps) => {
                 />
               </div>
               <div>
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-1.5 flex items-center justify-between">
                   <label htmlFor="password" className="block text-sm font-semibold text-ink">{t("Senha", "Password")}</label>
                   <button type="button" onClick={() => go("forgotPassword")} className={linkClass}>
                     {t("Esqueci minha senha", "Forgot password?")}
@@ -167,27 +182,29 @@ export const Login = ({ onLogged }: LoginProps) => {
                     onClick={() => setShowPassword((value) => !value)}
                     aria-pressed={showPassword}
                     aria-label={showPassword ? t("Ocultar senha", "Hide password") : t("Mostrar senha", "Show password")}
-                    className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-[6px] text-muted transition hover:bg-slate-100 hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded text-muted transition-colors duration-rapido hover:bg-surface-2 hover:text-ink"
                   >
                     {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                   </button>
                 </div>
                 {capsLock && (
-                  <p id="caps-warning" className="mt-1.5 text-sm font-semibold text-amber-700">
+                  <p id="caps-warning" className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-trail-text">
+                    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 2l6.5 12h-13z" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M8 6.5v3.5M8 11.6v.4" stroke="currentColor" strokeWidth="2" /></svg>
                     {t("Caps Lock está ativado.", "Caps Lock is on.")}
                   </p>
                 )}
               </div>
 
-              {error && <p id="login-error" role="alert" className="rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
+              {error && (
+                <p id="login-error" role="alert" className="border-l-2 border-trail py-1 pl-3 text-sm font-semibold text-trail-text">
+                  {error}
+                </p>
+              )}
 
-              <button
-                type="submit"
-                disabled={loading || !ra.trim() || !password}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-brand font-bold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading && <LoaderCircle className="animate-spin" size={20} aria-hidden="true" />}
+              <button type="submit" disabled={loading || !ra.trim() || !password} className="btn btn-pri h-12 w-full">
+                {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-ink/40 border-t-on-ink" aria-hidden="true" />}
                 {t("Entrar", "Sign in")}
+                {!loading && <ArrowRight size={18} className="arw" aria-hidden="true" />}
               </button>
             </form>
 
@@ -211,7 +228,7 @@ export const Login = ({ onLogged }: LoginProps) => {
 
         {mode === "forgotPassword" && (
           <>
-            <h1 className="text-2xl font-bold text-ink">{t("Esqueci minha senha", "Forgot your password?")}</h1>
+            <h1 className="text-[28px] font-bold leading-[1.08] tracking-[-0.04em] text-ink">{t("Esqueci minha senha", "Forgot your password?")}</h1>
             <p className="mt-2 text-muted">
               {t(
                 "Informe seu RA ou usuário. O pedido vai para a coordenação da sua turma, que gera uma senha temporária e entrega a você.",
@@ -220,7 +237,7 @@ export const Login = ({ onLogged }: LoginProps) => {
             </p>
             <form onSubmit={submitReset} className="mt-6 space-y-4" noValidate>
               <div>
-                <label htmlFor="reset-ra" className="mb-1 block text-sm font-semibold text-ink">{t("RA ou usuário", "Student ID or username")}</label>
+                <label htmlFor="reset-ra" className="mb-1.5 block text-sm font-semibold text-ink">{t("RA ou usuário", "Student ID or username")}</label>
                 <input
                   id="reset-ra"
                   autoComplete="username"
@@ -233,13 +250,13 @@ export const Login = ({ onLogged }: LoginProps) => {
                   aria-describedby={error ? "reset-error" : undefined}
                 />
               </div>
-              {error && <p id="reset-error" role="alert" className="rounded-[8px] bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading || !ra.trim()}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-brand font-bold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {loading && <LoaderCircle className="animate-spin" size={20} aria-hidden="true" />}
+              {error && (
+                <p id="reset-error" role="alert" className="border-l-2 border-trail py-1 pl-3 text-sm font-semibold text-trail-text">
+                  {error}
+                </p>
+              )}
+              <button type="submit" disabled={loading || !ra.trim()} className="btn btn-pri h-12 w-full">
+                {loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-ink/40 border-t-on-ink" aria-hidden="true" />}
                 {t("Pedir nova senha", "Request a new password")}
               </button>
             </form>
@@ -249,8 +266,10 @@ export const Login = ({ onLogged }: LoginProps) => {
 
         {mode === "resetSent" && (
           <div role="status">
-            <MailCheck size={40} className="text-teal" aria-hidden="true" />
-            <h1 className="mt-3 text-2xl font-bold text-ink">{t("Pedido enviado", "Request sent")}</h1>
+            <span className="tag tag-ok">
+              <MailCheck aria-hidden="true" /> {t("Pedido enviado", "Request sent")}
+            </span>
+            <h1 className="mt-4 text-[28px] font-bold leading-[1.08] tracking-[-0.04em] text-ink">{t("Pedido enviado", "Request sent")}</h1>
             <p className="mt-2 text-muted">
               {t(
                 "Se encontrarmos sua conta, a coordenação da sua turma recebe o pedido e entrega uma senha temporária a você. Depois de entrar, você continua de onde parou.",
@@ -263,8 +282,8 @@ export const Login = ({ onLogged }: LoginProps) => {
 
         {mode === "forgotId" && (
           <>
-            <h1 className="text-2xl font-bold text-ink">{t("Esqueci meu RA ou usuário", "Forgot your ID or username?")}</h1>
-            <ul className="mt-4 space-y-3 text-slate-700">
+            <h1 className="text-[28px] font-bold leading-[1.08] tracking-[-0.04em] text-ink">{t("Esqueci meu RA ou usuário", "Forgot your ID or username?")}</h1>
+            <ul className="mt-5 divide-y divide-line border-y border-line text-ink [&>li]:py-3">
               <li>
                 <strong>{t("Seu RA", "Your student ID")}</strong>{" "}
                 {t("é o número de matrícula: está na sua carteirinha de estudante e no portal acadêmico da instituição.",
@@ -284,11 +303,12 @@ export const Login = ({ onLogged }: LoginProps) => {
           </>
         )}
 
-        <p className="mt-8 border-t border-line pt-4 text-xs text-muted">
+        <p className="mt-10 border-t border-line pt-4 text-xs leading-relaxed text-muted">
           {t("Depois de entrar, você escolhe como seus dados de estudo são usados (LGPD/GDPR).",
              "After you sign in, you choose how your study data is used (GDPR/LGPD).")}
         </p>
       </main>
+      </div>
     </div>
   );
 };

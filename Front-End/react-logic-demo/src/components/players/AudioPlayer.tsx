@@ -111,9 +111,9 @@ export const AudioPlayer = ({ url, title, durationSeconds, initialSeconds, resou
   const perc = total ? Math.min(100, Math.round((100 * listened) / total)) : 0;
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-5">
+    <div className="card p-5">
       <h3 className="flex items-center gap-2 font-bold text-ink">
-        <Headphones size={20} className="text-brand" />
+        <Headphones size={20} className="text-ink" />
         {title}
       </h3>
       <audio ref={audioRef} controls preload="metadata" src={url ?? undefined} className="mt-3 w-full" />

@@ -14,6 +14,7 @@ import { StudentProfile, getCoachMessage } from "../services/api";
 import { Lang, useLanguage } from "../i18n";
 import { useSpeech } from "../hooks/useSpeech";
 import { CompanionAvatar } from "./brand/CompanionAvatar";
+import { TopoMap } from "./brand/TopoMap";
 import { AVATAR_PERSONAS, personaTagline } from "./brand/avatars";
 import { setPersona } from "../services/persona";
 import { useToast } from "./ui/Toast";
@@ -21,7 +22,7 @@ import { useToast } from "./ui/Toast";
 // Opções do seletor de avatar do card "Meu Desempenho": o mascote EduBot (2D,
 // sempre disponível) + os cientistas 3D (Einstein, Curie). `persona: null` = EduBot.
 const AVATAR_OPTIONS = [
-  { id: "edubot", label: "Engage-Agent", persona: null },
+  { id: "edubot", label: "Explorador", persona: null },
   ...AVATAR_PERSONAS.map((p) => ({
     id: p.id,
     label: p.variant === "einstein" ? "Einstein" : "Curie",
@@ -99,12 +100,14 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
   };
 
   return (
-    <div className="mb-6 overflow-hidden rounded-[8px] border border-line bg-gradient-to-br from-indigo-50 to-white p-6 shadow-soft">
+    <div className="card relative mb-6 overflow-hidden p-6">
+      <TopoMap variant="faixa" className="opacity-50" />
+      <div className="relative">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
         <div className="flex shrink-0 flex-col items-center gap-2">
           {/* AV.3: componente único — mascote 2D ou cientista 3D (com lip-sync
               por visemas) e fallback automático se o WebGL falhar. */}
-          <CompanionAvatar personaId={avatarId} speaking={speaking} visemeRef={visemeRef} size={140} />
+          <CompanionAvatar personaId={avatarId} speaking={speaking} visemeRef={visemeRef} size={140} estado={aiLoading ? "pensando" : "explicando"} />
 
           {/* Seletor de personagem: EduBot + cientistas — todos LIVRES (AV.1). */}
           <div className="flex flex-wrap justify-center gap-1.5">
@@ -117,10 +120,10 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
                 }}
                 aria-pressed={avatarId === opt.id}
                 title={opt.label}
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                className={`num rounded-sm border px-2.5 py-1 text-[11.5px] font-medium transition-colors duration-rapido ${
                   avatarId === opt.id
-                    ? "bg-brand text-white"
-                    : "border border-line bg-white text-muted hover:bg-slate-50"
+                    ? "border-ink bg-ink text-on-ink"
+                    : "border-line-strong bg-surface text-muted hover:text-ink"
                 }`}
               >
                 {opt.label}
@@ -136,45 +139,38 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 text-sm font-bold text-brand">
-            <Sparkles size={16} /> {t("Recado do Engage-Agent", "A note from Engage-Agent")}
-            {fromAi && (
-              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-indigo-700">
-                {t("por IA", "by AI")}
-              </span>
-            )}
+          <div className="flex items-center gap-2">
+            <span className="k">{t("Recado do tutor", "A note from your tutor")}</span>
+            {fromAi && <span className="tag tag-mid">{t("por IA", "by AI")}</span>}
           </div>
 
           {/* Balão de fala */}
-          <div className="relative mt-2 rounded-[12px] border border-line bg-white p-4 text-slate-800 shadow-sm">
-            <span className="absolute -left-2 top-5 hidden h-4 w-4 rotate-45 border-b border-l border-line bg-white sm:block" />
-            <p className="leading-relaxed">{message}</p>
-          </div>
+          <p className="msg-a mt-3 text-[17px] leading-[1.55] text-ink">{message}</p>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {speaking ? (
               <button
                 onClick={stop}
-                className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 font-semibold text-white transition hover:bg-indigo-600"
+                className="btn btn-pri btn-sm"
               >
-                <Pause size={18} /> {t("Parar", "Stop")}
+                <Pause size={16} /> {t("Parar", "Stop")}
               </button>
             ) : (
               <button
                 onClick={() => speak(message, lang, avatarId)}
                 disabled={!supported}
-                className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="btn btn-pri btn-sm"
               >
-                <Play size={18} /> {t("Ouvir o Engage-Agent", "Listen to Engage-Agent")}
+                <Play size={16} /> {t("Ouvir o tutor", "Listen to the tutor")}
               </button>
             )}
 
             <button
               onClick={askAi}
               disabled={aiLoading}
-              className="flex h-10 items-center gap-2 rounded-[8px] border border-brand px-4 font-semibold text-brand transition hover:bg-indigo-50 disabled:opacity-60"
+              className="btn btn-gh btn-sm"
             >
-              <Sparkles size={18} />
+              <Sparkles size={16} />
               {aiLoading ? t("Gerando...", "Generating...") : t("Gerar com IA", "Generate with AI")}
             </button>
 
@@ -183,6 +179,7 @@ export const PerformanceCoach = ({ profile }: { profile: StudentProfile }) => {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

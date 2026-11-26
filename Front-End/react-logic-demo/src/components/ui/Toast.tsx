@@ -44,9 +44,9 @@ const ICONS: Record<ToastKind, typeof Info> = {
 };
 
 const STYLES: Record<ToastKind, string> = {
-  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  error: "border-rose-200 bg-rose-50 text-rose-800",
-  info: "border-line bg-white text-ink"
+  success: "border-mata/40 bg-mata/10 text-mata",
+  error: "border-trail/40 bg-trail/10 text-trail-text",
+  info: "border-line bg-surface text-ink"
 };
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
@@ -119,7 +119,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
               onMouseLeave={() => startTimer(toast.id, toast.duration)}
               onFocus={() => clearTimer(toast.id)}
               onBlur={() => startTimer(toast.id, toast.duration)}
-              className={`flex items-start gap-3 rounded-[8px] border p-4 shadow-soft ${STYLES[toast.kind]}`}
+              className={`flex items-start gap-3 rounded border p-4 ${STYLES[toast.kind]}`}
             >
               <Icon size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
               <span className="flex-1 text-sm font-medium">{toast.message}</span>

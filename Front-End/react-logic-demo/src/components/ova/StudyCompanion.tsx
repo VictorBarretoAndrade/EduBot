@@ -17,8 +17,9 @@ Esc fecha e devolve o foco ao boneco, Tab fecha. O botão do avatar tem aria-lab
 prefers-reduced-motion (via CompanionAvatar/CSS).
 */
 import { KeyboardEvent, MutableRefObject, useEffect, useRef, useState } from "react";
-import { Bot, EyeOff, MessageCircle, MoreHorizontal, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
+import { EyeOff, MessageCircle, MoreHorizontal, Pause, Play, Volume2, VolumeX, X } from "lucide-react";
 import { CompanionAvatar } from "../brand/CompanionAvatar";
+import { Explorador } from "../brand/Explorador";
 import { CompanionLine } from "../../hooks/useCompanionScript";
 import { useT } from "../../i18n";
 
@@ -84,11 +85,11 @@ export const StudyCompanion = ({
       <button
         ref={reopenerRef}
         onClick={onShow}
-        className="fixed bottom-4 left-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-soft transition hover:bg-indigo-600"
-        aria-label={t("Mostrar o Engage-Agent", "Show Engage-Agent")}
-        title={t("Mostrar o Engage-Agent", "Show Engage-Agent")}
+        className="xp-av fixed bottom-4 left-4 z-30 lg:left-[280px] h-12 w-12 border-line-strong shadow-soft transition-colors duration-rapido hover:border-ink"
+        aria-label={t("Mostrar o tutor", "Show the tutor")}
+        title={t("Mostrar o tutor", "Show the tutor")}
       >
-        <Bot size={22} aria-hidden="true" />
+        <Explorador estado="explicando" variant="cabeca" size={48} still decorative />
       </button>
     );
   }
@@ -108,7 +109,7 @@ export const StudyCompanion = ({
     {
       key: "hide",
       icon: EyeOff,
-      label: t("Ocultar o Engage-Agent", "Hide Engage-Agent"),
+      label: t("Ocultar o tutor", "Hide the tutor"),
       run: () => { hidFromMenuRef.current = true; onHide(); },
     },
   ];
@@ -149,14 +150,14 @@ export const StudyCompanion = ({
     }
   };
 
-  const menuItem = "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-slate-700 transition hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none";
+  const menuItem = "flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm text-ink transition hover:bg-surface-2 focus:bg-surface-2 focus:outline-none";
 
   return (
-    <div className="fixed bottom-4 left-4 z-30 flex max-w-[min(340px,calc(100vw-2rem))] items-end gap-2">
+    <div className="fixed bottom-4 left-4 z-30 lg:left-[280px] flex max-w-[min(340px,calc(100vw-2rem))] items-end gap-2">
       <style>{`
-        @keyframes ebPop { 0%{transform:scale(0.96);opacity:0} 100%{transform:scale(1);opacity:1} }
+        @keyframes ebPop { 0%{transform:translateY(6px);opacity:0} 100%{transform:none;opacity:1} }
         @keyframes ebCeleb { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-8px)} 55%{transform:translateY(0)} 75%{transform:translateY(-4px)} }
-        .eb-pop { animation: ebPop .18s ease-out; }
+        .eb-pop { animation: ebPop var(--dur-medio) var(--ease-subida); }
         .eb-celeb { animation: ebCeleb .7s ease-in-out; }
         @media (prefers-reduced-motion: reduce) { .eb-pop, .eb-celeb { animation: none !important; } }
       `}</style>
@@ -171,9 +172,9 @@ export const StudyCompanion = ({
               role="menu"
               aria-labelledby="companion-menu-title"
               onKeyDown={onMenuKeyDown}
-              className="eb-pop absolute bottom-full left-0 z-10 mb-2 w-56 overflow-hidden rounded-[12px] border border-line bg-white py-1 shadow-soft"
+              className="eb-pop absolute bottom-full left-0 z-10 mb-2 w-56 overflow-hidden card py-1 shadow-soft"
             >
-              <div id="companion-menu-title" className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted">
+              <div id="companion-menu-title" className="k px-3 pb-1 pt-2 text-muted">
                 {t("O que posso fazer por você?", "What can I do for you?")}
               </div>
               {actions.map((action, idx) => {
@@ -187,7 +188,7 @@ export const StudyCompanion = ({
                     className={menuItem}
                     onClick={() => runAction(action)}
                   >
-                    <Icon size={16} className="text-brand" aria-hidden="true" /> {action.label}
+                    <Icon size={16} className="text-ink" aria-hidden="true" /> {action.label}
                   </button>
                 );
               })}
@@ -202,11 +203,18 @@ export const StudyCompanion = ({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-label={t("Companheiro de estudo — abrir menu de ações", "Study companion — open actions menu")}
-          className={`relative rounded-2xl outline-none ring-brand/30 transition hover:ring-4 focus-visible:ring-4 ${line?.kind === "celebrating" ? "eb-celeb" : ""}`}
+          className="relative card p-1 shadow-soft outline-none transition-colors duration-rapido hover:border-ink"
         >
-          <CompanionAvatar personaId={personaId} speaking={speaking} visemeRef={visemeRef} size={92} />
+          {/* Relevo: a expressão segue o momento — comemora (meta) quando a fala é de celebração. */}
+          <CompanionAvatar
+            personaId={personaId}
+            speaking={speaking}
+            visemeRef={visemeRef}
+            size={84}
+            estado={line?.kind === "celebrating" ? "meta" : "explicando"}
+          />
           {/* dica visual de que o boneco é clicável (abre menu) */}
-          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-white text-brand shadow-sm" aria-hidden="true">
+          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-line-strong bg-surface text-ink" aria-hidden="true">
             <MoreHorizontal size={14} />
           </span>
         </button>
@@ -216,23 +224,24 @@ export const StudyCompanion = ({
       {line && (
         <div className="mb-1 min-w-0 flex-1">
           <div
-            className="eb-pop relative rounded-[14px] rounded-bl-none border border-line bg-white p-3 shadow-soft"
+            className="eb-pop relative card p-3.5 shadow-soft"
             role="status"
             aria-live="polite"
           >
             <button
               onClick={onDismiss}
               aria-label={t("Dispensar", "Dismiss")}
-              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-line bg-white text-muted shadow-sm transition hover:bg-slate-50"
+              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-line-strong bg-surface text-muted transition-colors duration-rapido hover:text-ink"
             >
               <X size={12} aria-hidden="true" />
             </button>
-            <p className="text-sm leading-snug text-slate-800">{line.text}</p>
+            <div className="msg-who">{t("Tutor Learnia", "Learnia tutor")}</div>
+            <p className="msg-a text-sm leading-snug text-ink">{line.text}</p>
 
             {line.action && (
               <button
                 onClick={line.action.run}
-                className="mt-2 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white transition hover:bg-indigo-600"
+                className="btn btn-pri btn-sm mt-3"
               >
                 {line.action.label}
               </button>
@@ -243,14 +252,14 @@ export const StudyCompanion = ({
                 {speaking ? (
                   <button
                     onClick={onStop}
-                    className="flex items-center gap-1 rounded-full border border-line bg-slate-50 px-2 py-1 text-xs font-semibold text-brand"
+                    className="chip"
                   >
                     <Pause size={12} aria-hidden="true" /> {t("Parar", "Stop")}
                   </button>
                 ) : (
                   <button
                     onClick={onListen}
-                    className="flex items-center gap-1 rounded-full border border-line bg-slate-50 px-2 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+                    className="chip"
                   >
                     <Play size={12} aria-hidden="true" /> {t("Ouvir", "Listen")}
                   </button>

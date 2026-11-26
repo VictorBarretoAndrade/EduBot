@@ -14,15 +14,15 @@ A11y: cada bloco é uma região com heading; os números aparecem sempre em text
 import {
   Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from "recharts";
-import {
-  AlertTriangle, Bell, CheckCircle2, Database, Gauge, LoaderCircle, Users, XCircle
-} from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, Gauge, Users, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { TutorOverview, getTutorOverview } from "../services/api";
 import { useLanguage, useT } from "../i18n";
 import { resourceTypeLabel } from "../services/labels";
 import { formatNumber } from "../services/format";
 import { MasteryHeatmap } from "./MasteryHeatmap";
+import { C, axisProps, barRadius, gridProps, legendProps, tooltipProps } from "./ui/chartTheme";
+import { RelevoLoader } from "./brand/RelevoLoader";
 import { EngagementPanel } from "./EngagementPanel";
 
 // Catálogo: chave vinda do backend (rastreamento) -> rótulo amigável. Tudo aqui
@@ -53,9 +53,9 @@ interface KpiProps {
   alerta?: boolean;
 }
 const Kpi = ({ icon, label, value, alerta }: KpiProps) => (
-  <div className="rounded-[8px] border border-line bg-white p-5 shadow-soft">
-    <div className="flex items-center gap-2 text-muted">{icon} {label}</div>
-    <div className={`mt-2 text-3xl font-bold ${alerta ? "text-rose-600" : "text-ink"}`}>{value}</div>
+  <div className="card p-5">
+    <div className="k k-muted flex items-center justify-between gap-2">{label} <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span></div>
+    <div className={`mt-3 text-[34px] font-bold leading-none tracking-[-0.04em] [font-variant-numeric:tabular-nums] ${alerta ? "text-trail-text" : "text-ink"}`}>{value}</div>
   </div>
 );
 
@@ -71,7 +71,7 @@ export const ManagerDashboard = () => {
 
   if (error) {
     return (
-      <div className="rounded-[8px] border border-rose-200 bg-rose-50 p-6 text-rose-800" role="alert">
+      <div className="rounded border border-trail/40 bg-trail/10 p-6 text-trail-text" role="alert">
         {t("Não foi possível carregar a visão do gestor.", "Couldn't load the program overview.")}
       </div>
     );
@@ -79,7 +79,7 @@ export const ManagerDashboard = () => {
   if (!data) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
+        <RelevoLoader size={44} />
         <span className="sr-only" role="status">{t("Carregando", "Loading")}</span>
       </div>
     );
@@ -99,9 +99,8 @@ export const ManagerDashboard = () => {
   return (
     <section className="space-y-6">
       <div>
-        <h1 className="flex items-center gap-2 text-3xl font-bold text-ink">
-          <Database className="text-brand" aria-hidden="true" /> {t("Visão do Gestor", "Program Coordinator Overview")}
-        </h1>
+        <p className="k k-muted">{t("Coordenação", "Program coordination")}</p>
+        <h1 className="h-display mt-2 text-ink">{t("Visão do Gestor", "Program Coordinator Overview")}</h1>
         <p className="mt-2 text-muted">
           {t("Tudo que o sistema consegue medir da turma, com números reais.", "Everything the platform measures across the class, with live data.")}
         </p>
@@ -116,25 +115,25 @@ export const ManagerDashboard = () => {
       </div>
 
       {/* Acertos x erros totais da turma (número cru) */}
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("Quiz da turma", "Class quiz performance")}</h2>
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[8px] border border-line bg-slate-50 p-4">
+      <div className="card p-6">
+        <h2 className="lab">{t("Quiz da turma", "Class quiz performance")}</h2>
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded border border-line bg-bg p-4">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={22} className="text-emerald-600" aria-hidden="true" />
-            <span className="text-2xl font-bold text-emerald-700">{data.quiz.acertos}</span>
+            <CheckCircle2 size={22} className="text-mata" aria-hidden="true" />
+            <span className="text-2xl font-bold text-mata">{data.quiz.acertos}</span>
             <span className="text-sm text-muted">{t("acertos", "correct")}</span>
           </div>
-          <span className="text-slate-300" aria-hidden="true">|</span>
+          <span className="text-muted" aria-hidden="true">|</span>
           <div className="flex items-center gap-2">
-            <XCircle size={22} className="text-rose-600" aria-hidden="true" />
-            <span className="text-2xl font-bold text-rose-700">{data.quiz.erros}</span>
+            <XCircle size={22} className="text-trail-text" aria-hidden="true" />
+            <span className="text-2xl font-bold text-trail-text">{data.quiz.erros}</span>
             <span className="text-sm text-muted">{t("erros", "incorrect")}</span>
           </div>
           {aproveitamento !== null && (
             <>
-              <span className="text-slate-300" aria-hidden="true">|</span>
+              <span className="text-muted" aria-hidden="true">|</span>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-brand">{aproveitamento}%</span>
+                <span className="text-2xl font-bold text-ink">{aproveitamento}%</span>
                 <span className="text-sm text-muted">{t("de aproveitamento", "accuracy")}</span>
               </div>
             </>
@@ -143,10 +142,10 @@ export const ManagerDashboard = () => {
       </div>
 
       {/* Acertos x erros POR ASSUNTO — gráfico + números brutos */}
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("Acertos e erros por assunto (turma)", "Correct and incorrect answers by course (class)")}</h2>
+      <div className="card p-6">
+        <h2 className="lab">{t("Acertos e erros por assunto (turma)", "Correct and incorrect answers by course (class)")}</h2>
         {data.por_assunto.length === 0 ? (
-          <p className="mt-4 rounded-[8px] bg-slate-50 p-4 text-sm text-muted">
+          <p className="mt-4 rounded bg-bg p-4 text-sm text-muted">
             {t("Ainda não há respostas registradas nesta turma.", "No answers recorded in this class yet.")}
           </p>
         ) : (
@@ -154,13 +153,13 @@ export const ManagerDashboard = () => {
             <div className="mt-5 h-72">
               <ResponsiveContainer>
                 <BarChart data={assuntoChart}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nome" interval={0} tick={{ fontSize: 12 }} />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey={kLabel} fill="#15beb5" radius={[8, 8, 0, 0]} />
-                  <Bar dataKey={eLabel} fill="#f43f5e" radius={[8, 8, 0, 0]} />
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="nome" interval={0} {...axisProps} />
+                  <YAxis allowDecimals={false} {...axisProps} />
+                  <Tooltip {...tooltipProps} />
+                  <Legend {...legendProps} />
+                  <Bar dataKey={kLabel} fill={C.ink} radius={barRadius} />
+                  <Bar dataKey={eLabel} fill={C.trail} radius={barRadius} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -183,9 +182,9 @@ export const ManagerDashboard = () => {
                     return (
                       <tr key={s.subject_id} className="border-t border-line">
                         <td className="py-2 pr-4 font-semibold text-ink">{s.subject_nome}</td>
-                        <td className="py-2 pr-4 text-emerald-700">{s.acertos}</td>
-                        <td className="py-2 pr-4 text-rose-700">{s.erros}</td>
-                        <td className="py-2 pr-4 font-semibold text-brand">{perc != null ? `${perc}%` : "—"}</td>
+                        <td className="py-2 pr-4 text-mata">{s.acertos}</td>
+                        <td className="py-2 pr-4 text-trail-text">{s.erros}</td>
+                        <td className="py-2 pr-4 font-semibold text-ink">{perc != null ? `${perc}%` : "—"}</td>
                         <td className="py-2 pr-4">{s.dominio_medio != null ? `${Math.round(s.dominio_medio * 100)}%` : "—"}</td>
                       </tr>
                     );
@@ -204,8 +203,8 @@ export const ManagerDashboard = () => {
       {/* Fase 1 — consumo REAL de vídeo. A métrica anterior era a posição
           máxima do player: um seek para o fim marcava 100% sem assistir nada. */}
       {data.video && data.video.segundos_assistidos > 0 && (
-        <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-          <h2 className="text-xl font-bold text-ink">{t("Vídeo — consumo real", "Video — actual watch time")}</h2>
+        <div className="card p-6">
+          <h2 className="lab">{t("Vídeo — consumo real", "Video — actual watch time")}</h2>
           <p className="mt-1 text-sm text-muted">
             {t("Cobertura é o trecho do vídeo efetivamente percorrido (pular à frente não conta).",
                "Coverage is the portion of the video actually played through (skipping ahead doesn't count).")}
@@ -213,13 +212,13 @@ export const ManagerDashboard = () => {
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
               <div className="text-2xl font-bold text-ink">{data.video.cobertura_media}%</div>
-              <div className="text-sm text-muted">{t("cobertura média", "average coverage")}</div>
+              <div className="k k-muted">{t("cobertura média", "average coverage")}</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-ink">
                 {Math.round(data.video.segundos_assistidos / 60)} min
               </div>
-              <div className="text-sm text-muted">{t("assistidos pela turma", "watched by the class")}</div>
+              <div className="k k-muted">{t("assistidos pela turma", "watched by the class")}</div>
             </div>
             {data.video.ponto_abandono_medio != null && (
               <div>
@@ -227,7 +226,7 @@ export const ManagerDashboard = () => {
                   {Math.floor(data.video.ponto_abandono_medio / 60)}m
                   {String(data.video.ponto_abandono_medio % 60).padStart(2, "0")}s
                 </div>
-                <div className="text-sm text-muted">{t("ponto médio de abandono", "average drop-off point")}</div>
+                <div className="k k-muted">{t("ponto médio de abandono", "average drop-off point")}</div>
               </div>
             )}
           </div>
@@ -236,15 +235,15 @@ export const ManagerDashboard = () => {
 
       {/* Fase 2 — onde a turma trava. Só aparece quando já há leitura por seção. */}
       {data.secoes_dificeis && data.secoes_dificeis.length > 0 && (
-        <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-          <h2 className="text-xl font-bold text-ink">{t("Onde a turma trava", "Where the class gets stuck")}</h2>
+        <div className="card p-6">
+          <h2 className="lab">{t("Onde a turma trava", "Where the class gets stuck")}</h2>
           <p className="mt-1 text-sm text-muted">
             {t("Seções com maior tempo de leitura e mais releituras — candidatas a revisão do conteúdo.",
                "Sections with the longest reading time and most re-reads — candidates for content revision.")}
           </p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-muted">
+              <thead className="bg-bg text-muted">
                 <tr>
                   <th className="px-4 py-2 font-semibold">{t("Seção", "Section")}</th>
                   <th className="px-3 py-2 font-semibold">{t("Módulo", "Module")}</th>
@@ -263,7 +262,7 @@ export const ManagerDashboard = () => {
                       {Math.floor(s.segundos_medios / 60)}m{String(s.segundos_medios % 60).padStart(2, "0")}s
                     </td>
                     <td className="px-3 py-2">
-                      <span className={s.releituras_por_aluno > 1 ? "font-bold text-amber-700" : "text-slate-700"}>
+                      <span className={s.releituras_por_aluno > 1 ? "font-bold text-ink" : "text-ink"}>
                         {s.releituras_por_aluno}×
                       </span>
                     </td>
@@ -279,18 +278,18 @@ export const ManagerDashboard = () => {
           consegue atender. É informação acionável para o GESTOR (trabalho
           editorial), não um erro de software. */}
       {data.lacunas_conteudo && data.lacunas_conteudo.length > 0 && (
-        <div className="rounded-[8px] border border-amber-200 bg-amber-50 p-6 shadow-soft">
+        <div className="rounded border border-line-strong bg-surface-2 p-6">
           <h2 className="flex items-center gap-2 text-xl font-bold text-ink">
-            <XCircle size={20} className="text-amber-600" aria-hidden="true" />
+            <XCircle size={20} className="text-ink" aria-hidden="true" />
             {t("Lacunas de conteúdo para o reforço", "Content gaps for personalized practice")}
           </h2>
-          <p className="mt-1 text-sm text-amber-900">
-            {t("Estas competências não têm material suficiente para o Engage-Agent montar um reforço eficaz: são necessárias ao menos 3 questões e 2 formatos de material.",
-               "These learning outcomes don't have enough material for Engage-Agent to build effective practice paths: at least 3 questions and 2 resource formats are needed.")}
+          <p className="mt-1 text-sm text-ink">
+            {t("Estas competências não têm material suficiente para a Learnia montar um reforço eficaz: são necessárias ao menos 3 questões e 2 formatos de material.",
+               "These learning outcomes don't have enough material for Learnia to build effective practice paths: at least 3 questions and 2 resource formats are needed.")}
           </p>
           <ul className="mt-4 space-y-2">
             {data.lacunas_conteudo.map((c) => (
-              <li key={c.competency_id} className="rounded-[8px] border border-amber-200 bg-white p-3 text-sm">
+              <li key={c.competency_id} className="rounded border border-line-strong bg-surface p-3 text-sm">
                 <span className="font-semibold text-ink">{c.nome}</span>
                 <span className="text-muted"> · {c.assunto}</span>
                 <div className="mt-1 text-muted">
@@ -307,8 +306,8 @@ export const ManagerDashboard = () => {
       )}
 
       {/* Catálogo de rastreamento — transparência com o gestor */}
-      <div className="rounded-[8px] border border-line bg-white p-6 shadow-soft">
-        <h2 className="text-xl font-bold text-ink">{t("O que o sistema rastreia", "What the platform tracks")}</h2>
+      <div className="card p-6">
+        <h2 className="lab">{t("O que o sistema rastreia", "What the platform tracks")}</h2>
         <p className="mt-1 text-sm text-muted">
           {t("Cada sinal com a contagem real de registros da turma. Tudo abaixo persiste no banco.",
              "Each learning signal and its live record count for this class.")}
@@ -317,7 +316,7 @@ export const ManagerDashboard = () => {
           {CATALOGO.map((c) => (
             <li key={c.key} className="flex items-center justify-between gap-3 py-3">
               <span className="flex items-center gap-2 text-sm text-ink">
-                <CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />
+                <CheckCircle2 size={16} className="text-mata" aria-hidden="true" />
                 {t(c.pt, c.en)}
               </span>
               <span className="shrink-0 text-sm">
@@ -328,13 +327,13 @@ export const ManagerDashboard = () => {
           ))}
         </ul>
 
-        <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-slate-400">
+        <h3 className="k mt-6 text-muted">
           {t("Ainda não rastreado", "Not tracked yet")}
         </h3>
         <ul className="mt-2 space-y-2">
           {NAO_RASTREADO.map((c) => (
             <li key={c.pt} className="flex items-center gap-2 text-sm text-muted">
-              <XCircle size={16} className="text-slate-400" aria-hidden="true" />
+              <XCircle size={16} className="text-muted" aria-hidden="true" />
               {t(c.pt, c.en)}
             </li>
           ))}

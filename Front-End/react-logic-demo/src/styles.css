@@ -1,3 +1,9 @@
+/* Identidade "Relevo" (Learnia). Os tokens (cores claro/escuro, fontes, cantos,
+   movimento) vêm de design/relevo/tokens.css — fonte única, a mesma da home e do
+   guia. Aqui ficam só a base do app e as peças do guia (botões, rótulo, status,
+   cartão, carregamento e o tutor Explorador). */
+@import "../../../design/relevo/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,36 +15,470 @@
 body {
   margin: 0;
   min-width: 320px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f8fafc;
+  font-family: var(--font-sans);
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--dur-medio) var(--ease-subida), color var(--dur-medio) var(--ease-subida);
 }
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
-/* VI.1 (Plano 4) — foco visível FORTE (WCAG 2.4.7 / 1.4.11): anel indigo sólido
-   + halo branco, para contrastar tanto em fundo claro quanto sobre os gradientes
-   escuros (header do chat, hero do OVA). Regra sem @layer → vence os `outline-none`
-   das utilities. Alvos com ring próprio (Carousel, avatar do companheiro) já têm
-   foco visível; os contêineres tabIndex=-1 (main, diálogos) não são tabuláveis. */
+::selection {
+  background: rgb(var(--trail) / 0.28);
+}
+
+/* Títulos apertados e pesados (Geist 700): -3% a -4,5% conforme o tamanho. */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
+}
+h1 {
+  letter-spacing: -0.04em;
+}
+.k,
+.lab,
+.tag {
+  letter-spacing: 0.1em;
+}
+.tag {
+  letter-spacing: 0.06em;
+}
+
+/* VI.1 (Plano 4) — foco visível forte (WCAG 2.4.7 / 1.4.11). No Relevo o foco é a
+   Trilha (3,4:1 sobre o papel, 6,7:1 no escuro). Regra sem @layer → vence os
+   `outline-none` das utilities. */
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 a:focus-visible,
 [tabindex="0"]:focus-visible {
-  outline: 3px solid #4f46e5;
+  outline: 2px solid rgb(var(--trail));
   outline-offset: 2px;
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.9);
 }
 
-/* VI.2 (Plano 4) — respeitar "reduzir movimento" em TODA a app (antes só o
-   companheiro respeitava). Congela animações/transições decorativas e o scroll
-   suave via CSS. Os spinners ficam estáticos — todos ganharam texto sr-only
-   ("Carregando"); o lip-sync do avatar 3D e o scroll do chat são tratados em JS. */
+@layer components {
+  /* Rótulo e dado: Geist Mono 500, caixa alta, +10%. Em Trilha (texto) por padrão. */
+  .k {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(var(--trail-text));
+  }
+  .k-muted {
+    color: rgb(var(--muted));
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Cartão: Folha + borda de 1 px. O relevo vem das linhas, não de sombras. */
+  .card {
+    background: rgb(var(--surface));
+    border: 1px solid rgb(var(--line));
+    border-radius: var(--radius);
+  }
+
+  /* Botões: primário Basalto (Papel no escuro), destaque Trilha com texto escuro,
+     fantasma com borda forte. A seta (.arw) avança 4 px no hover. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.2;
+    padding: 11px 17px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color var(--dur-rapido), border-color var(--dur-rapido), color var(--dur-rapido);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .btn .arw,
+  .btn > svg.lucide-arrow-right {
+    transition: transform var(--dur-medio) var(--ease-subida);
+  }
+  .btn:hover:not(:disabled) .arw,
+  .btn:hover:not(:disabled) > svg.lucide-arrow-right {
+    transform: translateX(4px);
+  }
+  .btn-pri {
+    background: rgb(var(--ink));
+    color: rgb(var(--on-ink));
+  }
+  .btn-pri:hover:not(:disabled) {
+    background: rgb(var(--ink) / 0.86);
+  }
+  .btn-acc {
+    background: rgb(var(--trail));
+    color: rgb(var(--on-trail));
+  }
+  .btn-acc:hover:not(:disabled) {
+    background: rgb(var(--trail) / 0.88);
+  }
+  .btn-gh {
+    background: rgb(var(--surface));
+    color: rgb(var(--ink));
+    border-color: rgb(var(--line-strong));
+  }
+  .btn-gh:hover:not(:disabled) {
+    background: rgb(var(--surface-2));
+  }
+  .btn-sm {
+    font-size: 14px;
+    padding: 7px 12px;
+    gap: 8px;
+  }
+  .btn-lg {
+    font-size: 17px;
+    padding: 14px 22px;
+  }
+
+  /* Status com forma e palavra: ✓ na meta, ◐ você está aqui, ▲ abaixo da meta. */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: fit-content;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .tag svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+  }
+  .tag-ok {
+    color: rgb(var(--mata));
+  }
+  .tag-mid {
+    color: rgb(var(--ink));
+    background: rgb(var(--surface-2));
+    border-color: rgb(var(--line-strong));
+  }
+  .tag-low {
+    color: rgb(var(--trail-text));
+  }
+
+  /* Campo de formulário: borda forte (3:1), foco em Trilha. */
+  .field {
+    width: 100%;
+    background: rgb(var(--surface));
+    color: rgb(var(--ink));
+    border: 1px solid rgb(var(--line-strong));
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color var(--dur-rapido);
+  }
+  .field::placeholder {
+    color: rgb(var(--muted));
+  }
+  .field:focus {
+    border-color: rgb(var(--ink));
+  }
+
+  /* Rótulo de cartão: título em Trilha (texto) à esquerda, apoio em Grafite à direita. */
+  .lab {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(var(--trail-text));
+  }
+  .lab > :last-child:not(:first-child) {
+    color: rgb(var(--muted));
+    text-align: right;
+  }
+
+  /* Régua de elevação: marcas de Curva sobre a base em Basalto; o avanço sobe em
+     Trilha da esquerda para a direita (o rastro percorrido). */
+  .elev {
+    position: relative;
+    height: 26px;
+    border-bottom: 1.5px solid rgb(var(--ink));
+    background: repeating-linear-gradient(90deg, rgb(var(--contour-em)) 0 1px, transparent 1px 9px);
+  }
+  .elev > span {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 100%;
+    background: rgb(var(--trail));
+    clip-path: polygon(0 100%, 0 75%, 30% 55%, 60% 30%, 100% 0, 100% 100%);
+    transform-origin: left;
+    animation: relevo-cresce var(--dur-desenho) var(--ease-trilha) 0.15s both;
+  }
+  .elev.na-meta > span {
+    background: rgb(var(--mata));
+  }
+  .elev-sm {
+    height: 16px;
+  }
+
+  /* Conversa com o tutor: pergunta do aluno com borda; resposta com filete em Trilha. */
+  .msg-q {
+    margin-left: auto;
+    width: fit-content;
+    max-width: 85%;
+    padding: 9px 13px;
+    border: 1px solid rgb(var(--line-strong));
+    border-radius: var(--radius);
+    background: rgb(var(--surface));
+    font-size: 15px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .msg-who {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(var(--trail-text));
+    margin-bottom: 6px;
+  }
+  .msg-a {
+    border-left: 2px solid rgb(var(--trail));
+    padding-left: 13px;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 5px 8px;
+    border: 1px solid rgb(var(--line-strong));
+    border-radius: var(--radius-sm);
+    color: rgb(var(--ink));
+    background: transparent;
+    transition: border-color var(--dur-rapido), background-color var(--dur-rapido);
+  }
+  .chip:hover {
+    border-color: rgb(var(--ink));
+  }
+  .ai-note {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgb(var(--line));
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgb(var(--muted));
+  }
+
+  /* Título de página e de seção (Geist 700, apertado). */
+  .h-display {
+    font-weight: 700;
+    font-size: clamp(32px, 4vw, 44px);
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+  }
+  .h-sec {
+    font-weight: 700;
+    font-size: 24px;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+  }
+
+  /* Barra de progresso: trilho em linha, avanço em Basalto; a cota é uma marca. */
+  .track {
+    position: relative;
+    height: 6px;
+    background: rgb(var(--surface-2));
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .track > span {
+    display: block;
+    height: 100%;
+    background: rgb(var(--ink));
+    transition: width var(--dur-desenho) var(--ease-trilha);
+  }
+}
+
+/* Domínio por competência (morros + cota). */
+.mts .body { fill: rgb(var(--surface-2)); stroke: rgb(var(--ink)); stroke-width: 1.6; }
+.mts .cl line { stroke: rgb(var(--contour-em)); stroke-width: 1; }
+.mts .low .cl line { stroke: rgb(var(--trail)); opacity: 0.6; }
+.mts .ok .body { fill: rgb(var(--mata) / 0.12); }
+.mts .none .body { fill: rgb(var(--bg)); stroke: rgb(var(--line-strong)); stroke-dasharray: 3 4; }
+.mts .pv { font: 700 16px var(--font-sans); fill: rgb(var(--ink)); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.mts .low .pv { fill: rgb(var(--trail-text)); }
+.mts .none .pv { fill: rgb(var(--muted)); font-weight: 500; }
+.mts .goal { stroke: rgb(var(--trail)); stroke-width: 1.6; stroke-dasharray: 6 5; }
+.mts .gl { font: 500 11px var(--font-mono); fill: rgb(var(--trail-text)); text-anchor: end; }
+.mts .base { stroke: rgb(var(--ink)); stroke-width: 1.6; }
+.mts .mt { transform-box: view-box; animation: relevo-morro 0.9s var(--ease-subida) both; animation-delay: calc(var(--i) * 0.15s); }
+@keyframes relevo-morro { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@keyframes relevo-cresce {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Entrada de cartões: sobem da base e assentam devagar (--ease-subida). */
+.sobe {
+  animation: relevo-sobe var(--dur-medio) var(--ease-subida) both;
+}
+@keyframes relevo-sobe {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Carregamento: curvas de nível se abrindo a partir do cume (espera > 400 ms). */
+.ripple {
+  position: relative;
+  flex: none;
+}
+.ripple svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ripple path {
+  fill: none;
+  stroke: rgb(var(--ink));
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: relevo-onda 2.4s var(--ease-subida) infinite;
+  animation-delay: calc(var(--i) * -0.8s);
+}
+.ripple circle {
+  fill: rgb(var(--trail));
+}
+@keyframes relevo-onda {
+  0% { transform: scale(0.2); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+
+/* Curvas de nível de fundo (decorativas): deriva lenta, 60 s, vai e volta. */
+.topo .deriva path {
+  fill: none;
+  stroke: rgb(var(--contour));
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.topo .deriva path.em {
+  stroke: rgb(var(--contour-em));
+}
+.topo .deriva {
+  animation: relevo-deriva var(--dur-deriva) ease-in-out infinite alternate;
+}
+@keyframes relevo-deriva {
+  from { transform: translate3d(0, 0, 0) scale(1.02); }
+  to { transform: translate3d(-34px, 16px, 0) scale(1.05); }
+}
+
+/* "Hoje" / cume: pulso lento como sinal de GPS. Nunca mais de um por tela. */
+.gps {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: relevo-respira 2.4s ease-in-out infinite;
+}
+@keyframes relevo-respira {
+  50% { transform: scale(1.25); }
+}
+
+/* Tutor Explorador (design/relevo/gerador/explorador.py): só traço sobre a Folha,
+   troca sozinho no modo escuro. `.still` = parado (só um animado por tela). */
+.chr { width: 100%; height: 100%; overflow: visible; }
+.chr .fill { fill: rgb(var(--surface)); stroke: rgb(var(--ink)); stroke-width: 2.4; stroke-linejoin: round; }
+.chr .ln { fill: none; stroke: rgb(var(--ink)); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.chr .ln2 { fill: none; stroke: rgb(var(--ink)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chr .nose { stroke-width: 1.8; }
+.chr .fk, .chr .eyes ellipse { fill: rgb(var(--ink)); }
+.chr .tr-f { fill: rgb(var(--trail)); stroke: rgb(var(--ink)); stroke-width: 1.6; stroke-linejoin: round; }
+.chr .rel { fill: none; stroke: rgb(var(--contour-em)); stroke-width: 1.6; stroke-linecap: round; }
+.chr .sw { fill: none; stroke: rgb(var(--muted)); stroke-width: 2; stroke-linecap: round; }
+.chr .think circle { fill: rgb(var(--muted)); transform-box: fill-box; transform-origin: center; }
+.chr .m-b { opacity: 0; }
+.chr.cab .fill, .chr.cab .ln { stroke-width: 3.2; }
+.chr.cab .ln2 { stroke-width: 2.6; }
+.chr.cab .rel { stroke-width: 2; }
+.chr .eyes, .chr .ndl, .chr .sw { transform-box: fill-box; transform-origin: center; }
+.chr .bodyg, .chr .headg, .chr .hat, .chr .gs { transform-box: view-box; }
+.chr .bodyg { transform-origin: 60px 118px; }
+.chr .headg { transform-origin: 60px 86px; transition: transform var(--dur-medio) var(--ease-subida); }
+.chr .hat { transform-origin: 30px 46px; }
+.chr[data-expr="ouvindo"] .headg { transform: rotate(-7deg); }
+.chr:not(.still) .eyes { animation: xp-pisca 5s infinite; }
+@keyframes xp-pisca { 0%, 93%, 100% { transform: scaleY(1); } 95.5% { transform: scaleY(0.1); } }
+.chr:not(.still) .m-a { animation: xp-fala-a 0.42s linear 9; }
+.chr:not(.still) .m-b { animation: xp-fala-b 0.42s linear 9; }
+.chr.falando .m-a { animation: xp-fala-a 0.42s linear infinite; }
+.chr.falando .m-b { animation: xp-fala-b 0.42s linear infinite; }
+@keyframes xp-fala-a { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes xp-fala-b { 0%, 49% { opacity: 0; } 50%, 100% { opacity: 1; } }
+.chr[data-expr="explicando"]:not(.still) .gs { animation: xp-gesto 2.4s var(--ease-subida) 2; }
+@keyframes xp-gesto { 0%, 100% { transform: none; } 30% { transform: translateY(-3px); } 60% { transform: translateY(1px); } }
+.chr[data-expr="ouvindo"]:not(.still) .sw { animation: xp-som 1.4s ease-in-out infinite; }
+.chr[data-expr="ouvindo"]:not(.still) .sw:last-child { animation-delay: 0.35s; }
+@keyframes xp-som { 0%, 100% { opacity: 0.25; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1); } }
+.chr[data-expr="pensando"]:not(.still) .ndl { animation: xp-gira 2.2s var(--ease-trilha) infinite; }
+@keyframes xp-gira { to { transform: rotate(360deg); } }
+.chr[data-expr="pensando"]:not(.still) .think circle { animation: xp-boia 1.5s ease-in-out infinite; }
+.chr[data-expr="pensando"]:not(.still) .think circle:nth-child(2) { animation-delay: 0.25s; }
+.chr[data-expr="pensando"]:not(.still) .think circle:nth-child(3) { animation-delay: 0.5s; }
+@keyframes xp-boia { 50% { transform: translateY(-3px); opacity: 0.45; } }
+.chr[data-expr="encorajando"]:not(.still) .gs { animation: xp-punho 1.6s var(--ease-subida) 3; }
+@keyframes xp-punho { 0%, 100% { transform: none; } 25% { transform: translateY(-5px); } 50% { transform: none; } }
+.chr[data-expr="meta"]:not(.still) .bodyg { animation: xp-pula 1.8s var(--ease-subida) infinite; }
+@keyframes xp-pula { 0%, 62%, 100% { transform: translateY(0); } 14% { transform: translateY(-6px); } 28% { transform: translateY(0); } 40% { transform: translateY(-2px); } }
+.chr[data-expr="meta"]:not(.still) .hat { animation: xp-chapeu 1.8s var(--ease-subida) infinite; }
+@keyframes xp-chapeu { 0%, 70%, 100% { transform: none; } 25%, 45% { transform: translateY(-9px) rotate(-12deg); } }
+.chr[data-expr="revisar"]:not(.still) .headg { animation: xp-aceno 2.6s ease-in-out infinite; }
+@keyframes xp-aceno { 0%, 70%, 100% { transform: rotate(0); } 20% { transform: rotate(-4deg); } 42% { transform: rotate(3deg); } }
+
+/* Avatar redondo do Explorador (versão cabeça, abaixo de 48 px). */
+.xp-av {
+  display: inline-block;
+  flex: none;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgb(var(--surface-2));
+  border: 1px solid rgb(var(--line));
+}
+
+/* VI.2 (Plano 4) — "reduzir movimento" em TODA a app: estado final direto. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -48,4 +488,5 @@ a:focus-visible,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .ripple path { animation: none !important; opacity: 1; }
 }

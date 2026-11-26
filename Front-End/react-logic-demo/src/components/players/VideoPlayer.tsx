@@ -249,7 +249,7 @@ export const VideoPlayer = ({
       const video = document.createElement("video");
       video.controls = true;
       video.src = url;
-      video.className = "w-full rounded-[8px]";
+      video.className = "w-full rounded";
       video.addEventListener("loadedmetadata", () => {
         durationRef.current = video.duration || 0;
       });
@@ -298,11 +298,11 @@ export const VideoPlayer = ({
   const seconds = watched % 60;
 
   return (
-    <div className="rounded-[8px] border border-line bg-white p-5">
+    <div className="card p-5">
       <h3 className="font-bold text-ink">{title}</h3>
-      <div ref={slotRef} className="mt-3 aspect-video overflow-hidden rounded-[8px] bg-slate-950 [&>iframe]:h-full [&>iframe]:w-full" />
-      <div className="mt-3 h-2 rounded-full bg-slate-100">
-        <div className="h-2 rounded-full bg-brand transition-all" style={{ width: `${coverage}%` }} />
+      <div ref={slotRef} className="mt-3 aspect-video overflow-hidden rounded bg-ink [&>iframe]:h-full [&>iframe]:w-full" />
+      <div className="mt-3 h-2 rounded-[1px] bg-surface-2">
+        <div className="h-2 rounded-[1px] bg-ink transition-all" style={{ width: `${coverage}%` }} />
       </div>
       {/* O rótulo diz o que a barra REALMENTE mede: trecho do vídeo percorrido
           (não a posição alcançada). O tempo assistido aparece ao lado. */}

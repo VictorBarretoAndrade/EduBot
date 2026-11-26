@@ -17,7 +17,7 @@ Plano 6 (B.1): a página do módulo vira um stepper Conteúdo → Atividades →
 no passo Conteúdo — pular direto para o quiz não pode contar como leitura (é a
 leitura que libera o quiz no backend).
 */
-import { ArrowLeft, BookOpenText, CheckCircle2, ClipboardList, ListChecks, LoaderCircle, Sparkles, Trophy, Volume2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpenText, ClipboardList, ListChecks, Sparkles, Trophy, Volume2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   GamificationAward,
@@ -47,6 +47,10 @@ import { OvaQuiz } from "./OvaQuiz";
 import { TutorChat } from "./TutorChat";
 import { StudyCompanion } from "./StudyCompanion";
 import { ExternalCourseCard } from "../ExternalCourseCard";
+import { ExploradorAvatar } from "../brand/Explorador";
+import { RelevoLoader } from "../brand/RelevoLoader";
+import { TopoMap } from "../brand/TopoMap";
+import { Elev, StatusTag } from "../ui/Relevo";
 import { safeGet, safeSet, safeRemove } from "../../services/storage";
 
 const COMPLETED_PERC = 90;
@@ -459,20 +463,18 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
     <div className="flex gap-6">
       <div ref={contentRef} className="min-w-0 flex-1">
         {/* Cabeçalho da página do OVA: voltar, título, progresso e Tutor IA */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
             <button
               onClick={onBack}
-              className="flex h-11 w-11 items-center justify-center rounded-[8px] border border-line bg-white text-ink transition hover:bg-slate-50"
+              className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded border border-line-strong text-ink transition-colors duration-rapido hover:bg-surface-2"
               aria-label={t("Voltar para a matéria", "Back to the course")}
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </button>
             <div>
-              <p className="flex items-center gap-2 font-semibold text-brand">
-                <BookOpenText size={18} aria-hidden="true" /> {ova.subject_nome ?? t("Módulo", "Module")}
-              </p>
-              <h1 className="text-2xl font-bold text-ink">{ova.ova_name}</h1>
+              <p className="k">{ova.subject_nome ?? t("Módulo", "Module")}</p>
+              <h1 className="mt-1.5 text-[32px] font-bold leading-[1.05] tracking-[-0.04em] text-ink">{ova.ova_name}</h1>
             </div>
           </div>
           <button
@@ -480,31 +482,34 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
               setShowTutor((value) => !value);
               if (!showTutor) logInteraction(OVA_ASSISTANT_OPENED);
             }}
-            className={`flex h-11 items-center gap-2 rounded-[8px] px-5 font-semibold transition ${
-              showTutor ? "bg-indigo-50 text-brand" : "bg-brand text-white hover:bg-indigo-600"
-            }`}
+            className={`btn ${showTutor ? "btn-gh" : "btn-pri"}`}
           >
-            <Sparkles size={18} />
-            {showTutor ? t("Fechar o chat", "Close chat") : t("Perguntar ao Engage-Agent", "Ask Engage-Agent")}
+            <ExploradorAvatar size={24} estado={showTutor ? "ouvindo" : "explicando"} />
+            {showTutor ? t("Fechar o chat", "Close chat") : t("Perguntar ao tutor", "Ask the tutor")}
           </button>
         </div>
 
-        {/* Barra de progresso de leitura (QF.2: perceptível por leitor de tela —
-            é ela que destrava o quiz). */}
+        {/* Régua de leitura (QF.2: perceptível por leitor de tela — é ela que
+            destrava o quiz). Relevo: o avanço sobe em Trilha. */}
         <div
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={shownProgress}
           aria-label={t("Progresso de leitura", "Reading progress")}
-          className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-slate-200"
+          className="mb-6"
         >
-          <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${shownProgress}%` }} />
+          <div className="mb-1.5 flex justify-between">
+            <span className="k k-muted">{t("Leitura", "Reading")}</span>
+            <span className="num text-[12px] text-ink">{shownProgress}%</span>
+          </div>
+          <Elev value={shownProgress} small meta={shownProgress >= 100} />
         </div>
 
-        {/* Plano 6 (B.1): stepper do módulo — cada passo tem URL própria. */}
-        <nav aria-label={t("Passos do módulo", "Module steps")} className="mb-6">
-          <ol className="grid gap-2 sm:grid-flow-col sm:auto-cols-fr">
+        {/* Plano 6 (B.1): stepper do módulo — cada passo tem URL própria. Relevo:
+            abas em linha com o passo ativo marcado pela base em Trilha. */}
+        <nav aria-label={t("Passos do módulo", "Module steps")} className="mb-8 border-b border-line">
+          <ol className="grid gap-0 sm:grid-flow-col sm:auto-cols-fr">
             {steps.map((item, index) => {
               const Icon = item.icon;
               const active = item.id === step;
@@ -513,21 +518,22 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
                   <button
                     onClick={() => onStepChange(item.id)}
                     aria-current={active ? "step" : undefined}
-                    className={`flex w-full items-center gap-3 rounded-[8px] border p-3 text-left transition ${
-                      active ? "border-brand bg-indigo-50" : "border-line bg-white hover:border-slate-300"
+                    className={`relative flex w-full items-center gap-3 px-1 py-3 text-left transition-colors duration-rapido sm:px-3 ${
+                      active ? "text-ink" : "text-muted hover:text-ink"
                     }`}
                   >
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold ${
-                      active ? "bg-brand text-white" : "bg-slate-100 text-muted"
+                    <span className={`num flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[12px] font-semibold ${
+                      active ? "border-ink bg-ink text-on-ink" : "border-line-strong text-muted"
                     }`}>
                       {index + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className={`flex items-center gap-1.5 font-semibold ${active ? "text-indigo-800" : "text-ink"}`}>
-                        <Icon size={16} aria-hidden="true" /> {item.label}
+                      <span className="flex items-center gap-1.5 font-semibold">
+                        <Icon size={15} aria-hidden="true" /> {item.label}
                       </span>
-                      <span className="block text-xs text-muted">{item.detail}</span>
+                      <span className="num block text-[11.5px] text-muted">{item.detail}</span>
                     </span>
+                    {active && <span className="absolute inset-x-0 -bottom-px h-[2px] bg-trail" aria-hidden="true" />}
                   </button>
                 </li>
               );
@@ -536,29 +542,27 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
         </nav>
 
         {error && (
-          <div className="rounded-[8px] border border-rose-200 bg-rose-50 p-6 text-rose-700">
+          <div className="border-l-2 border-trail py-2 pl-4 text-trail-text">
             {t("Não foi possível carregar o conteúdo deste módulo.", "Couldn't load this module's content.")}
           </div>
         )}
 
         {!content && !error && (
           <div className="flex min-h-[40vh] items-center justify-center">
-            <LoaderCircle className="animate-spin text-brand" size={32} aria-hidden="true" />
-            <span className="sr-only">{t("Carregando", "Loading")}</span>
+            <RelevoLoader size={44} hint={t("Carregando", "Loading")} />
           </div>
         )}
 
         {content && step === "conteudo" && (
           <div className="space-y-6">
-            {/* Hero / introdução */}
+            {/* Hero / introdução — Relevo: Folha com curvas de nível, sem gradiente. */}
             {content.intro && (
-              <section className="overflow-hidden rounded-[8px] bg-gradient-to-br from-[#04093b] to-brand p-8 text-white shadow-soft">
-                {content.heroLabel && (
-                  <span className="text-sm font-semibold uppercase tracking-[0.18em] text-white/70">
-                    {content.heroLabel}
-                  </span>
-                )}
-                <p className="mt-3 text-lg leading-relaxed text-white/90">{content.intro}</p>
+              <section className="card relative overflow-hidden p-8">
+                <TopoMap variant="faixa" className="opacity-60" />
+                <div className="relative max-w-[720px]">
+                  {content.heroLabel && <span className="k">{content.heroLabel}</span>}
+                  <p className="mt-3 text-[19px] leading-[1.55] tracking-[-0.01em] text-ink">{content.intro}</p>
+                </div>
               </section>
             )}
 
@@ -569,18 +573,18 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
                 // Fase 2: o observer usa este nó para saber quando a seção está
                 // sendo lida de fato (metade visível por pelo menos 1 s).
                 ref={observeSection(section.id, sectionIndex)}
-                className="rounded-[8px] border border-line bg-white p-7 shadow-soft"
+                className="card p-7 md:p-9"
               >
                 {(section.heading || companionEnabled) && (
                   <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
                     {section.heading
-                      ? <h2 className="text-2xl font-bold text-ink">{section.heading}</h2>
+                      ? <h2 className="h-sec text-ink">{section.heading}</h2>
                       : <span />}
                     {companionEnabled && (
                       <div className="flex shrink-0 gap-2">
                         <button
                           onClick={() => readSection(section)}
-                          className="flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+                          className="chip"
                           title={t("Ouvir esta seção", "Listen to this section")}
                         >
                           <Volume2 size={14} /> {t("Ouvir", "Listen")}
@@ -593,7 +597,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
                               `Explain the "${section.heading ?? "current"}" section in other words.`
                             ));
                           }}
-                          className="flex items-center gap-1 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-indigo-50"
+                          className="chip"
                           title={t("Explicar esta seção", "Explain this section")}
                         >
                           <Sparkles size={14} aria-hidden="true" /> {t("Explicar", "Explain")}
@@ -606,7 +610,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
                   {section.blocks.map((block, index) => {
                     if (block.kind === "paragraph") {
                       return (
-                        <p key={index} className="leading-relaxed text-slate-700">
+                        <p key={index} className="max-w-[70ch] text-[17px] leading-[1.65] text-ink">
                           {block.text}
                         </p>
                       );
@@ -618,7 +622,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
                           src={block.src}
                           alt={block.alt ?? ""}
                           loading="lazy"
-                          className="mx-auto max-h-[420px] w-full rounded-[8px] object-contain"
+                          className="mx-auto max-h-[420px] w-full rounded object-contain"
                         />
                       );
                     }
@@ -634,8 +638,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
 
             {/* Vídeos e áudios (mídias do banco) — fazem parte do conteúdo */}
             {hasMedia && (
-              <section className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
-                <h2 className="mb-5 border-b border-line pb-3 text-2xl font-bold text-ink">
+              <section className="card p-7 md:p-9">
+                <h2 className="h-sec mb-5 border-b border-line pb-3 text-ink">
                   {t("Vídeos e áudios", "Videos & audio")}
                 </h2>
                 <div className="space-y-5">
@@ -670,8 +674,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
 
         {/* Passo 2 — atividades do módulo */}
         {step === "atividades" && (
-          <section className="space-y-4 rounded-[8px] border border-line bg-white p-7 shadow-soft">
-            <h2 className="border-b border-line pb-3 text-2xl font-bold text-ink">{t("Atividades", "Activities")}</h2>
+          <section className="card space-y-4 p-7 md:p-9">
+            <h2 className="h-sec border-b border-line pb-3 text-ink">{t("Atividades", "Activities")}</h2>
             <p className="text-muted">
               {t("Coloque em prática o que você leu. Marque cada atividade quando terminar.",
                  "Put what you read into practice. Mark each activity when you're done.")}
@@ -679,20 +683,18 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
             {activityResources.map((resource) => (
               <div
                 key={resource.resource_id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] border border-line bg-white p-5"
+                className="flex flex-wrap items-center justify-between gap-4 rounded border border-line bg-bg p-4"
               >
                 <div className="flex items-center gap-3">
-                  <ListChecks className="text-brand" size={24} aria-hidden="true" />
-                  <div className="font-bold text-ink">{resource.resource_title}</div>
+                  <ListChecks className="text-muted" size={20} aria-hidden="true" />
+                  <div className="font-semibold text-ink">{resource.resource_title}</div>
                 </div>
                 {resource.completed ? (
-                  <span className="flex items-center gap-2 rounded-[8px] bg-emerald-50 px-4 py-2 font-semibold text-emerald-700">
-                    <CheckCircle2 size={18} aria-hidden="true" /> {t("Concluída", "Done")}
-                  </span>
+                  <StatusTag kind="ok">{t("Concluída", "Done")}</StatusTag>
                 ) : (
                   <button
                     onClick={() => completeActivity(resource)}
-                    className="h-11 rounded-[8px] bg-teal px-5 font-semibold text-white"
+                    className="btn btn-gh btn-sm"
                   >
                     {t("Marcar como concluída", "Mark as done")}
                   </button>
@@ -707,8 +709,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
 
         {/* Passo 3 — quiz do módulo (com o modo desafio que morava na aba Quiz) */}
         {step === "quiz" && (
-          <section className="rounded-[8px] border border-line bg-white p-7 shadow-soft">
-            <h2 className="mb-5 border-b border-line pb-3 text-2xl font-bold text-ink">{t("Teste seus conhecimentos", "Test your knowledge")}</h2>
+          <section className="card p-7 md:p-9">
+            <h2 className="h-sec mb-5 border-b border-line pb-3 text-ink">{t("Teste seus conhecimentos", "Test your knowledge")}</h2>
             <OvaQuiz
               ovaId={ova.ova_id}
               studentId={studentId}
@@ -725,9 +727,10 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
           <div className="mt-6 flex justify-end">
             <button
               onClick={() => onStepChange(nextStep.id)}
-              className="h-11 rounded-[8px] bg-brand px-5 font-semibold text-white transition hover:bg-indigo-600"
+              className="btn btn-pri"
             >
               {t(`Próximo: ${nextStep.label}`, `Next: ${nextStep.label}`)}
+              <ArrowRight size={18} className="arw" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -741,8 +744,8 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
             setShowTutor(true);
             logInteraction(OVA_ASSISTANT_OPENED);
           }}
-          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-l-[10px] bg-brand py-4 pl-3 pr-2 font-semibold text-white shadow-soft transition hover:bg-indigo-600 [writing-mode:vertical-rl]"
-          aria-label={t("Perguntar ao Engage-Agent", "Ask Engage-Agent")}
+          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-2 rounded-l border border-r-0 border-ink bg-ink py-4 pl-2.5 pr-2 text-sm font-semibold text-on-ink shadow-soft transition-colors duration-rapido hover:bg-ink/85 [writing-mode:vertical-rl]"
+          aria-label={t("Perguntar ao tutor", "Ask the tutor")}
         >
           <Sparkles size={18} className="rotate-90" aria-hidden="true" />
           {t("Perguntar", "Ask")}
@@ -753,7 +756,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
       {showTutor && (
         <>
           <div
-            className="fixed inset-0 z-30 bg-black/30 lg:hidden"
+            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
             onClick={() => setShowTutor(false)}
             aria-hidden
           />
@@ -761,7 +764,7 @@ export const OvaReader = ({ ova, studentId, persona, companionEnabled, step, onS
             ref={asideRef}
             role={isDesktop ? undefined : "dialog"}
             aria-modal={isDesktop ? undefined : true}
-            aria-label={isDesktop ? undefined : t("Chat do Engage-Agent", "Engage-Agent chat")}
+            aria-label={isDesktop ? undefined : t("Chat do tutor", "Tutor chat")}
             className="fixed inset-y-0 right-0 z-40 w-full max-w-[420px] p-4 lg:static lg:z-auto lg:w-[380px] lg:shrink-0 lg:p-0"
           >
             <div className="h-full lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">

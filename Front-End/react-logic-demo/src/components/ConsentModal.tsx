@@ -60,11 +60,11 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
         aria-modal="true"
         aria-labelledby="consent-title"
         tabIndex={-1}
-        className="w-full max-w-lg rounded-[8px] bg-white p-8 shadow-soft outline-none"
+        className="w-full max-w-lg rounded border border-line bg-surface p-8 shadow-soft outline-none"
       >
         <div className="flex items-center gap-3">
-          <ShieldCheck size={28} className="text-brand" />
-          <h1 id="consent-title" className="text-2xl font-bold text-ink">{t("Privacidade e seus dados", "Privacy and your data")}</h1>
+          <ShieldCheck size={28} className="text-ink" />
+          <h1 id="consent-title" className="h-sec text-ink">{t("Privacidade e seus dados", "Privacy and your data")}</h1>
         </div>
         <p className="mt-3 text-muted">
           {t(
@@ -74,10 +74,10 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
         </p>
 
         <div className="mt-6 space-y-4">
-          <div className="rounded-[8px] bg-slate-50 p-4">
+          <div className="rounded bg-bg p-4">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-ink">{t("Acompanhamento pedagógico", "Learning progress tracking")}</span>
-              <span className="rounded-[8px] bg-brand/10 px-2 py-1 text-xs font-bold uppercase tracking-wide text-brand">
+              <span className="k rounded bg-ink/10 px-2 py-1 text-ink">
                 {t("Necessário", "Required")}
               </span>
             </div>
@@ -89,21 +89,21 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
             </p>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-line p-4">
-            <input type="checkbox" className="mt-1" checked={ia} onChange={(e) => setIa(e.target.checked)} />
+          <label className="flex cursor-pointer items-start gap-3 rounded border border-line p-4">
+            <input type="checkbox" className="mt-1 accent-[rgb(var(--ink))]" checked={ia} onChange={(e) => setIa(e.target.checked)} />
             <span>
               <span className="font-semibold text-ink">{t("IA sobre os seus dados", "AI-powered personalization")}</span>
               <span className="mt-1 block text-sm text-muted">
                 {t(
-                  "Permitir que o Engage-Agent use IA sobre o seu histórico e guarde o texto das suas perguntas ao tutor. Opcional.",
-                  "Allow Engage-Agent to use AI on your study history and save the questions you ask in chat. Optional."
+                  "Permitir que a Learnia use IA sobre o seu histórico e guarde o texto das suas perguntas ao tutor. Opcional.",
+                  "Allow Learnia to use AI on your study history and save the questions you ask in chat. Optional."
                 )}
               </span>
             </span>
           </label>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-[8px] border border-line p-4">
-            <input type="checkbox" className="mt-1" checked={imagem} onChange={(e) => setImagem(e.target.checked)} />
+          <label className="flex cursor-pointer items-start gap-3 rounded border border-line p-4">
+            <input type="checkbox" className="mt-1 accent-[rgb(var(--ink))]" checked={imagem} onChange={(e) => setImagem(e.target.checked)} />
             <span>
               <span className="font-semibold text-ink">{t("Imagem e voz", "Image and voice")}</span>
               <span className="mt-1 block text-sm text-muted">
@@ -119,7 +119,7 @@ export const ConsentModal = ({ onDone }: ConsentModalProps) => {
         <button
           onClick={save}
           disabled={saving}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-[8px] bg-brand font-bold text-white disabled:bg-slate-300"
+          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded bg-ink font-bold text-on-ink disabled:bg-line"
         >
           {saving && <LoaderCircle className="animate-spin" size={20} />}
           {t("Salvar e continuar", "Save and continue")}
